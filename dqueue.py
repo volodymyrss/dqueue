@@ -43,7 +43,6 @@ class TaskEntry(peewee.Model):
     queue = peewee.CharField(default="default")
 
     key = peewee.CharField(primary_key=True)
-    instance_key = peewee.CharField()
     state = peewee.CharField()
     worker_id = peewee.CharField()
     entry = peewee.TextField()
@@ -54,7 +53,20 @@ class TaskEntry(peewee.Model):
     class Meta:
         database = db
 
-db.create_tables([TaskEntry])
+class TaskHistory(peewee.Model):
+    queue = peewee.CharField(default="default")
+
+    key = peewee.CharField()
+    state = peewee.CharField()
+    worker_id = peewee.CharField()
+
+    timestamp = peewee.DateTimeField()
+    message = peewee.CharField()
+
+    class Meta:
+        database = db
+
+db.create_tables([TaskEntry,TaskHistory])
 
 class Task(object):
     def __init__(self,task_data,execution_info=None, submission_data=None, depends_on=None):
@@ -99,9 +111,6 @@ class Task(object):
 
         
 
-    @property
-    def instance_key(self):
-        return self.get_key(False)
 
     @property
     def key(self):
@@ -152,9 +161,6 @@ class Queue(object):
         )
         return "{fqdn}.{pid}".format(**d)
 
-    @property
-    def taskname(self):
-        return self.current_task.instance_key
 
     def find_task_instances(self,task,klist=None):
         if klist is None:
@@ -181,20 +187,20 @@ class Queue(object):
         if all([d['state']=="done" for d in dependency_states]):
             log("dependecies complete, will unlock", task)
             self.move_task("locked", "waiting", task)
-            return dict(state="waiting", instance_key=task.instance_key)
+            return dict(state="waiting", key=task.key)
 
         if any([d['state']=="failed" for d in dependency_states]):
             log("dependecies complete, will unlock", task)
-            self.move_task("locked", "failed", task.filename_instance)
-            return dict(state="failed", instance_key=task.instance_key)
+            self.move_task("locked", "failed", task)
+            return dict(state="failed", key=task.key)
 
         if not any([d['state'] in ["running","waiting","locked"] for d in dependency_states]):
             log("dependecies incomplete, but nothing will come of this anymore, will unlock", task)
-            self.move_task("locked", "waiting", task.filename_instance)
-            return dict(state="waiting", instance_key=task.instance_key)
+            self.move_task("locked", "waiting", task)
+            return dict(state="waiting", key=task.key)
 
         log("task still locked", task)
-        return dict(state="locked",instance_key=task.instance_key)
+        return dict(state="locked",key=task.key)
     
     def remember(self,task_data,submission_data=None):
         task=Task(task_data,submission_data=submission_data)
@@ -208,12 +214,26 @@ class Queue(object):
                         ).execute()
         assert len(r)==1
         return r[0]
+    
+    def log_task(self,message,task=None,state=None):
+        if task is None:
+            task=self.current_task
+        if state is None:
+            state=self.current_task_status
+        return TaskHistory.insert(
+                             queue=self.queue,
+                             key=task.key,
+                             state=state,
+                             worker_id=self.worker_id,
+                             timestamp=datetime.datetime.now(),
+                             message=message,
+                        ).execute()
 
     def insert_task_entry(self,task,state):
+        self.log_task("task created",task,state)
         return TaskEntry.insert(
                          queue=self.queue,
                          key=task.key,
-                         instance_key=task.instance_key,
                          state=state,
                          worker_id=self.worker_id,
                          entry=task.serialize(),
@@ -236,6 +256,7 @@ class Queue(object):
 
         if instance_for_key is not None:
             log("found existing instance(s) for this key, no need to put:",instances_for_key)
+            self.log_task("task created",task,instance_for_key['state'])
             return instance_for_key
 
         if depends_on is None:
@@ -246,7 +267,7 @@ class Queue(object):
         instance_for_key=self.find_task_instances(task)[0]
         recovered_task=Task.from_entry(instance_for_key['task_entry'].entry)
 
-        if recovered_task.instance_key != task.instance_key:
+        if recovered_task.key != task.key:
             log("inconsitent storage:")
             log("stored:",task.filename_instance)
             log("recovered:", recovered_task.filename_instance)
@@ -294,9 +315,10 @@ class Queue(object):
         entry=entries[0]
         self.current_task=Task.from_entry(entry.entry)
 
-        log(self.current_task.instance_key)
+        log(self.current_task.key)
+        
 
-        if self.current_task.instance_key != entry.instance_key:
+        if self.current_task.key != entry.key:
             log("inconsitent storage:")
             log(">>>> stored:", task_name)
             log(">>>> recovered:", self.current_task.filename_instance)
@@ -309,10 +331,11 @@ class Queue(object):
 
             raise Exception("Inconsistent storage")
 
-        self.current_task_status = "waiting"
 
         log("task is running",self.current_task)
         self.current_task_status = "running"
+
+        self.log_task("task started")
 
         log('task',self.current_task.submission_info)
 
@@ -362,15 +385,18 @@ class Queue(object):
     def task_done(self):
         log("task done",self.current_task)
 
-        r=TaskEntry.update({TaskEntry.state:"done"}).where(TaskEntry.instance_key==self.current_task.instance_key).execute()
+        r=TaskEntry.update({TaskEntry.state:"done"}).where(TaskEntry.key==self.current_task.key).execute()
 
         self.current_task_status="done"
+
+        log('task done')
+
         self.current_task=None
 
     def task_failed(self,update=lambda x:None):
         update(self.current_task)
 
-        r=TaskEntry.update({TaskEntry.state:"failed",TaskEntry.entry:self.current_task.serialize()}).where(TaskEntry.instance_key==self.current_task.instance_key).execute()
+        r=TaskEntry.update({TaskEntry.state:"failed",TaskEntry.entry:self.current_task.serialize()}).where(TaskEntry.key==self.current_task.key).execute()
 
         self.current_task_status = "failed"
         self.current_task = None
@@ -436,8 +462,35 @@ class Queue(object):
 
 
 if __name__ == "__main__":
-    log(Queue().info)
-    log(Queue().list(kinds=["waiting","done","failed","running"]))
-    print(Queue().show())
-    #for r in Queue().show().split("\n"):
-    #    log(r)
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("queue",default="./queue")
+    parser.add_argument('-L', dest='listen',  help='...',action='store_true', default=False)
+    parser.add_argument('-H', dest='host',  help='...', default="0.0.0.0")
+    args=parser.parse_args()
+
+    if args.listen:
+        from flask import Flask
+        from flask import render_template,make_response
+
+        app = Flask(__name__)
+
+        @app.route('/')
+        def list():
+            entries=[model_to_dict(entry) for entry in TaskEntry.select().execute()]
+            for entry in entries:
+                entry_data=yaml.load(StringIO.StringIO(entry['entry']))
+                entry['entry']=entry_data
+            return render_template('task_list.html', entries=entries)
+        
+        @app.route('/purge')
+        def purge():
+            entries=TaskEntry.delete().execute()
+            return make_response("deleted %i"%len(entries))
+
+        app.run(port=5555,debug=True,host=args.host)
+    else:
+        log(Queue().info)
+        log(Queue().list(kinds=["waiting","done","failed","running"]))
+        print(Queue().show())
