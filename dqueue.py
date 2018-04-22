@@ -37,7 +37,7 @@ import peewee
 from playhouse.db_url import connect
 from playhouse.shortcuts import model_to_dict, dict_to_model
 
-db=connect(os.environ.get("DATABASE_URL"))
+db=connect(os.environ.get("DQUEUE_DATABASE_URL"))
 
 class TaskEntry(peewee.Model):
     queue = peewee.CharField(default="default")
