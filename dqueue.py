@@ -169,9 +169,10 @@ class Queue(object):
     
     def try_all_locked(self):
         r=[]
-        for task_fn in self.list("locked"):
-            log("trying to unlock", task_fn)
-            r.append(self.try_to_unlock(Task.from_file(self.queue_dir("locked")+"/"+task_fn)))
+        for task_key in self.list("locked"):
+            task_entry=self.select_task_entry(task_key)
+            log("trying to unlock", task_key,task_entry,task_entry.key,task_entry.entry)
+            r.append(self.try_to_unlock(Task.from_entry(task_entry.entry)))
         return r
 
     def try_to_unlock(self,task):
@@ -179,38 +180,43 @@ class Queue(object):
 
         if all([d['state']=="done" for d in dependency_states]):
             log("dependecies complete, will unlock", task)
-            self.move_task("locked", "waiting", task.filename_instance)
-            return dict(state="waiting", fn=self.queue_dir("waiting") + "/" + task.filename_instance)
+            self.move_task("locked", "waiting", task)
+            return dict(state="waiting", instance_key=task.instance_key)
 
         if any([d['state']=="failed" for d in dependency_states]):
             log("dependecies complete, will unlock", task)
             self.move_task("locked", "failed", task.filename_instance)
-            return dict(state="failed", fn=self.queue_dir("failed") + "/" + task.filename_instance)
+            return dict(state="failed", instance_key=task.instance_key)
 
         if not any([d['state'] in ["running","waiting","locked"] for d in dependency_states]):
             log("dependecies incomplete, but nothing will come of this anymore, will unlock", task)
             self.move_task("locked", "waiting", task.filename_instance)
-            return dict(state="waiting", fn=self.queue_dir("waiting") + "/" + task.filename_instance)
+            return dict(state="waiting", instance_key=task.instance_key)
 
         log("task still locked", task)
-        return dict(state="locked",fn=self.queue_dir("locked")+"/"+task.filename_instance)
+        return dict(state="locked",instance_key=task.instance_key)
     
     def remember(self,task_data,submission_data=None):
         task=Task(task_data,submission_data=submission_data)
         nfn=self.queue_dir("problem") + "/"+task.filename_instance
         open(nfn, "w").write(task.serialize())
             
+    
+    def select_task_entry(self,key):
+        r=TaskEntry.select().where(
+                         TaskEntry.key==key,
+                        ).execute()
+        assert len(r)==1
+        return r[0]
 
     def insert_task_entry(self,task,state):
         return TaskEntry.insert(
                          queue=self.queue,
-
                          key=task.key,
                          instance_key=task.instance_key,
                          state=state,
                          worker_id=self.worker_id,
                          entry=task.serialize(),
-
                          created=datetime.datetime.now(),
                          modified=datetime.datetime.now(),
                         ).execute()
@@ -228,11 +234,6 @@ class Queue(object):
         else:
             instance_for_key=None
 
-        if instance_for_key is not None and instance_for_key['state']=="locked":
-            #found_task=Task.from_entry(instance_for_key['fn'])
-            log("task found locked", found_task, "will use instead of", task)
-            return self.try_to_unlock(found_task)
-
         if instance_for_key is not None:
             log("found existing instance(s) for this key, no need to put:",instances_for_key)
             return instance_for_key
@@ -240,8 +241,7 @@ class Queue(object):
         if depends_on is None:
             self.insert_task_entry(task,"waiting")
         else:
-            pass
-            #task.to_entry("locked")
+            self.insert_task_entry(task,"locked")
 
         instance_for_key=self.find_task_instances(task)[0]
         recovered_task=Task.from_entry(instance_for_key['task_entry'].entry)
@@ -285,8 +285,7 @@ class Queue(object):
         if r==0:
             #self.try_all_locked()
             #tasks=self.list("waiting")
-            if len(tasks)==0:
-                raise Empty()
+            raise Empty()
 
         entries=TaskEntry.select().where(TaskEntry.worker_id==self.worker_id,TaskEntry.state=="running").order_by(TaskEntry.modified.desc()).limit(1).execute()
         if len(entries)>1:
@@ -384,31 +383,22 @@ class Queue(object):
         task=Task.from_file(self.queue_dir(fromk) + "/" + taskname)
         task.to_file(self.queue_dir(tok) + "/" + taskname)
 
-    def move_task(self,fromk,tok,taskname=None):
-        if taskname is None:
-            taskname=self.taskname
-
-        task=Task.from_file(self.queue_dir(fromk) + "/" + taskname)
-        task.to_file(self.queue_dir(tok) + "/" + taskname)
-
-        try:
-            os.remove(self.queue_dir(fromk) + "/" + taskname)
-        except OSError as e:
-            log("locked task stolen!",taskname,"from",fromk,"to",tok,"exception:",e)
+    def move_task(self,fromk,tok,task):
+        r=TaskEntry.update({
+                        TaskEntry.state:tok,
+                        TaskEntry.worker_id:self.worker_id,
+                        TaskEntry.modified:datetime.datetime.now(),
+                    })\
+                    .where(TaskEntry.state==fromk,TaskEntry.key==task.key).execute()
 
     def remove_task(self,fromk,taskname=None):
-        os.remove(self.queue_dir(fromk) + "/" + taskname)
+        pass
 
-    def wipe(self,wipe_from=["waiting"],purge=True):
+    def wipe(self,wipe_from=["waiting"]):
         for fromk in wipe_from:
             for key in self.list(fromk):
-                if purge:
-                    log("removing",fromk + "/" + key)
-                    TaskEntry.delete().where(TaskEntry.key==key).execute()
-                else:
-                    pass
-                    #log("to delete",self.queue_dir(fromk) + "/" + key)
-                    #self.move_task(fromk,"deleted",taskname=taskname)
+                log("removing",fromk + "/" + key)
+                TaskEntry.delete().where(TaskEntry.key==key).execute()
 
     def list(self,kind=None,kinds=None,fullpath=False):
         if kinds is None:

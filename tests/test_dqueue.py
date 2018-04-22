@@ -92,9 +92,9 @@ def test_one():
 
 
 def test_locked_jobs():
-    import fsqueue
+    import dqueue
 
-    queue=fsqueue.Queue("./queue")
+    queue=dqueue.Queue("./queue")
     queue.wipe(["waiting","done","running","locked","failed"])
 
     assert queue.info['waiting']==0
@@ -108,8 +108,6 @@ def test_locked_jobs():
     queue.put(t2)
 
     print(queue.info)
-
-    print(glob.glob(queue.queue_dir("waiting")+"/*"))
 
     assert len(queue.list("waiting")) == 1
     assert len(queue.list("locked")) == 1
@@ -130,7 +128,6 @@ def test_locked_jobs():
     print(queue.info)
 
     print("expected resolved dependecy`")
-    #r=queue.try_all_locked()
     #assert len(r)==1
     #assert r[0]['state']=="waiting"
    # assert queue.put(t1)['state'] == "waiting"
@@ -138,6 +135,10 @@ def test_locked_jobs():
   #  assert len(queue.list("waiting")) == 1
   #  assert len(queue.list("locked")) == 0
 
+    with pytest.raises(dqueue.Empty):
+        t = queue.get().task_data
+    
+    r=queue.try_all_locked()
     t = queue.get().task_data
 
     print("from queue", t)
@@ -146,6 +147,6 @@ def test_locked_jobs():
     assert t == t1
 
     queue.task_done()
-    with pytest.raises(fsqueue.Empty):
+    with pytest.raises(dqueue.Empty):
         queue.get()
     print(queue.info)
