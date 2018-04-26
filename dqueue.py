@@ -11,6 +11,8 @@ import glob
 import logging
 import StringIO
 
+import urlparse
+
 logger=logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 handler=logging.StreamHandler()
@@ -38,6 +40,7 @@ from playhouse.db_url import connect
 from playhouse.shortcuts import model_to_dict, dict_to_model
 
 db=connect(os.environ.get("DQUEUE_DATABASE_URL"))
+#db.get_conn().ping(True)
 
 class TaskEntry(peewee.Model):
     queue = peewee.CharField(default="default")
@@ -183,21 +186,32 @@ class Queue(object):
 
     def try_to_unlock(self,task):
         dependency_states=self.find_dependecies_states(task)
+        
 
         if all([d['state']=="done" for d in dependency_states]):
+            self.log_task("task dependencies complete: unlocking",task,"locked")
             log("dependecies complete, will unlock", task)
             self.move_task("locked", "waiting", task)
             return dict(state="waiting", key=task.key)
 
         if any([d['state']=="failed" for d in dependency_states]):
             log("dependecies complete, will unlock", task)
+            self.log_task("task dependencies failed: unlocking to fail",task,"failed")
             self.move_task("locked", "failed", task)
             return dict(state="failed", key=task.key)
 
-        if not any([d['state'] in ["running","waiting","locked"] for d in dependency_states]):
+        if not any([d['state'] in ["running","waiting","locked","incomplete"] for d in dependency_states]):
             log("dependecies incomplete, but nothing will come of this anymore, will unlock", task)
-            self.move_task("locked", "waiting", task)
-            return dict(state="waiting", key=task.key)
+            #self.log_task("task dependencies INcomplete: unlocking",task,"locked")
+
+            from collections import defaultdict
+            dd=defaultdict(int)
+            for d in dependency_states:
+                dd[d['state']]+=1
+
+            self.log_task("task dependencies INcomplete: "+repr(dict(dd)),task,"locked")
+           # self.move_task("locked", "waiting", task)
+          #  return dict(state="waiting", key=task.key)
 
         log("task still locked", task)
         return dict(state="locked",key=task.key)
@@ -231,15 +245,19 @@ class Queue(object):
 
     def insert_task_entry(self,task,state):
         self.log_task("task created",task,state)
-        return TaskEntry.insert(
-                         queue=self.queue,
-                         key=task.key,
-                         state=state,
-                         worker_id=self.worker_id,
-                         entry=task.serialize(),
-                         created=datetime.datetime.now(),
-                         modified=datetime.datetime.now(),
-                        ).execute()
+
+        try:
+            TaskEntry.insert(
+                             queue=self.queue,
+                             key=task.key,
+                             state=state,
+                             worker_id=self.worker_id,
+                             entry=task.serialize(),
+                             created=datetime.datetime.now(),
+                             modified=datetime.datetime.now(),
+                            ).execute()
+        except pymysql.err.IntegrityError as e:
+            log("task already inserted")
 
     def put(self,task_data,submission_data=None, depends_on=None):
         assert depends_on is None or type(depends_on) in [list,tuple]
@@ -256,7 +274,7 @@ class Queue(object):
 
         if instance_for_key is not None:
             log("found existing instance(s) for this key, no need to put:",instances_for_key)
-            self.log_task("task created",task,instance_for_key['state'])
+            self.log_task("task already found",task,instance_for_key['state'])
             return instance_for_key
 
         if depends_on is None:
@@ -304,8 +322,7 @@ class Queue(object):
                     .where(TaskEntry.state=="waiting").limit(1).execute()
 
         if r==0:
-            #self.try_all_locked()
-            #tasks=self.list("waiting")
+            self.try_all_locked()
             raise Empty()
 
         entries=TaskEntry.select().where(TaskEntry.worker_id==self.worker_id,TaskEntry.state=="running").order_by(TaskEntry.modified.desc()).limit(1).execute()
@@ -373,22 +390,41 @@ class Queue(object):
 
 
     def task_locked(self,depends_on):
-        log("locking task",self.current_task)
-        self.clear_current_task_entry()
-        self.current_task_status="locked"
-        self.current_task.depends_on=depends_on
-        self.current_task.to_file(self.queue_dir("locked")+"/"+self.current_task.filename_instance)
+        if self.current_task is None:
+            raise Exception("task must be available to lock")
 
+        log("locking task",self.current_task)
+        self.current_task.depends_on=depends_on
+        serialized=self.current_task.serialize()
+
+        self.log_task("task to lock: serialized to %i"%len(serialized),state="locked")
+
+        r=TaskEntry.update({
+                    TaskEntry.state:"locked",
+                    TaskEntry.entry:serialized,
+                }).where(
+                    TaskEntry.key==self.current_task.key,
+                    TaskEntry.state=="running",
+                 ).execute()
+        
+        self.log_task("task locked from "+self.current_task_status,state="locked")
+
+        self.current_task_status="locked"
         self.current_task=None
 
 
     def task_done(self):
         log("task done",self.current_task)
 
-        r=TaskEntry.update({TaskEntry.state:"done"}).where(TaskEntry.key==self.current_task.key).execute()
+        r=TaskEntry.update({
+                    TaskEntry.state:"done",
+                    TaskEntry.entry:self.current_task.serialize(),
+                    TaskEntry.modified:datetime.datetime.now(),
+                }).where(TaskEntry.key==self.current_task.key).execute()
 
         self.current_task_status="done"
 
+        self.log_task("task done")
         log('task done')
 
         self.current_task=None
@@ -396,18 +432,14 @@ class Queue(object):
     def task_failed(self,update=lambda x:None):
         update(self.current_task)
 
-        r=TaskEntry.update({TaskEntry.state:"failed",TaskEntry.entry:self.current_task.serialize()}).where(TaskEntry.key==self.current_task.key).execute()
+        r=TaskEntry.update({
+                    TaskEntry.state:"failed",
+                    TaskEntry.entry:self.current_task.serialize(),
+                    TaskEntry.modified:datetime.datetime.now(),
+                }).where(TaskEntry.key==self.current_task.key).execute()
 
         self.current_task_status = "failed"
         self.current_task = None
-
-
-    def copy_task(self,fromk,tok,taskname=None):
-        if taskname is None:
-            taskname=self.taskname
-
-        task=Task.from_file(self.queue_dir(fromk) + "/" + taskname)
-        task.to_file(self.queue_dir(tok) + "/" + taskname)
 
     def move_task(self,fromk,tok,task):
         r=TaskEntry.update({
@@ -476,20 +508,105 @@ if __name__ == "__main__":
 
         app = Flask(__name__)
 
+        decoded_entries={}
+
         @app.route('/')
         def list():
-            entries=[model_to_dict(entry) for entry in TaskEntry.select().execute()]
+            try:
+                db.connect()
+            except peewee.OperationalError as e:
+                pass
+
+            print("searching for entries")
+            entries=[model_to_dict(entry) for entry in TaskEntry.select().order_by(TaskEntry.modified.desc()).execute()]
+            print("found entries",len(entries))
             for entry in entries:
-                entry_data=yaml.load(StringIO.StringIO(entry['entry']))
+                print("decoding",len(entry['entry']))
+                if entry['entry'] in decoded_entries:
+                    entry_data=decoded_entries[entry['entry']]
+                else:
+                    entry_data=yaml.load(StringIO.StringIO(entry['entry']))
+
+                    entry_data['submission_info']['callback_parameters']={}
+                    for callback in entry_data['submission_info']['callbacks']:
+                        entry_data['submission_info']['callback_parameters'].update(urlparse.parse_qs(callback.split("?",1)[1]))
+
+                    decoded_entries[entry['entry']]=entry_data
                 entry['entry']=entry_data
+
+            db.close()
             return render_template('task_list.html', entries=entries)
+        
+        @app.route('/task/info/<string:key>')
+        def task_info(key):
+            entry=[model_to_dict(entry) for entry in TaskEntry.select().where(TaskEntry.key==key).execute()]
+            if len(entry)==0:
+                return make_response("no such entry found")
+
+            entry=entry[0]
+
+            print("decoding",len(entry['entry']))
+            entry_data=yaml.load(StringIO.StringIO(entry['entry']))
+            entry['entry']=entry_data
+                
+            from ansi2html import ansi2html
+
+            if entry['entry']['execution_info'] is not None:
+                entry['exception']=entry['entry']['execution_info']['exception']['exception_message']
+                formatted_exception=ansi2html(entry['entry']['execution_info']['exception']['formatted_exception']).split("\n")
+            else:
+                entry['exception']="no exception"
+                formatted_exception=["no exception"]
+            
+            history=[model_to_dict(en) for en in TaskHistory.select().where(TaskHistory.key==key).order_by(TaskHistory.id.desc()).execute()]
+            #history=[model_to_dict(en) for en in TaskHistory.select().where(TaskHistory.key==key).order_by(TaskHistory.timestamp.desc()).execute()]
+
+            return render_template('task_info.html', entry=entry,history=history,formatted_exception=formatted_exception)
         
         @app.route('/purge')
         def purge():
-            entries=TaskEntry.delete().execute()
-            return make_response("deleted %i"%len(entries))
+            nentries=TaskEntry.delete().execute()
+            return make_response("deleted %i"%nentries)
 
-        app.run(port=5555,debug=True,host=args.host)
+        @app.route('/resubmit/<string:scope>/<string:selector>')
+        def resubmit(scope,selector):
+            if scope=="state":
+                if selector=="all":
+                    nentries=TaskEntry.update({
+                                    TaskEntry.state:"waiting",
+                                    TaskEntry.modified:datetime.datetime.now(),
+                                })\
+                                .execute()
+                else:
+                    nentries=TaskEntry.update({
+                                    TaskEntry.state:"waiting",
+                                    TaskEntry.modified:datetime.datetime.now(),
+                                })\
+                                .where(TaskEntry.state==selector)\
+                                .execute()
+            elif scope=="task":
+                nentries=TaskEntry.update({
+                                TaskEntry.state:"waiting",
+                                TaskEntry.modified:datetime.datetime.now(),
+                            })\
+                            .where(TaskEntry.key==selector)\
+                            .execute()
+
+            return make_response("resubmitted %i"%nentries)
+
+
+#         class MyApplication(Application):
+#            def load(self):
+
+#                  from openlibrary.coverstore import server, code
+#                   server.load_config(configfile)
+#                    return code.app.wsgifunc()
+
+        #from gunicorn.app.base import Application
+        #Application().run(app,port=5555,debug=True,host=args.host)
+
+ #       MyApplication().run()
+        app.run(port=5555,debug=True,host=args.host,threaded=True)
     else:
         log(Queue().info)
         log(Queue().list(kinds=["waiting","done","failed","running"]))
