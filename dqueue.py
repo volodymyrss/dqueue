@@ -264,8 +264,16 @@ class Queue(object):
 
         task=Task(task_data,submission_data=submission_data,depends_on=depends_on)
 
-        instances_for_key=self.find_task_instances(task)
-        assert len(instances_for_key)<=1
+        ntry_race=10
+        while True:
+            instances_for_key=self.find_task_instances(task)
+            if len(instances_for_key)<=1:
+                break
+            time.sleep(1)
+            ntry_race-=1
+        if len(instances_for_key)>1:
+            raise Exception("probably race condition, multiple task instances:",instances_for_key)
+
 
         if len(instances_for_key) == 1:
             instance_for_key=instances_for_key[0]
