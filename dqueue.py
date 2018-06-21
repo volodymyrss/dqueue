@@ -398,22 +398,36 @@ class Queue(object):
 
 
     def task_locked(self,depends_on):
+        log("locking task",self.current_task)
+        self.log_task("task to lock...",state="locked")
         if self.current_task is None:
             raise Exception("task must be available to lock")
 
-        log("locking task",self.current_task)
         self.current_task.depends_on=depends_on
         serialized=self.current_task.serialize()
 
         self.log_task("task to lock: serialized to %i"%len(serialized),state="locked")
 
-        r=TaskEntry.update({
-                    TaskEntry.state:"locked",
-                    TaskEntry.entry:serialized,
-                }).where(
-                    TaskEntry.key==self.current_task.key,
-                    TaskEntry.state=="running",
-                 ).execute()
+        n_tries_left=10
+        retry_delay=2
+        while n_tries_left>0:
+            try:
+                r=TaskEntry.update({
+                            TaskEntry.state:"locked",
+                            TaskEntry.entry:serialized,
+                        }).where(
+                            TaskEntry.key==self.current_task.key,
+                            TaskEntry.state=="running",
+                         ).execute()
+            except Exception as e:
+                log('failed to lock:',repr(e))
+                self.log_task("task to failed lock: %s; serialized to %i"%(repr(e),len(serialized)),state="failed_to_lock")
+                time.sleep(retry_delay)
+                if n_tries_left==1:
+                    raise
+                n_tries_left-=1
+            else:
+                break
         
         self.log_task("task locked from "+self.current_task_status,state="locked")
 
