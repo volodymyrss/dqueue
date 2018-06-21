@@ -537,7 +537,10 @@ if __name__ == "__main__":
 
                     entry_data['submission_info']['callback_parameters']={}
                     for callback in entry_data['submission_info']['callbacks']:
-                        entry_data['submission_info']['callback_parameters'].update(urlparse.parse_qs(callback.split("?",1)[1]))
+                        if callback is not None:
+                            entry_data['submission_info']['callback_parameters'].update(urlparse.parse_qs(callback.split("?",1)[1]))
+                        else:
+                            entry_data['submission_info']['callback_parameters'].update(dict(job_id="unset",session_id="unset"))
 
                     decoded_entries[entry['entry']]=entry_data
                 entry['entry']=entry_data
