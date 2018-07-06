@@ -180,7 +180,8 @@ class Queue(object):
         r=[]
         for task_key in self.list("locked"):
             task_entry=self.select_task_entry(task_key)
-            log("trying to unlock", task_key,task_entry,task_entry.key,task_entry.entry)
+            log("trying to unlock", task_entry.key)
+            #log("trying to unlock", task_key,task_entry,task_entry.key,task_entry.entry)
             r.append(self.try_to_unlock(Task.from_entry(task_entry.entry)))
         return r
 
@@ -213,7 +214,7 @@ class Queue(object):
            # self.move_task("locked", "waiting", task)
           #  return dict(state="waiting", key=task.key)
 
-        log("task still locked", task)
+        log("task still locked", task.key)
         return dict(state="locked",key=task.key)
     
     def remember(self,task_data,submission_data=None):
@@ -390,7 +391,8 @@ class Queue(object):
             else:
                 dependencies[-1]['state']='incomplete'
             
-            log("dependency:",dependencies[-1]['state'],dependencies[-1]['states'], dependency, dependency_instances)
+            log("dependency:",dependencies[-1]['state'],dependencies[-1]['states'], dependencies[-1]['task'].key, dependency_instances[0])
+            #log("dependency:",dependencies[-1]['state'],dependencies[-1]['states'], dependency, dependency_instances)
 
         return dependencies
 
@@ -437,6 +439,8 @@ class Queue(object):
 
     def task_done(self):
         log("task done",self.current_task)
+
+        self.log_task("task to register done")
 
         r=TaskEntry.update({
                     TaskEntry.state:"done",
@@ -547,14 +551,24 @@ if __name__ == "__main__":
                 if entry['entry'] in decoded_entries:
                     entry_data=decoded_entries[entry['entry']]
                 else:
-                    entry_data=yaml.load(StringIO.StringIO(entry['entry']))
+                    try:
+                        entry_data=yaml.load(StringIO.StringIO(entry['entry']))
+                        entry_data['submission_info']['callback_parameters']={}
+                        for callback in entry_data['submission_info']['callbacks']:
+                            if callback is not None:
+                                entry_data['submission_info']['callback_parameters'].update(urlparse.parse_qs(callback.split("?",1)[1]))
+                            else:
+                                entry_data['submission_info']['callback_parameters'].update(dict(job_id="unset",session_id="unset"))
+                    except:
+                        entry_data={'task_data':
+                                        {'object_identity':
+                                            {'factory_name':'??'}},
+                                    'submission_info':
+                                        {'callback_parameters':
+                                            {'job_id':['??'],
+                                             'session_id':['??']}}
+                                    }
 
-                    entry_data['submission_info']['callback_parameters']={}
-                    for callback in entry_data['submission_info']['callbacks']:
-                        if callback is not None:
-                            entry_data['submission_info']['callback_parameters'].update(urlparse.parse_qs(callback.split("?",1)[1]))
-                        else:
-                            entry_data['submission_info']['callback_parameters'].update(dict(job_id="unset",session_id="unset"))
 
                     decoded_entries[entry['entry']]=entry_data
                 entry['entry']=entry_data
@@ -571,22 +585,26 @@ if __name__ == "__main__":
             entry=entry[0]
 
             print("decoding",len(entry['entry']))
-            entry_data=yaml.load(StringIO.StringIO(entry['entry']))
-            entry['entry']=entry_data
+
+            try:
+                entry_data=yaml.load(StringIO.StringIO(entry['entry']))
+                entry['entry']=entry_data
+                    
+                from ansi2html import ansi2html
+
+                if entry['entry']['execution_info'] is not None:
+                    entry['exception']=entry['entry']['execution_info']['exception']['exception_message']
+                    formatted_exception=ansi2html(entry['entry']['execution_info']['exception']['formatted_exception']).split("\n")
+                else:
+                    entry['exception']="no exception"
+                    formatted_exception=["no exception"]
                 
-            from ansi2html import ansi2html
+                history=[model_to_dict(en) for en in TaskHistory.select().where(TaskHistory.key==key).order_by(TaskHistory.id.desc()).execute()]
+                #history=[model_to_dict(en) for en in TaskHistory.select().where(TaskHistory.key==key).order_by(TaskHistory.timestamp.desc()).execute()]
 
-            if entry['entry']['execution_info'] is not None:
-                entry['exception']=entry['entry']['execution_info']['exception']['exception_message']
-                formatted_exception=ansi2html(entry['entry']['execution_info']['exception']['formatted_exception']).split("\n")
-            else:
-                entry['exception']="no exception"
-                formatted_exception=["no exception"]
-            
-            history=[model_to_dict(en) for en in TaskHistory.select().where(TaskHistory.key==key).order_by(TaskHistory.id.desc()).execute()]
-            #history=[model_to_dict(en) for en in TaskHistory.select().where(TaskHistory.key==key).order_by(TaskHistory.timestamp.desc()).execute()]
-
-            return render_template('task_info.html', entry=entry,history=history,formatted_exception=formatted_exception)
+                return render_template('task_info.html', entry=entry,history=history,formatted_exception=formatted_exception)
+            except:
+                return entry['entry']
         
         @app.route('/purge')
         def purge():
