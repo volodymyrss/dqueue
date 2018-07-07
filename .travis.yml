@@ -14,7 +14,7 @@ install:
 - pip install -r requirements.txt
 - pip install .
 script:
-- echo "db: $DQUEUE_DATABASE_URL"
+- echo $DQUEUE_DATABASE_URL"
 - PYTHONPATH=./ py.test . --cov=./
 after_success:
 - coverage xml
@@ -22,4 +22,4 @@ after_success:
 - codecov
 env:
   global:
-    - DQUEUE_DATABASE_URL=mysql+pool://root:@localhost/dqueue?max_connections=42&stale_timeout=8001.2
+    - DQUEUE_DATABASE_URL=mysql+pool://root@localhost/dqueue?max_connections=42&stale_timeout=8001.2
