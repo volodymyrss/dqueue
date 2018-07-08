@@ -125,8 +125,10 @@ class Task(object):
         task_data_string=yaml.dump(self.task_data,encoding='utf-8')
 
         components.append(sha224(task_data_string).hexdigest()[:8])
-        log("encoding: "+repr(components),severity="debug")
-        log(task_data_string,severity="debug")
+        log("encoding: "+repr(components))
+        log(task_data_string)
+        #log("encoding: "+repr(components),severity="debug")
+        #log(task_data_string,severity="debug")
 
         if not key:
             components.append("%.14lg"%self.submission_info['time'])
@@ -166,6 +168,7 @@ class Queue(object):
 
 
     def find_task_instances(self,task,klist=None):
+        log("find_task_instances for",task.key)
         if klist is None:
             klist=["waiting", "running", "done", "failed", "locked"]
 
@@ -341,6 +344,9 @@ class Queue(object):
         entry=entries[0]
         self.current_task=Task.from_entry(entry.entry)
 
+
+        assert self.current_task.key==entry.key
+
         log(self.current_task.key)
         
 
@@ -371,6 +377,8 @@ class Queue(object):
         if task.depends_on is None:
             raise Exception("can not inspect dependecies in an independent task!")
 
+        log("find_dependecies_states for",task.key)
+
         dependencies=[]
         for dependency in task.depends_on:
             dependency_task=Task(dependency)
@@ -384,6 +392,11 @@ class Queue(object):
                 dependencies[-1]['states'].append(i['state'])
                 dependencies[-1]['task']=dependency_task
 
+            if len(dependencies[-1]['states'])==0:
+                print("job dependencies do not exist, expecting %s"%dependency_task.key)
+                print(dependency_task.serialize())
+                raise Exception("job dependencies do not exist, expecting %s"%dependency_task.key)
+
             if 'done' in dependencies[-1]['states']:
                 dependencies[-1]['state']='done'
             elif 'failed' in dependencies[-1]['states']:
@@ -391,7 +404,11 @@ class Queue(object):
             else:
                 dependencies[-1]['state']='incomplete'
             
-            log("dependency:",dependencies[-1]['state'],dependencies[-1]['states'], dependencies[-1]['task'].key, dependency_instances[0])
+            try:
+                log("dependency:",dependencies[-1]['state'],dependencies[-1]['states'], dependencies[-1]['task'].key, dependency_instances[0])
+            except KeyError:
+                log("problematic dependency:",dependencies[-1])
+                raise Exception("problematic dependency:",dependencies[-1])
             #log("dependency:",dependencies[-1]['state'],dependencies[-1]['states'], dependency, dependency_instances)
 
         return dependencies
@@ -438,7 +455,7 @@ class Queue(object):
 
 
     def task_done(self):
-        log("task done",self.current_task)
+        log("task done, closing:",self.current_task.key,self.current_task)
 
         self.log_task("task to register done")
 
@@ -451,7 +468,7 @@ class Queue(object):
         self.current_task_status="done"
 
         self.log_task("task done")
-        log('task done')
+        log('task registered done',self.current_task.key)
 
         self.current_task=None
 
