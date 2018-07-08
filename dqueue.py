@@ -39,7 +39,7 @@ import peewee
 from playhouse.db_url import connect
 from playhouse.shortcuts import model_to_dict, dict_to_model
 
-db=connect(os.environ.get("DQUEUE_DATABASE_URL"))
+db=connect(os.environ.get("DQUEUE_DATABASE_URL","mysql+pool://root@localhost/dqueue?max_connections=42&stale_timeout=8001.2"))
 #db.get_conn().ping(True)
 
 class TaskEntry(peewee.Model):
@@ -125,8 +125,10 @@ class Task(object):
         task_data_string=yaml.dump(self.task_data,encoding='utf-8')
 
         components.append(sha224(task_data_string).hexdigest()[:8])
-        log("encoding: "+repr(components),severity="debug")
-        log(task_data_string,severity="debug")
+        log("encoding: "+repr(components))
+        log(task_data_string)
+        #log("encoding: "+repr(components),severity="debug")
+        #log(task_data_string,severity="debug")
 
         if not key:
             components.append("%.14lg"%self.submission_info['time'])
@@ -166,6 +168,7 @@ class Queue(object):
 
 
     def find_task_instances(self,task,klist=None):
+        log("find_task_instances for",task.key)
         if klist is None:
             klist=["waiting", "running", "done", "failed", "locked"]
 
@@ -180,7 +183,8 @@ class Queue(object):
         r=[]
         for task_key in self.list("locked"):
             task_entry=self.select_task_entry(task_key)
-            log("trying to unlock", task_key,task_entry,task_entry.key,task_entry.entry)
+            log("trying to unlock", task_entry.key)
+            #log("trying to unlock", task_key,task_entry,task_entry.key,task_entry.entry)
             r.append(self.try_to_unlock(Task.from_entry(task_entry.entry)))
         return r
 
@@ -213,7 +217,7 @@ class Queue(object):
            # self.move_task("locked", "waiting", task)
           #  return dict(state="waiting", key=task.key)
 
-        log("task still locked", task)
+        log("task still locked", task.key)
         return dict(state="locked",key=task.key)
     
     def remember(self,task_data,submission_data=None):
@@ -340,6 +344,9 @@ class Queue(object):
         entry=entries[0]
         self.current_task=Task.from_entry(entry.entry)
 
+
+        assert self.current_task.key==entry.key
+
         log(self.current_task.key)
         
 
@@ -370,6 +377,8 @@ class Queue(object):
         if task.depends_on is None:
             raise Exception("can not inspect dependecies in an independent task!")
 
+        log("find_dependecies_states for",task.key)
+
         dependencies=[]
         for dependency in task.depends_on:
             dependency_task=Task(dependency)
@@ -383,6 +392,11 @@ class Queue(object):
                 dependencies[-1]['states'].append(i['state'])
                 dependencies[-1]['task']=dependency_task
 
+            if len(dependencies[-1]['states'])==0:
+                print("job dependencies do not exist, expecting %s"%dependency_task.key)
+                print(dependency_task.serialize())
+                raise Exception("job dependencies do not exist, expecting %s"%dependency_task.key)
+
             if 'done' in dependencies[-1]['states']:
                 dependencies[-1]['state']='done'
             elif 'failed' in dependencies[-1]['states']:
@@ -390,7 +404,12 @@ class Queue(object):
             else:
                 dependencies[-1]['state']='incomplete'
             
-            log("dependency:",dependencies[-1]['state'],dependencies[-1]['states'], dependency, dependency_instances)
+            try:
+                log("dependency:",dependencies[-1]['state'],dependencies[-1]['states'], dependencies[-1]['task'].key, dependency_instances[0])
+            except KeyError:
+                log("problematic dependency:",dependencies[-1])
+                raise Exception("problematic dependency:",dependencies[-1])
+            #log("dependency:",dependencies[-1]['state'],dependencies[-1]['states'], dependency, dependency_instances)
 
         return dependencies
 
@@ -436,7 +455,9 @@ class Queue(object):
 
 
     def task_done(self):
-        log("task done",self.current_task)
+        log("task done, closing:",self.current_task.key,self.current_task)
+
+        self.log_task("task to register done")
 
         r=TaskEntry.update({
                     TaskEntry.state:"done",
@@ -447,7 +468,7 @@ class Queue(object):
         self.current_task_status="done"
 
         self.log_task("task done")
-        log('task done')
+        log('task registered done',self.current_task.key)
 
         self.current_task=None
 
@@ -547,11 +568,24 @@ if __name__ == "__main__":
                 if entry['entry'] in decoded_entries:
                     entry_data=decoded_entries[entry['entry']]
                 else:
-                    entry_data=yaml.load(StringIO.StringIO(entry['entry']))
+                    try:
+                        entry_data=yaml.load(StringIO.StringIO(entry['entry']))
+                        entry_data['submission_info']['callback_parameters']={}
+                        for callback in entry_data['submission_info']['callbacks']:
+                            if callback is not None:
+                                entry_data['submission_info']['callback_parameters'].update(urlparse.parse_qs(callback.split("?",1)[1]))
+                            else:
+                                entry_data['submission_info']['callback_parameters'].update(dict(job_id="unset",session_id="unset"))
+                    except:
+                        entry_data={'task_data':
+                                        {'object_identity':
+                                            {'factory_name':'??'}},
+                                    'submission_info':
+                                        {'callback_parameters':
+                                            {'job_id':['??'],
+                                             'session_id':['??']}}
+                                    }
 
-                    entry_data['submission_info']['callback_parameters']={}
-                    for callback in entry_data['submission_info']['callbacks']:
-                        entry_data['submission_info']['callback_parameters'].update(urlparse.parse_qs(callback.split("?",1)[1]))
 
                     decoded_entries[entry['entry']]=entry_data
                 entry['entry']=entry_data
@@ -568,22 +602,26 @@ if __name__ == "__main__":
             entry=entry[0]
 
             print("decoding",len(entry['entry']))
-            entry_data=yaml.load(StringIO.StringIO(entry['entry']))
-            entry['entry']=entry_data
+
+            try:
+                entry_data=yaml.load(StringIO.StringIO(entry['entry']))
+                entry['entry']=entry_data
+                    
+                from ansi2html import ansi2html
+
+                if entry['entry']['execution_info'] is not None:
+                    entry['exception']=entry['entry']['execution_info']['exception']['exception_message']
+                    formatted_exception=ansi2html(entry['entry']['execution_info']['exception']['formatted_exception']).split("\n")
+                else:
+                    entry['exception']="no exception"
+                    formatted_exception=["no exception"]
                 
-            from ansi2html import ansi2html
+                history=[model_to_dict(en) for en in TaskHistory.select().where(TaskHistory.key==key).order_by(TaskHistory.id.desc()).execute()]
+                #history=[model_to_dict(en) for en in TaskHistory.select().where(TaskHistory.key==key).order_by(TaskHistory.timestamp.desc()).execute()]
 
-            if entry['entry']['execution_info'] is not None:
-                entry['exception']=entry['entry']['execution_info']['exception']['exception_message']
-                formatted_exception=ansi2html(entry['entry']['execution_info']['exception']['formatted_exception']).split("\n")
-            else:
-                entry['exception']="no exception"
-                formatted_exception=["no exception"]
-            
-            history=[model_to_dict(en) for en in TaskHistory.select().where(TaskHistory.key==key).order_by(TaskHistory.id.desc()).execute()]
-            #history=[model_to_dict(en) for en in TaskHistory.select().where(TaskHistory.key==key).order_by(TaskHistory.timestamp.desc()).execute()]
-
-            return render_template('task_info.html', entry=entry,history=history,formatted_exception=formatted_exception)
+                return render_template('task_info.html', entry=entry,history=history,formatted_exception=formatted_exception)
+            except:
+                return entry['entry']
         
         @app.route('/purge')
         def purge():

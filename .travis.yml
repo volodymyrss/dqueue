@@ -1,0 +1,26 @@
+language: python
+python:
+- '2.7'
+dist: trusty
+services:
+- docker
+- mysql
+before_install:
+- sudo apt-get -qq update
+- pip install codecov
+- pip install pytest-cov
+- pip install codacy-coverage
+- mysql -e 'CREATE DATABASE IF NOT EXISTS dqueue;'
+install:
+- pip install -r requirements.txt
+- pip install .
+script:
+- echo $DQUEUE_DATABASE_URL
+- PYTHONPATH=./ py.test . --cov=./
+after_success:
+- coverage xml
+- python-codacy-coverage -r coverage.xml
+- codecov
+env:
+  global:
+    - DQUEUE_DATABASE_URL='mysql+pool://root@localhost/dqueue?max_connections=42&stale_timeout=8001.2'
