@@ -1,10 +1,11 @@
-from setuptools import setup
+from distutils.core import setup
 
-setup(name='fsqueue',
-      version='0.1',
-      description='filesystem-based queue, for environments where nothing better is available',
-      url='https://github.com/volodymyrss/fsqueue',
-      author='V.S.',
+setup(name='dqueue',
+      version='1.0',
+      description='a queue manager (yet another)',
+      author='Volodymyr Savchenko',
+      author_email='vladimir.savchenko@gmail.com',
       license='MIT',
-      py_modules=['fsqueue'],
-      zip_safe=False)
+      py_modules=['dqueue'],
+      zip_safe=False,
+     )

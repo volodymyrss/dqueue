@@ -39,7 +39,7 @@ import peewee
 from playhouse.db_url import connect
 from playhouse.shortcuts import model_to_dict, dict_to_model
 
-db=connect(os.environ.get("DQUEUE_DATABASE_URL"))
+db=connect(os.environ.get("DQUEUE_DATABASE_URL","mysql+pool://root@localhost/dqueue?max_connections=42&stale_timeout=8001.2"))
 #db.get_conn().ping(True)
 
 class TaskEntry(peewee.Model):
