@@ -36,7 +36,37 @@
                     {{ ekey }}
                 </td>
                 <td>
-                    {{ evalue }}
+                    {% if ekey == "task_data" %}
+                        <table class="table">
+                            {% for tdkey,tdvalue in evalue.object_identity.items() %}
+                            <tr>
+                                <td>
+                                    {{ tdkey }}
+                                </td>
+                                <td>
+                                    {% if tdkey == "assumptions" %}
+                                        <table class="table">
+                                            {% for assumption in tdvalue %}
+                                            <tr>
+                                                <td>
+                                                    {{ assumption[0] }}
+                                                </td>
+                                                <td>
+                                                    {{ assumption[1] }}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </table>
+                                    {% else %}
+                                        {{ tdvalue }}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    {% else %}
+                        {{ evalue }}
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}
