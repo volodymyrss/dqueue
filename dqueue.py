@@ -330,8 +330,8 @@ class Queue(object):
                         TaskEntry.worker_id:self.worker_id,
                         TaskEntry.modified:datetime.datetime.now(),
                     })\
-                    .order_by(TaskEntry.created.desc())\
-                    .where(TaskEntry.state=="waiting").limit(1).execute()
+                    .order_by(TaskEntry.created)\
+                    .where( (TaskEntry.state=="waiting") & (TaskEntry.queue==self.queue) ).limit(1).execute()
 
         if r==0:
             self.try_all_locked()
