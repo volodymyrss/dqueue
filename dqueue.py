@@ -176,12 +176,13 @@ class Queue(object):
 
 
     def find_task_instances(self,task,klist=None):
-        log("find_task_instances for",task.key)
+        print("find_task_instances for",task.key)
         if klist is None:
             klist=["waiting", "running", "done", "failed", "locked"]
 
         instances_for_key = []
         for state in klist:
+            print("any",state,"find_task_instances for",task.key)
             instances_for_key+=[
                     dict(state=state,task_entry=task_entry) for task_entry in TaskEntry.select().where(TaskEntry.state==state, TaskEntry.key==task.key, TaskEntry.queue==self.queue)
                 ]
@@ -388,21 +389,25 @@ class Queue(object):
         log("find_dependecies_states for",task.key)
 
         dependencies=[]
-        for dependency in task.depends_on:
+        for i_dep,dependency in enumerate(task.depends_on):
             dependency_task=Task(dependency)
+
+            print("task",task.key,"depends on task",dependency_task.key,i_dep,"/",len(task.depends_on))
             dependency_instances=self.find_task_instances(dependency_task)
+            print("task instances for",dependency_task.key,len(dependency_instances))
 
             dependencies.append(dict(states=[]))
 
-            for i in dependency_instances:
+            for i_i,i in enumerate(dependency_instances):
                 # if i['state']=="done"]) == 0:
                 #log("dependency incomplete")
                 dependencies[-1]['states'].append(i['state'])
                 dependencies[-1]['task']=dependency_task
+                print("task instance for",dependency_task.key,"is",i['state'],"from",i_i,"/",len(dependency_instances))
 
             if len(dependencies[-1]['states'])==0:
                 print("job dependencies do not exist, expecting %s"%dependency_task.key)
-                print(dependency_task.serialize())
+                #print(dependency_task.serialize())
                 raise Exception("job dependencies do not exist, expecting %s"%dependency_task.key)
 
             if 'done' in dependencies[-1]['states']:
@@ -518,7 +523,7 @@ class Queue(object):
         kind_jobs = []
 
         for kind in kinds:
-            for task_entry in TaskEntry.select().where(TaskEntry.state==kind):
+            for task_entry in TaskEntry.select().where(TaskEntry.state==kind, TaskEntry.queue==self.queue):
                 kind_jobs.append(task_entry.key)
         return kind_jobs
 
@@ -533,7 +538,7 @@ class Queue(object):
         r=""
         for kind in "waiting","running","done","failed","locked":
             r+="\n= "+kind+"\n"
-            for task_entry in TaskEntry.select().where(TaskEntry.state==kind):
+            for task_entry in TaskEntry.select().where(TaskEntry.state==kind, TaskEntry.queue==self.queue):
                 r+=" - "+repr(model_to_dict(task_entry))+"\n"
         return r
 
