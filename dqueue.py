@@ -10,8 +10,12 @@ from collections import OrderedDict
 import glob
 import logging
 import StringIO
-
 import urlparse
+
+import pymysql
+import peewee
+from playhouse.db_url import connect
+from playhouse.shortcuts import model_to_dict, dict_to_model
 
 logger=logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -34,21 +38,15 @@ class CurrentTaskUnfinished(Exception):
 class TaskStolen(Exception):
     pass
 
-import pymysql
-import peewee
-from playhouse.db_url import connect
-from playhouse.shortcuts import model_to_dict, dict_to_model
 
 def connect_db():
     return connect(os.environ.get("DQUEUE_DATABASE_URL","mysql+pool://root@localhost/dqueue?max_connections=42&stale_timeout=8001.2"))
-
 
 try:
     db=connect_db()
 except:
     pass
 
-#db.get_conn().ping(True)
 
 class TaskEntry(peewee.Model):
     queue = peewee.CharField(default="default")
@@ -269,7 +267,7 @@ class Queue(object):
                              created=datetime.datetime.now(),
                              modified=datetime.datetime.now(),
                             ).execute()
-        except pymysql.err.IntegrityError as e:
+        except (pymysql.err.IntegrityError, peewee.IntegrityError) as e:
             log("task already inserted")
 
     def put(self,task_data,submission_data=None, depends_on=None):
