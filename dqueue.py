@@ -131,8 +131,8 @@ class Task(object):
         task_data_string=yaml.dump(self.task_data,encoding='utf-8')
 
         components.append(sha224(task_data_string).hexdigest()[:8])
-        log("encoding: "+repr(components))
-        log(task_data_string)
+        #log("encoding: "+repr(components))
+        #log(task_data_string)
         #log("encoding: "+repr(components),severity="debug")
         #log(task_data_string,severity="debug")
 
@@ -174,7 +174,7 @@ class Queue(object):
 
 
     def find_task_instances(self,task,klist=None):
-        print("find_task_instances for",task.key)
+        log("find_task_instances for",task.key,"in",self.queue)
         if klist is None:
             klist=["waiting", "running", "done", "failed", "locked"]
 
@@ -268,7 +268,12 @@ class Queue(object):
                              modified=datetime.datetime.now(),
                             ).execute()
         except (pymysql.err.IntegrityError, peewee.IntegrityError) as e:
-            log("task already inserted")
+            log("task already inserted, reasserting the queue to",self.queue)
+            TaskEntry.update(
+                                queue=self.queue,
+                            ).where(
+                                TaskEntry.key == task.key,
+                            ).execute()
 
     def put(self,task_data,submission_data=None, depends_on=None):
         assert depends_on is None or type(depends_on) in [list,tuple]
@@ -298,8 +303,10 @@ class Queue(object):
 
         if depends_on is None:
             self.insert_task_entry(task,"waiting")
+            log("task inserted as waiting")
         else:
             self.insert_task_entry(task,"locked")
+            log("task inserted as locked")
 
         instance_for_key=self.find_task_instances(task)[0]
         recovered_task=Task.from_entry(instance_for_key['task_entry'].entry)
@@ -511,6 +518,10 @@ class Queue(object):
             for key in self.list(fromk):
                 log("removing",fromk + "/" + key)
                 TaskEntry.delete().where(TaskEntry.key==key).execute()
+        
+    def purge(self):
+        nentries=TaskEntry.delete().execute()
+        log("deleted %i"%nentries)
 
     def list(self,kind=None,kinds=None,fullpath=False):
         if kinds is None:
