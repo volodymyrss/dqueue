@@ -574,7 +574,8 @@ if __name__ == "__main__":
                 pass
 
             print("searching for entries")
-            entries=[model_to_dict(entry) for entry in TaskEntry.select().order_by(TaskEntry.modified.desc()).execute()]
+            date_N_days_ago = datetime.datetime.now() - datetime.timedelta(days=2)
+            entries=[model_to_dict(entry) for entry in TaskEntry.select().where(TaskEntry.modified >= date_N_days_ago).order_by(TaskEntry.modified.desc()).execute()]
             print("found entries",len(entries))
             for entry in entries:
                 print("decoding",len(entry['entry']))
