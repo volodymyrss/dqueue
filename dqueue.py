@@ -10,8 +10,12 @@ from collections import OrderedDict
 import glob
 import logging
 import StringIO
-
 import urlparse
+
+import pymysql
+import peewee
+from playhouse.db_url import connect
+from playhouse.shortcuts import model_to_dict, dict_to_model
 
 logger=logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -34,21 +38,15 @@ class CurrentTaskUnfinished(Exception):
 class TaskStolen(Exception):
     pass
 
-import pymysql
-import peewee
-from playhouse.db_url import connect
-from playhouse.shortcuts import model_to_dict, dict_to_model
 
 def connect_db():
     return connect(os.environ.get("DQUEUE_DATABASE_URL","mysql+pool://root@localhost/dqueue?max_connections=42&stale_timeout=8001.2"))
-
 
 try:
     db=connect_db()
 except:
     pass
 
-#db.get_conn().ping(True)
 
 class TaskEntry(peewee.Model):
     queue = peewee.CharField(default="default")
@@ -133,8 +131,8 @@ class Task(object):
         task_data_string=yaml.dump(self.task_data,encoding='utf-8')
 
         components.append(sha224(task_data_string).hexdigest()[:8])
-        log("encoding: "+repr(components))
-        log(task_data_string)
+        #log("encoding: "+repr(components))
+        #log(task_data_string)
         #log("encoding: "+repr(components),severity="debug")
         #log(task_data_string,severity="debug")
 
@@ -176,7 +174,7 @@ class Queue(object):
 
 
     def find_task_instances(self,task,klist=None):
-        print("find_task_instances for",task.key)
+        log("find_task_instances for",task.key,"in",self.queue)
         if klist is None:
             klist=["waiting", "running", "done", "failed", "locked"]
 
@@ -269,8 +267,13 @@ class Queue(object):
                              created=datetime.datetime.now(),
                              modified=datetime.datetime.now(),
                             ).execute()
-        except pymysql.err.IntegrityError as e:
-            log("task already inserted")
+        except (pymysql.err.IntegrityError, peewee.IntegrityError) as e:
+            log("task already inserted, reasserting the queue to",self.queue)
+            TaskEntry.update(
+                                queue=self.queue,
+                            ).where(
+                                TaskEntry.key == task.key,
+                            ).execute()
 
     def put(self,task_data,submission_data=None, depends_on=None):
         assert depends_on is None or type(depends_on) in [list,tuple]
@@ -300,8 +303,10 @@ class Queue(object):
 
         if depends_on is None:
             self.insert_task_entry(task,"waiting")
+            log("task inserted as waiting")
         else:
             self.insert_task_entry(task,"locked")
+            log("task inserted as locked")
 
         instance_for_key=self.find_task_instances(task)[0]
         recovered_task=Task.from_entry(instance_for_key['task_entry'].entry)
@@ -513,6 +518,10 @@ class Queue(object):
             for key in self.list(fromk):
                 log("removing",fromk + "/" + key)
                 TaskEntry.delete().where(TaskEntry.key==key).execute()
+        
+    def purge(self):
+        nentries=TaskEntry.delete().execute()
+        log("deleted %i"%nentries)
 
     def list(self,kind=None,kinds=None,fullpath=False):
         if kinds is None:

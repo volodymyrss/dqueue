@@ -8,7 +8,7 @@ import time
 def test_one():
     import dqueue
 
-    queue=dqueue.Queue("test")
+    queue=dqueue.Queue("test-queue")
     queue.wipe(["waiting","done","running","failed","locked"])
 
     assert queue.info['waiting']==0
@@ -16,7 +16,6 @@ def test_one():
     assert queue.info['running']==0
     assert queue.info['failed']==0
     assert queue.info['locked']==0
-
 
     t1 = dict(test=1, data=2)
     t2 = dict(test=1, data=3)
@@ -94,8 +93,10 @@ def test_one():
 def test_locked_jobs():
     import dqueue
 
-    queue=dqueue.Queue("./queue")
+    queue=dqueue.Queue("test-queue")
     queue.wipe(["waiting","done","running","locked","failed"])
+
+    print("status:\n",queue.show())
 
     assert queue.info['waiting']==0
 
