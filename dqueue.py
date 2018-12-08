@@ -269,6 +269,8 @@ class Queue(object):
                             ).execute()
         except (pymysql.err.IntegrityError, peewee.IntegrityError) as e:
             log("task already inserted, reasserting the queue to",self.queue)
+
+            # deadlock
             TaskEntry.update(
                                 queue=self.queue,
                             ).where(
@@ -493,13 +495,28 @@ class Queue(object):
     def task_failed(self,update=lambda x:None):
         update(self.current_task)
 
+        task= self.current_task
+
+        self.log_task("task failed",self.current_task,"failed")
+        
+        history=[model_to_dict(en) for en in TaskHistory.select().where(TaskHistory.key==task.key).order_by(TaskHistory.id.desc()).execute()]
+        n_failed = len([he for he in history if he['state'] == "failed"])
+
+        self.log_task("task failed %i times already"%n_failed,task,"failed")
+        if n_failed < 10:# HC!
+            next_state = "waiting"
+            self.log_task("task failure forgiven, to waiting",task,"waiting")
+        else:
+            next_state = "failed"
+            self.log_task("task failure permanent",task,"waiting")
+
         r=TaskEntry.update({
-                    TaskEntry.state:"failed",
+                    TaskEntry.state:next_state,
                     TaskEntry.entry:self.current_task.serialize(),
                     TaskEntry.modified:datetime.datetime.now(),
                 }).where(TaskEntry.key==self.current_task.key).execute()
 
-        self.current_task_status = "failed"
+        self.current_task_status = next_state
         self.current_task = None
 
     def move_task(self,fromk,tok,task):
@@ -574,6 +591,26 @@ if __name__ == "__main__":
         app = Flask(__name__)
 
         decoded_entries={}
+
+
+        class ReverseProxied(object):
+            def __init__(self, app):
+                self.app = app
+
+            def __call__(self, environ, start_response):
+                script_name = environ.get('HTTP_X_FORWARDED_PREFIX', '')
+                if script_name:
+                    environ['SCRIPT_NAME'] = script_name
+                    path_info = environ['PATH_INFO']
+                    if path_info.startswith(script_name):
+                        environ['PATH_INFO'] = path_info[len(script_name):]
+
+                scheme = environ.get('HTTP_X_SCHEME', '')
+                if scheme:
+                    environ['wsgi.url_scheme'] = scheme
+                return self.app(environ, start_response)
+
+        app.wsgi_app = ReverseProxied(app.wsgi_app)
 
         @app.route('/')
         def list():
