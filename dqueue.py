@@ -25,7 +25,7 @@ formatter = logging.Formatter('%(asctime)s %(levelname)8s %(name)s | %(message)s
 handler.setFormatter(formatter)
 
 def log(*args,**kwargs):
-    severity=kwargs.get('severity','info').upper()
+    severity=kwargs.get('severity','warning').upper()
     logger.log(getattr(logging,severity)," ".join([repr(arg) for arg in list(args)+list(kwargs.items())]))
 
 
@@ -178,12 +178,15 @@ class Queue(object):
         if klist is None:
             klist=["waiting", "running", "done", "failed", "locked"]
 
-        instances_for_key = []
-        for state in klist:
-            print("any",state,"find_task_instances for",task.key)
-            instances_for_key+=[
-                    dict(state=state,task_entry=task_entry) for task_entry in TaskEntry.select().where(TaskEntry.state==state, TaskEntry.key==task.key, TaskEntry.queue==self.queue)
-                ]
+        instances_for_key=[
+                dict(task_entry=task_entry) for task_entry in TaskEntry.select().where(TaskEntry.state << klist, TaskEntry.key==task.key, TaskEntry.queue==self.queue)
+            ]
+
+        log("found task instances for",task.key,"N == ",len(instances_for_key))
+        for i in instances_for_key:
+            i['state'] = i['task_entry'].state
+            log(i['state'], i['task_entry'])
+
         return instances_for_key
     
     def try_all_locked(self):
@@ -283,12 +286,17 @@ class Queue(object):
         task=Task(task_data,submission_data=submission_data,depends_on=depends_on)
 
         ntry_race=10
-        while True:
+        retry_sleep_race=2
+        while ntry_race>0:
             instances_for_key=self.find_task_instances(task)
             if len(instances_for_key)<=1:
                 break
-            time.sleep(1)
+            log("found instances for key:",instances_for_key)
+            log("found unexpected number of instances for key:",len(instances_for_key))
+            log("sleeping for",retry_sleep_race,"attempt",ntry_race)
+            time.sleep(retry_sleep_race)
             ntry_race-=1
+
         if len(instances_for_key)>1:
             raise Exception("probably race condition, multiple task instances:",instances_for_key)
 
@@ -359,7 +367,7 @@ class Queue(object):
 
         entry=entries[0]
         self.current_task=Task.from_entry(entry.entry)
-
+        self.current_task_stored_key=self.current_task.key
 
         assert self.current_task.key==entry.key
 
@@ -476,6 +484,7 @@ class Queue(object):
 
     def task_done(self):
         log("task done, closing:",self.current_task.key,self.current_task)
+        log("task done, stored key:",self.current_task_stored_key)
 
         self.log_task("task to register done")
 
@@ -484,6 +493,14 @@ class Queue(object):
                     TaskEntry.entry:self.current_task.serialize(),
                     TaskEntry.modified:datetime.datetime.now(),
                 }).where(TaskEntry.key==self.current_task.key).execute()
+
+        if self.current_task_stored_key != self.current_task.key:
+            r=TaskEntry.update({
+                        TaskEntry.state:"done",
+                        TaskEntry.entry:self.current_task.serialize(),
+                        TaskEntry.modified:datetime.datetime.now(),
+                    }).where(TaskEntry.key==self.current_task_stored_key).execute()
+
 
         self.current_task_status="done"
 
@@ -586,7 +603,7 @@ if __name__ == "__main__":
 
     if args.listen:
         from flask import Flask
-        from flask import render_template,make_response
+        from flask import render_template,make_response,request
 
         app = Flask(__name__)
 
@@ -620,7 +637,7 @@ if __name__ == "__main__":
                 pass
 
             print("searching for entries")
-            date_N_days_ago = datetime.datetime.now() - datetime.timedelta(days=2)
+            date_N_days_ago = datetime.datetime.now() - datetime.timedelta(days=float(request.args.get('since',1)))
             entries=[model_to_dict(entry) for entry in TaskEntry.select().where(TaskEntry.modified >= date_N_days_ago).order_by(TaskEntry.modified.desc()).execute()]
             print("found entries",len(entries))
             for entry in entries:
