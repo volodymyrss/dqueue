@@ -520,9 +520,10 @@ class Queue(object):
         n_failed = len([he for he in history if he['state'] == "failed"])
 
         self.log_task("task failed %i times already"%n_failed,task,"failed")
-        if n_failed < 10:# HC!
+        if n_failed < 20:# HC!
             next_state = "waiting"
             self.log_task("task failure forgiven, to waiting",task,"waiting")
+            time.sleep(5+2**int(n_failed/2))
         else:
             next_state = "failed"
             self.log_task("task failure permanent",task,"waiting")
