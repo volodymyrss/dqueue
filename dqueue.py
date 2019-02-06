@@ -17,6 +17,8 @@ import peewee
 from playhouse.db_url import connect
 from playhouse.shortcuts import model_to_dict, dict_to_model
 
+n_failed_retries = int(os.environ.get('DQUEUE_FAILED_N_RETRY','20'))
+
 logger=logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 handler=logging.StreamHandler()
@@ -509,6 +511,10 @@ class Queue(object):
 
         self.current_task=None
 
+    def clear_task_history(self):
+        print('this is very descructive')
+        TaskHistory.delete().execute()
+
     def task_failed(self,update=lambda x:None):
         update(self.current_task)
 
@@ -520,7 +526,7 @@ class Queue(object):
         n_failed = len([he for he in history if he['state'] == "failed"])
 
         self.log_task("task failed %i times already"%n_failed,task,"failed")
-        if n_failed < 20:# HC!
+        if n_failed < n_failed_retries:# HC!
             next_state = "waiting"
             self.log_task("task failure forgiven, to waiting",task,"waiting")
             time.sleep(5+2**int(n_failed/2))

@@ -7,9 +7,10 @@ import time
 
 def test_one():
     import dqueue
-
+    
     queue=dqueue.Queue("test-queue")
     queue.wipe(["waiting","done","running","failed","locked"])
+    queue.clear_task_history()
 
     assert queue.info['waiting']==0
     assert queue.info['done']==0
@@ -70,9 +71,20 @@ def test_one():
     assert queue.info['locked']==0
 
 
-    t = queue.get().task_data
-    assert t==t2
-    queue.task_failed()
+    
+    print(queue.info)
+
+    n_tries = dqueue.n_failed_retries-2
+
+    while n_tries>0:
+        print("tries left",n_tries)
+        t = queue.get().task_data
+        assert t==t2
+        print(queue.info)
+
+        queue.task_failed()
+        n_tries-=1
+
     print(queue.info)
     
     assert queue.info['waiting']==0
