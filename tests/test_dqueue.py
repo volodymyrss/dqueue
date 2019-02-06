@@ -74,7 +74,7 @@ def test_one():
     
     print(queue.info)
 
-    n_tries = dqueue.n_failed_retries-2
+    n_tries = dqueue.n_failed_retries-1
 
     while n_tries>0:
         print("tries left",n_tries)
