@@ -9,8 +9,16 @@ from hashlib import sha224
 from collections import OrderedDict
 import glob
 import logging
-import StringIO
-import urlparse
+
+try:
+    import StringIO
+except:
+    from io import StringIO
+
+try:
+    import urlparse
+except ImportError:
+    import urllib.parse as urlparse
 
 import pymysql
 import peewee
