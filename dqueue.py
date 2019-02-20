@@ -49,6 +49,7 @@ try:
 except:
     pass
 
+    
 
 class TaskEntry(peewee.Model):
     queue = peewee.CharField(default="default")
@@ -77,7 +78,11 @@ class TaskHistory(peewee.Model):
     class Meta:
         database = db
 
-db.create_tables([TaskEntry,TaskHistory])
+try:
+    db.create_tables([TaskEntry,TaskHistory])
+    has_mysql = True
+except peewee.OperationalError:
+    has_mysql = False
 
 class Task(object):
     def __init__(self,task_data,execution_info=None, submission_data=None, depends_on=None):
