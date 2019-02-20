@@ -83,6 +83,8 @@ try:
     has_mysql = True
 except peewee.OperationalError:
     has_mysql = False
+except Exception:
+    has_mysql = False
 
 class Task(object):
     def __init__(self,task_data,execution_info=None, submission_data=None, depends_on=None):
