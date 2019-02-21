@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+
 
 import yaml
 import datetime
@@ -11,12 +11,12 @@ import glob
 import logging
 
 try:
-    import StringIO
+    import io
 except:
     from io import StringIO
 
 try:
-    import urlparse
+    import urllib.parse
 except ImportError:
     import urllib.parse as urlparse
 
@@ -127,7 +127,7 @@ class Task(object):
 
     @classmethod
     def from_entry(cls,entry):
-        task_dict=yaml.load(StringIO.StringIO(entry))
+        task_dict=yaml.load(io.StringIO(entry))
 
         self=cls(task_dict['task_data'])
         self.depends_on=task_dict['depends_on']
@@ -424,9 +424,9 @@ class Queue(object):
         for i_dep,dependency in enumerate(task.depends_on):
             dependency_task=Task(dependency)
 
-            print("task",task.key,"depends on task",dependency_task.key,i_dep,"/",len(task.depends_on))
+            print(("task",task.key,"depends on task",dependency_task.key,i_dep,"/",len(task.depends_on)))
             dependency_instances=self.find_task_instances(dependency_task)
-            print("task instances for",dependency_task.key,len(dependency_instances))
+            print(("task instances for",dependency_task.key,len(dependency_instances)))
 
             dependencies.append(dict(states=[]))
 
@@ -435,10 +435,10 @@ class Queue(object):
                 #log("dependency incomplete")
                 dependencies[-1]['states'].append(i['state'])
                 dependencies[-1]['task']=dependency_task
-                print("task instance for",dependency_task.key,"is",i['state'],"from",i_i,"/",len(dependency_instances))
+                print(("task instance for",dependency_task.key,"is",i['state'],"from",i_i,"/",len(dependency_instances)))
 
             if len(dependencies[-1]['states'])==0:
-                print("job dependencies do not exist, expecting %s"%dependency_task.key)
+                print(("job dependencies do not exist, expecting %s"%dependency_task.key))
                 #print(dependency_task.serialize())
                 raise Exception("job dependencies do not exist, expecting %s"%dependency_task.key)
 
@@ -661,18 +661,18 @@ if __name__ == "__main__":
             print("searching for entries")
             date_N_days_ago = datetime.datetime.now() - datetime.timedelta(days=float(request.args.get('since',1)))
             entries=[model_to_dict(entry) for entry in TaskEntry.select().where(TaskEntry.modified >= date_N_days_ago).order_by(TaskEntry.modified.desc()).execute()]
-            print("found entries",len(entries))
+            print(("found entries",len(entries)))
             for entry in entries:
-                print("decoding",len(entry['entry']))
+                print(("decoding",len(entry['entry'])))
                 if entry['entry'] in decoded_entries:
                     entry_data=decoded_entries[entry['entry']]
                 else:
                     try:
-                        entry_data=yaml.load(StringIO.StringIO(entry['entry']))
+                        entry_data=yaml.load(io.StringIO(entry['entry']))
                         entry_data['submission_info']['callback_parameters']={}
                         for callback in entry_data['submission_info']['callbacks']:
                             if callback is not None:
-                                entry_data['submission_info']['callback_parameters'].update(urlparse.parse_qs(callback.split("?",1)[1]))
+                                entry_data['submission_info']['callback_parameters'].update(urllib.parse.parse_qs(callback.split("?",1)[1]))
                             else:
                                 entry_data['submission_info']['callback_parameters'].update(dict(job_id="unset",session_id="unset"))
                     except:
@@ -700,10 +700,10 @@ if __name__ == "__main__":
 
             entry=entry[0]
 
-            print("decoding",len(entry['entry']))
+            print(("decoding",len(entry['entry'])))
 
             try:
-                entry_data=yaml.load(StringIO.StringIO(entry['entry']))
+                entry_data=yaml.load(io.StringIO(entry['entry']))
                 entry['entry']=entry_data
                     
                 from ansi2html import ansi2html
@@ -769,4 +769,4 @@ if __name__ == "__main__":
     else:
         log(Queue().info)
         log(Queue().list(kinds=["waiting","done","failed","running"]))
-        print(Queue().show())
+        print((Queue().show()))

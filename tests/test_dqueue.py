@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 
 import pytest
 import glob
@@ -28,7 +28,7 @@ def test_one():
     r=queue.put(t1)
     assert r['state'] == "submitted"
 
-    print(queue.info)
+    print((queue.info))
     assert queue.info['waiting'] == 1
 
     assert queue.put(t1)['state'] == "waiting"
@@ -40,7 +40,7 @@ def test_one():
     assert queue.info['waiting'] == 2
 
     assert len(queue.list()) == 2
-    print(queue.info)
+    print((queue.info))
 
     task=queue.get()
 
@@ -50,19 +50,19 @@ def test_one():
     assert queue.info['running'] == 1
 
 
-    print("from queue",t)
-    print("original",t1)
+    print(("from queue",t))
+    print(("original",t1))
 
     assert t==t1
-    print(queue.info)
+    print((queue.info))
 
     with pytest.raises(dqueue.CurrentTaskUnfinished):
         t=queue.get()
 
-    print(queue.info)
+    print((queue.info))
 
     queue.task_done()
-    print(queue.info)
+    print((queue.info))
 
     assert queue.info['waiting']==1
     assert queue.info['done']==1
@@ -72,20 +72,20 @@ def test_one():
 
 
     
-    print(queue.info)
+    print((queue.info))
 
     n_tries = dqueue.n_failed_retries - 2
 
     while n_tries>0:
-        print("tries left",n_tries)
+        print(("tries left",n_tries))
         t = queue.get().task_data
         assert t==t2
-        print(queue.info)
+        print((queue.info))
 
         queue.task_failed()
         n_tries-=1
 
-    print(queue.info)
+    print((queue.info))
     
     assert queue.info['waiting']==0
     assert queue.info['done']==1
@@ -99,7 +99,7 @@ def test_one():
         queue.get()
 
 
-    print(queue.info)
+    print((queue.info))
 
 
 def test_locked_jobs():
@@ -108,7 +108,7 @@ def test_locked_jobs():
     queue=dqueue.Queue("test-queue")
     queue.wipe(["waiting","done","running","locked","failed"])
 
-    print("status:\n",queue.show())
+    print(("status:\n",queue.show()))
 
     assert queue.info['waiting']==0
 
@@ -120,11 +120,11 @@ def test_locked_jobs():
     time.sleep(0.1)
     queue.put(t2)
 
-    print(queue.info)
+    print((queue.info))
 
     assert len(queue.list("waiting")) == 1
     assert len(queue.list("locked")) == 1
-    print(queue.info)
+    print((queue.info))
 
     print("trying to put dependent again")
     assert queue.put(t1) is not None
@@ -132,13 +132,13 @@ def test_locked_jobs():
 
     t=queue.get().task_data
 
-    print("from queue",t)
-    print("original",t2)
+    print(("from queue",t))
+    print(("original",t2))
 
     queue.task_done()
     print("finished dependency")
 
-    print(queue.info)
+    print((queue.info))
 
     print("expected resolved dependecy`")
     #assert len(r)==1
@@ -154,12 +154,12 @@ def test_locked_jobs():
     r=queue.try_all_locked()
     t = queue.get().task_data
 
-    print("from queue", t)
-    print("original", t1)
+    print(("from queue", t))
+    print(("original", t1))
 
     assert t == t1
 
     queue.task_done()
     with pytest.raises(dqueue.Empty):
         queue.get()
-    print(queue.info)
+    print((queue.info))
