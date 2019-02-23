@@ -16,7 +16,7 @@ except:
     from io import StringIO
 
 try:
-    import urllib.parse
+    import urlparse
 except ImportError:
     import urllib.parse as urlparse
 
