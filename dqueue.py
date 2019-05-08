@@ -658,9 +658,17 @@ if __name__ == "__main__":
             except peewee.OperationalError as e:
                 pass
 
+
+            json_filter = request.args.get('json_filter')
+
             print("searching for entries")
             date_N_days_ago = datetime.datetime.now() - datetime.timedelta(days=float(request.args.get('since',1)))
-            entries=[model_to_dict(entry) for entry in TaskEntry.select().where(TaskEntry.modified >= date_N_days_ago).order_by(TaskEntry.modified.desc()).execute()]
+
+            if json_filter:
+                entries=[model_to_dict(entry) for entry in TaskEntry.select().where((TaskEntry.modified >= date_N_days_ago) & (TaskEntry.entry.contains(json_filter))).order_by(TaskEntry.modified.desc()).execute()]
+            else:
+                entries=[model_to_dict(entry) for entry in TaskEntry.select().where(TaskEntry.modified >= date_N_days_ago).order_by(TaskEntry.modified.desc()).execute()]
+
             print(("found entries",len(entries)))
             for entry in entries:
                 print(("decoding",len(entry['entry'])))
@@ -672,10 +680,11 @@ if __name__ == "__main__":
                         entry_data['submission_info']['callback_parameters']={}
                         for callback in entry_data['submission_info']['callbacks']:
                             if callback is not None:
-                                entry_data['submission_info']['callback_parameters'].update(urllib.parse.parse_qs(callback.split("?",1)[1]))
+                                entry_data['submission_info']['callback_parameters'].update(urlparse.parse_qs(callback.split("?",1)[1]))
                             else:
                                 entry_data['submission_info']['callback_parameters'].update(dict(job_id="unset",session_id="unset"))
-                    except:
+                    except Exception as e:
+                        print("problem decoding", repr(e))
                         entry_data={'task_data':
                                         {'object_identity':
                                             {'factory_name':'??'}},
