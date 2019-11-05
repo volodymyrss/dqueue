@@ -6,7 +6,7 @@ import os
 import time
 import socket
 from hashlib import sha224
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 import glob
 import logging
 
@@ -276,6 +276,16 @@ class Queue(object):
 
     def insert_task_entry(self,task,state):
         self.log_task("task created",task,state)
+
+        log("to insert_task_entry: ", dict(
+             queue=self.queue,
+             key=task.key,
+             state=state,
+             worker_id=self.worker_id,
+             entry=task.serialize(),
+             created=datetime.datetime.now(),
+             modified=datetime.datetime.now(),
+        ))
 
         try:
             TaskEntry.insert(
@@ -625,7 +635,7 @@ if __name__ == "__main__":
 
     if args.listen:
         from flask import Flask
-        from flask import render_template,make_response,request
+        from flask import render_template,make_response,request,jsonify
 
         app = Flask(__name__)
 
@@ -650,8 +660,38 @@ if __name__ == "__main__":
                 return self.app(environ, start_response)
 
         app.wsgi_app = ReverseProxied(app.wsgi_app)
+        
+        @app.route('/stats')
+        def stats():
+            try:
+                db.connect()
+            except peewee.OperationalError as e:
+                pass
 
-        @app.route('/')
+            decode = bool(request.args.get('raw'))
+
+            print("searching for entries")
+            date_N_days_ago = datetime.datetime.now() - datetime.timedelta(days=float(request.args.get('since',1)))
+
+            entries=[entry for entry in TaskEntry.select().where(TaskEntry.modified >= date_N_days_ago).order_by(TaskEntry.modified.desc()).execute()]
+
+            bystate = defaultdict(int)
+            #bystate = defaultdict(list)
+
+            for entry in entries:
+                print("found state", entry.state)
+                bystate[entry.state] += 1
+                #bystate[entry.state].append(entry)
+
+            db.close()
+
+            if request.args.get('json') is not None:
+                return jsonify({k:v for k,v in bystate.items()})
+            else:
+                return render_template('task_stats.html', bystate=bystate)
+            #return jsonify({k:len(v) for k,v in bystate.items()})
+
+        @app.route('/list')
         def list():
             try:
                 db.connect()
@@ -659,15 +699,26 @@ if __name__ == "__main__":
                 pass
 
 
+            pick_state = request.args.get('state', 'any')
+
             json_filter = request.args.get('json_filter')
+
+            decode = bool(request.args.get('raw'))
 
             print("searching for entries")
             date_N_days_ago = datetime.datetime.now() - datetime.timedelta(days=float(request.args.get('since',1)))
 
-            if json_filter:
-                entries=[model_to_dict(entry) for entry in TaskEntry.select().where((TaskEntry.modified >= date_N_days_ago) & (TaskEntry.entry.contains(json_filter))).order_by(TaskEntry.modified.desc()).execute()]
+            if pick_state != "any":
+                if json_filter:
+                    entries=[model_to_dict(entry) for entry in TaskEntry.select().where((TaskEntry.state == pick_state) & (TaskEntry.modified >= date_N_days_ago) & (TaskEntry.entry.contains(json_filter))).order_by(TaskEntry.modified.desc()).execute()]
+                else:
+                    entries=[model_to_dict(entry) for entry in TaskEntry.select().where((TaskEntry.state == pick_state) & (TaskEntry.modified >= date_N_days_ago)).order_by(TaskEntry.modified.desc()).execute()]
             else:
-                entries=[model_to_dict(entry) for entry in TaskEntry.select().where(TaskEntry.modified >= date_N_days_ago).order_by(TaskEntry.modified.desc()).execute()]
+                if json_filter:
+                    entries=[model_to_dict(entry) for entry in TaskEntry.select().where((TaskEntry.modified >= date_N_days_ago) & (TaskEntry.entry.contains(json_filter))).order_by(TaskEntry.modified.desc()).execute()]
+                else:
+                    entries=[model_to_dict(entry) for entry in TaskEntry.select().where(TaskEntry.modified >= date_N_days_ago).order_by(TaskEntry.modified.desc()).execute()]
+
 
             print(("found entries",len(entries)))
             for entry in entries:
@@ -727,9 +778,12 @@ if __name__ == "__main__":
                 history=[model_to_dict(en) for en in TaskHistory.select().where(TaskHistory.key==key).order_by(TaskHistory.id.desc()).execute()]
                 #history=[model_to_dict(en) for en in TaskHistory.select().where(TaskHistory.key==key).order_by(TaskHistory.timestamp.desc()).execute()]
 
-                return render_template('task_info.html', entry=entry,history=history,formatted_exception=formatted_exception)
+                r = render_template('task_info.html', entry=entry,history=history,formatted_exception=formatted_exception)
             except:
-                return entry['entry']
+                r = jsonify(entry['entry'])
+
+            db.close()
+            return r
         
         @app.route('/purge')
         def purge():
@@ -774,6 +828,7 @@ if __name__ == "__main__":
         #Application().run(app,port=5555,debug=True,host=args.host)
 
  #       MyApplication().run()
+
         app.run(port=5555,debug=True,host=args.host,threaded=True)
     else:
         log(Queue().info)
