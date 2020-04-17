@@ -1,4 +1,4 @@
-from __future__ import print_function, division
+
 
 import yaml
 import datetime
@@ -9,8 +9,8 @@ from hashlib import sha224
 from collections import OrderedDict
 import glob
 import logging
-import StringIO
-import urlparse
+import io
+import urllib.parse
 
 import pymysql
 import peewee
@@ -110,7 +110,7 @@ class Task(object):
 
     @classmethod
     def from_entry(cls,entry):
-        task_dict=yaml.load(StringIO.StringIO(entry))
+        task_dict=yaml.load(io.StringIO(entry))
 
         self=cls(task_dict['task_data'])
         self.depends_on=task_dict['depends_on']
@@ -591,11 +591,11 @@ if __name__ == "__main__":
                     entry_data=decoded_entries[entry['entry']]
                 else:
                     try:
-                        entry_data=yaml.load(StringIO.StringIO(entry['entry']))
+                        entry_data=yaml.load(io.StringIO(entry['entry']))
                         entry_data['submission_info']['callback_parameters']={}
                         for callback in entry_data['submission_info']['callbacks']:
                             if callback is not None:
-                                entry_data['submission_info']['callback_parameters'].update(urlparse.parse_qs(callback.split("?",1)[1]))
+                                entry_data['submission_info']['callback_parameters'].update(urllib.parse.parse_qs(callback.split("?",1)[1]))
                             else:
                                 entry_data['submission_info']['callback_parameters'].update(dict(job_id="unset",session_id="unset"))
                     except:
@@ -626,7 +626,7 @@ if __name__ == "__main__":
             print("decoding",len(entry['entry']))
 
             try:
-                entry_data=yaml.load(StringIO.StringIO(entry['entry']))
+                entry_data=yaml.load(io.StringIO(entry['entry']))
                 entry['entry']=entry_data
                     
                 from ansi2html import ansi2html
