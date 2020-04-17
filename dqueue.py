@@ -6,16 +6,28 @@ import os
 import time
 import socket
 from hashlib import sha224
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 import glob
 import logging
 import io
 import urllib.parse
 
+try:
+    import io
+except:
+    from io import StringIO
+
+try:
+    import urlparse
+except ImportError:
+    import urllib.parse as urlparse
+
 import pymysql
 import peewee
 from playhouse.db_url import connect
 from playhouse.shortcuts import model_to_dict, dict_to_model
+
+n_failed_retries = int(os.environ.get('DQUEUE_FAILED_N_RETRY','20'))
 
 logger=logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -25,7 +37,7 @@ formatter = logging.Formatter('%(asctime)s %(levelname)8s %(name)s | %(message)s
 handler.setFormatter(formatter)
 
 def log(*args,**kwargs):
-    severity=kwargs.get('severity','info').upper()
+    severity=kwargs.get('severity','warning').upper()
     logger.log(getattr(logging,severity)," ".join([repr(arg) for arg in list(args)+list(kwargs.items())]))
 
 
@@ -44,9 +56,10 @@ def connect_db():
 
 try:
     db=connect_db()
-except:
-    pass
+except Exception as e:
+    logger.warning("unable to connect to DB: %s", repr(e))
 
+    
 
 class TaskEntry(peewee.Model):
     queue = peewee.CharField(default="default")
@@ -75,7 +88,13 @@ class TaskHistory(peewee.Model):
     class Meta:
         database = db
 
-db.create_tables([TaskEntry,TaskHistory])
+try:
+    db.create_tables([TaskEntry,TaskHistory])
+    has_mysql = True
+except peewee.OperationalError:
+    has_mysql = False
+except Exception:
+    has_mysql = False
 
 class Task(object):
     def __init__(self,task_data,execution_info=None, submission_data=None, depends_on=None):
@@ -178,12 +197,15 @@ class Queue(object):
         if klist is None:
             klist=["waiting", "running", "done", "failed", "locked"]
 
-        instances_for_key = []
-        for state in klist:
-            print("any",state,"find_task_instances for",task.key)
-            instances_for_key+=[
-                    dict(state=state,task_entry=task_entry) for task_entry in TaskEntry.select().where(TaskEntry.state==state, TaskEntry.key==task.key, TaskEntry.queue==self.queue)
-                ]
+        instances_for_key=[
+                dict(task_entry=task_entry) for task_entry in TaskEntry.select().where(TaskEntry.state << klist, TaskEntry.key==task.key, TaskEntry.queue==self.queue)
+            ]
+
+        log("found task instances for",task.key,"N == ",len(instances_for_key))
+        for i in instances_for_key:
+            i['state'] = i['task_entry'].state
+            log(i['state'], i['task_entry'])
+
         return instances_for_key
     
     def try_all_locked(self):
@@ -257,6 +279,16 @@ class Queue(object):
     def insert_task_entry(self,task,state):
         self.log_task("task created",task,state)
 
+        log("to insert_task_entry: ", dict(
+             queue=self.queue,
+             key=task.key,
+             state=state,
+             worker_id=self.worker_id,
+             entry=task.serialize(),
+             created=datetime.datetime.now(),
+             modified=datetime.datetime.now(),
+        ))
+
         try:
             TaskEntry.insert(
                              queue=self.queue,
@@ -269,6 +301,8 @@ class Queue(object):
                             ).execute()
         except (pymysql.err.IntegrityError, peewee.IntegrityError) as e:
             log("task already inserted, reasserting the queue to",self.queue)
+
+            # deadlock
             TaskEntry.update(
                                 queue=self.queue,
                             ).where(
@@ -281,12 +315,17 @@ class Queue(object):
         task=Task(task_data,submission_data=submission_data,depends_on=depends_on)
 
         ntry_race=10
-        while True:
+        retry_sleep_race=2
+        while ntry_race>0:
             instances_for_key=self.find_task_instances(task)
             if len(instances_for_key)<=1:
                 break
-            time.sleep(1)
+            log("found instances for key:",instances_for_key)
+            log("found unexpected number of instances for key:",len(instances_for_key))
+            log("sleeping for",retry_sleep_race,"attempt",ntry_race)
+            time.sleep(retry_sleep_race)
             ntry_race-=1
+
         if len(instances_for_key)>1:
             raise Exception("probably race condition, multiple task instances:",instances_for_key)
 
@@ -357,7 +396,7 @@ class Queue(object):
 
         entry=entries[0]
         self.current_task=Task.from_entry(entry.entry)
-
+        self.current_task_stored_key=self.current_task.key
 
         assert self.current_task.key==entry.key
 
@@ -397,9 +436,9 @@ class Queue(object):
         for i_dep,dependency in enumerate(task.depends_on):
             dependency_task=Task(dependency)
 
-            print("task",task.key,"depends on task",dependency_task.key,i_dep,"/",len(task.depends_on))
+            print(("task",task.key,"depends on task",dependency_task.key,i_dep,"/",len(task.depends_on)))
             dependency_instances=self.find_task_instances(dependency_task)
-            print("task instances for",dependency_task.key,len(dependency_instances))
+            print(("task instances for",dependency_task.key,len(dependency_instances)))
 
             dependencies.append(dict(states=[]))
 
@@ -408,10 +447,10 @@ class Queue(object):
                 #log("dependency incomplete")
                 dependencies[-1]['states'].append(i['state'])
                 dependencies[-1]['task']=dependency_task
-                print("task instance for",dependency_task.key,"is",i['state'],"from",i_i,"/",len(dependency_instances))
+                print(("task instance for",dependency_task.key,"is",i['state'],"from",i_i,"/",len(dependency_instances)))
 
             if len(dependencies[-1]['states'])==0:
-                print("job dependencies do not exist, expecting %s"%dependency_task.key)
+                print(("job dependencies do not exist, expecting %s"%dependency_task.key))
                 #print(dependency_task.serialize())
                 raise Exception("job dependencies do not exist, expecting %s"%dependency_task.key)
 
@@ -474,6 +513,7 @@ class Queue(object):
 
     def task_done(self):
         log("task done, closing:",self.current_task.key,self.current_task)
+        log("task done, stored key:",self.current_task_stored_key)
 
         self.log_task("task to register done")
 
@@ -483,6 +523,14 @@ class Queue(object):
                     TaskEntry.modified:datetime.datetime.now(),
                 }).where(TaskEntry.key==self.current_task.key).execute()
 
+        if self.current_task_stored_key != self.current_task.key:
+            r=TaskEntry.update({
+                        TaskEntry.state:"done",
+                        TaskEntry.entry:self.current_task.serialize(),
+                        TaskEntry.modified:datetime.datetime.now(),
+                    }).where(TaskEntry.key==self.current_task_stored_key).execute()
+
+
         self.current_task_status="done"
 
         self.log_task("task done")
@@ -490,16 +538,36 @@ class Queue(object):
 
         self.current_task=None
 
+    def clear_task_history(self):
+        print('this is very descructive')
+        TaskHistory.delete().execute()
+
     def task_failed(self,update=lambda x:None):
         update(self.current_task)
 
+        task= self.current_task
+
+        self.log_task("task failed",self.current_task,"failed")
+        
+        history=[model_to_dict(en) for en in TaskHistory.select().where(TaskHistory.key==task.key).order_by(TaskHistory.id.desc()).execute()]
+        n_failed = len([he for he in history if he['state'] == "failed"])
+
+        self.log_task("task failed %i times already"%n_failed,task,"failed")
+        if n_failed < n_failed_retries:# HC!
+            next_state = "waiting"
+            self.log_task("task failure forgiven, to waiting",task,"waiting")
+            time.sleep(5+2**int(n_failed/2))
+        else:
+            next_state = "failed"
+            self.log_task("task failure permanent",task,"waiting")
+
         r=TaskEntry.update({
-                    TaskEntry.state:"failed",
+                    TaskEntry.state:next_state,
                     TaskEntry.entry:self.current_task.serialize(),
                     TaskEntry.modified:datetime.datetime.now(),
                 }).where(TaskEntry.key==self.current_task.key).execute()
 
-        self.current_task_status = "failed"
+        self.current_task_status = next_state
         self.current_task = None
 
     def move_task(self,fromk,tok,task):
@@ -569,24 +637,94 @@ if __name__ == "__main__":
 
     if args.listen:
         from flask import Flask
-        from flask import render_template,make_response
+        from flask import render_template,make_response,request,jsonify
 
         app = Flask(__name__)
 
         decoded_entries={}
 
-        @app.route('/')
+
+        class ReverseProxied(object):
+            def __init__(self, app):
+                self.app = app
+
+            def __call__(self, environ, start_response):
+                script_name = environ.get('HTTP_X_FORWARDED_PREFIX', '')
+                if script_name:
+                    environ['SCRIPT_NAME'] = script_name
+                    path_info = environ['PATH_INFO']
+                    if path_info.startswith(script_name):
+                        environ['PATH_INFO'] = path_info[len(script_name):]
+
+                scheme = environ.get('HTTP_X_SCHEME', '')
+                if scheme:
+                    environ['wsgi.url_scheme'] = scheme
+                return self.app(environ, start_response)
+
+        app.wsgi_app = ReverseProxied(app.wsgi_app)
+        
+        @app.route('/stats')
+        def stats():
+            try:
+                db.connect()
+            except peewee.OperationalError as e:
+                pass
+
+            decode = bool(request.args.get('raw'))
+
+            print("searching for entries")
+            date_N_days_ago = datetime.datetime.now() - datetime.timedelta(days=float(request.args.get('since',1)))
+
+            entries=[entry for entry in TaskEntry.select().where(TaskEntry.modified >= date_N_days_ago).order_by(TaskEntry.modified.desc()).execute()]
+
+            bystate = defaultdict(int)
+            #bystate = defaultdict(list)
+
+            for entry in entries:
+                print("found state", entry.state)
+                bystate[entry.state] += 1
+                #bystate[entry.state].append(entry)
+
+            db.close()
+
+            if request.args.get('json') is not None:
+                return jsonify({k:v for k,v in bystate.items()})
+            else:
+                return render_template('task_stats.html', bystate=bystate)
+            #return jsonify({k:len(v) for k,v in bystate.items()})
+
+        @app.route('/list')
         def list():
             try:
                 db.connect()
             except peewee.OperationalError as e:
                 pass
 
+
+            pick_state = request.args.get('state', 'any')
+
+            json_filter = request.args.get('json_filter')
+
+            decode = bool(request.args.get('raw'))
+
             print("searching for entries")
-            entries=[model_to_dict(entry) for entry in TaskEntry.select().order_by(TaskEntry.modified.desc()).execute()]
-            print("found entries",len(entries))
+            date_N_days_ago = datetime.datetime.now() - datetime.timedelta(days=float(request.args.get('since',1)))
+
+            if pick_state != "any":
+                if json_filter:
+                    entries=[model_to_dict(entry) for entry in TaskEntry.select().where((TaskEntry.state == pick_state) & (TaskEntry.modified >= date_N_days_ago) & (TaskEntry.entry.contains(json_filter))).order_by(TaskEntry.modified.desc()).execute()]
+                else:
+                    entries=[model_to_dict(entry) for entry in TaskEntry.select().where((TaskEntry.state == pick_state) & (TaskEntry.modified >= date_N_days_ago)).order_by(TaskEntry.modified.desc()).execute()]
+            else:
+                if json_filter:
+                    entries=[model_to_dict(entry) for entry in TaskEntry.select().where((TaskEntry.modified >= date_N_days_ago) & (TaskEntry.entry.contains(json_filter))).order_by(TaskEntry.modified.desc()).execute()]
+                else:
+                    entries=[model_to_dict(entry) for entry in TaskEntry.select().where(TaskEntry.modified >= date_N_days_ago).order_by(TaskEntry.modified.desc()).execute()]
+
+
+            print(("found entries",len(entries)))
             for entry in entries:
-                print("decoding",len(entry['entry']))
+                print(("decoding",len(entry['entry'])))
                 if entry['entry'] in decoded_entries:
                     entry_data=decoded_entries[entry['entry']]
                 else:
@@ -598,7 +736,8 @@ if __name__ == "__main__":
                                 entry_data['submission_info']['callback_parameters'].update(urllib.parse.parse_qs(callback.split("?",1)[1]))
                             else:
                                 entry_data['submission_info']['callback_parameters'].update(dict(job_id="unset",session_id="unset"))
-                    except:
+                    except Exception as e:
+                        print("problem decoding", repr(e))
                         entry_data={'task_data':
                                         {'object_identity':
                                             {'factory_name':'??'}},
@@ -623,7 +762,7 @@ if __name__ == "__main__":
 
             entry=entry[0]
 
-            print("decoding",len(entry['entry']))
+            print(("decoding",len(entry['entry'])))
 
             try:
                 entry_data=yaml.load(io.StringIO(entry['entry']))
@@ -641,9 +780,12 @@ if __name__ == "__main__":
                 history=[model_to_dict(en) for en in TaskHistory.select().where(TaskHistory.key==key).order_by(TaskHistory.id.desc()).execute()]
                 #history=[model_to_dict(en) for en in TaskHistory.select().where(TaskHistory.key==key).order_by(TaskHistory.timestamp.desc()).execute()]
 
-                return render_template('task_info.html', entry=entry,history=history,formatted_exception=formatted_exception)
+                r = render_template('task_info.html', entry=entry,history=history,formatted_exception=formatted_exception)
             except:
-                return entry['entry']
+                r = jsonify(entry['entry'])
+
+            db.close()
+            return r
         
         @app.route('/purge')
         def purge():
@@ -688,8 +830,9 @@ if __name__ == "__main__":
         #Application().run(app,port=5555,debug=True,host=args.host)
 
  #       MyApplication().run()
+
         app.run(port=5555,debug=True,host=args.host,threaded=True)
     else:
         log(Queue().info)
         log(Queue().list(kinds=["waiting","done","failed","running"]))
-        print(Queue().show())
+        print((Queue().show()))
