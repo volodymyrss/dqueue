@@ -25,5 +25,6 @@ push: build
 test:
 	mypy *.py
 	#pylint -E  *.py
+	python -m pytest  -sv
 
 .FORCE:

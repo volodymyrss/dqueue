@@ -19,7 +19,7 @@ from flask import render_template,make_response,request,jsonify
 
 app = Flask(__name__)
 
-decoded_entries={}
+decoded_entries={} # type: ignore
 
 logger=logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
