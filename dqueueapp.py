@@ -204,6 +204,7 @@ def resubmit(scope,selector):
 
 
 @app.route('/healthcheck')
+@app.route('/')
 def healthcheck():
     return jsonify(
                 dict(
