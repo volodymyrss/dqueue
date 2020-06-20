@@ -47,6 +47,10 @@ class ReverseProxied(object):
 
 app.wsgi_app = ReverseProxied(app.wsgi_app)# type: ignore
 
+@app.errorhandler(peewee.OperationalError)
+def handle_dberror():
+    return "server DB error!", 500
+
 @app.route('/stats')
 def stats():
     try:
