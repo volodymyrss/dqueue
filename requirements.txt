@@ -3,3 +3,4 @@ pymysql
 peewee
 flask
 ansi2html
+gunicorn
