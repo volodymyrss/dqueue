@@ -1,6 +1,5 @@
-
-
 import yaml
+import traceback
 import datetime
 import os
 import time
@@ -49,6 +48,8 @@ app.wsgi_app = ReverseProxied(app.wsgi_app)# type: ignore
 
 @app.errorhandler(peewee.OperationalError)
 def handle_dberror(e):
+    logger.error("db access error: %s", e)
+    logger.error(traceback.format_exc())
     return "server DB error! please contact me (you know how)!", 500
 
 @app.route('/stats')
