@@ -56,6 +56,7 @@ def connect_db():
 
 try:
     db=connect_db()
+    logger.info(f"successfully connected to db: {db}")
 except Exception as e:
     logger.warning("unable to connect to DB: %s", repr(e))
 
