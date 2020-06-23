@@ -7,5 +7,10 @@ setup(name='dqueue',
       author_email='vladimir.savchenko@gmail.com',
       license='MIT',
       py_modules=['dqueue'],
+      entry_points={
+          'console_scripts':  [
+              'dqueue=dqueue:cli',
+                ]
+          },
       zip_safe=False,
      )

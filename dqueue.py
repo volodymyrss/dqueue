@@ -1,5 +1,3 @@
-
-
 import yaml
 import datetime
 import os
@@ -10,6 +8,7 @@ from collections import OrderedDict, defaultdict
 import glob
 import logging
 import io
+import click
 import urllib.parse
 
 try:
@@ -636,17 +635,18 @@ class Queue(object):
             time.sleep(delay)
 
 
+@click.group()
+def cli():
+    pass
 
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("queue", nargs="?", default=None)
-    parser.add_argument('-L', dest='listen',  help='...',action='store_true', default=False)
-    parser.add_argument('-H', dest='host',  help='...', default="0.0.0.0")
-    args=parser.parse_args()
-
-    for q in Queue.list_queues(args.queue):
+@cli.command()
+@click.argument("queue", default=None, required=False)
+def show(queue):
+    for q in Queue.list_queues(queue):
         log(q.info)
         log(q.list(kinds=["waiting","done","failed","running"]))
         print(q.show())
+
+if __name__ == "__main__":
+    cli()
+
