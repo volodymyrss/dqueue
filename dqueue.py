@@ -176,6 +176,16 @@ def makedir_if_neccessary(directory):
 
 class Queue(object):
 
+    @staticmethod
+    def list_queues(pattern=None):
+        if pattern is None:
+            return [ Queue(task_entry.queue) for task_entry in 
+                    TaskEntry.select(TaskEntry.queue).distinct() ]
+        else:
+            return [ Queue(task_entry.queue) for task_entry in 
+                    TaskEntry.select(TaskEntry.queue).where(TaskEntry.queue % pattern).distinct(TaskEntry.queue) ]
+        
+
     def __init__(self,queue="default"):
         self.worker_id=self.get_worker_id()
         self.queue=queue
@@ -631,11 +641,12 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("queue",default="./queue")
+    parser.add_argument("queue", nargs="?", default=None)
     parser.add_argument('-L', dest='listen',  help='...',action='store_true', default=False)
     parser.add_argument('-H', dest='host',  help='...', default="0.0.0.0")
     args=parser.parse_args()
 
-    log(Queue().info)
-    log(Queue().list(kinds=["waiting","done","failed","running"]))
-    print((Queue().show()))
+    for q in Queue.list_queues(args.queue):
+        log(q.info)
+        log(q.list(kinds=["waiting","done","failed","running"]))
+        print(q.show())
