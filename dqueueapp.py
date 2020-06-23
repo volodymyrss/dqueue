@@ -89,6 +89,7 @@ def list():
     except peewee.OperationalError as e:
         pass
 
+    output_json = request.args.get('json', False)
 
     pick_state = request.args.get('state', 'any')
 
@@ -141,7 +142,11 @@ def list():
         entry['entry']=entry_data
 
     db.close()
-    return render_template('task_list.html', entries=entries)
+
+    if output_json:
+        return jsonify(entries)
+    else:
+        return render_template('task_list.html', entries=entries)
 
 @app.route('/task/info/<string:key>')
 def task_info(key):

@@ -563,7 +563,7 @@ class Queue(object):
         n_failed = len([he for he in history if he['state'] == "failed"])
 
         self.log_task("task failed %i times already"%n_failed,task,"failed")
-        if n_failed < n_failed_retries:# HC!
+        if n_failed < n_failed_retries:
             next_state = "waiting"
             self.log_task("task failure forgiven, to waiting",task,"waiting")
             time.sleep(5+2**int(n_failed/2))
@@ -646,6 +646,15 @@ def show(queue):
         log(q.info)
         log(q.list(kinds=["waiting","done","failed","running"]))
         print(q.show())
+
+@cli.command()
+@click.argument("queue", default=None, required=False)
+def purge(queue):
+    for q in Queue.list_queues(queue):
+        log(q.info)
+        log(q.list(kinds=["waiting","done","failed","running"]))
+        print(q.show())
+        q.purge()
 
 if __name__ == "__main__":
     cli()

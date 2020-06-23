@@ -50,6 +50,7 @@ def test_one():
     assert queue.info['running'] == 1
 
 
+
     print(("from queue",t))
     print(("original",t1))
 
@@ -74,18 +75,20 @@ def test_one():
     
     print((queue.info))
 
-    n_tries = dqueue.n_failed_retries - 2
+    dqueue.n_failed_retries = 3
+    n_tries = dqueue.n_failed_retries - 1
 
     while n_tries>0:
-        print(("tries left",n_tries))
+        print("tries left",n_tries)
         t = queue.get().task_data
         assert t==t2
         print((queue.info))
 
         queue.task_failed()
         n_tries-=1
+    
 
-    print((queue.info))
+    print(queue.info)
     
     assert queue.info['waiting']==0
     assert queue.info['done']==1
