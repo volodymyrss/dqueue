@@ -1,4 +1,4 @@
-pyyaml
+pyyaml>=5.2
 pymysql
 peewee
 flask
