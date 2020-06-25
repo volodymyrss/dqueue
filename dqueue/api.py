@@ -100,6 +100,40 @@ class TaskView(SwaggerView):
                 task_info=info,
             )
 
+class TaskPurgeView(SwaggerView):
+    parameters = [
+                {
+                    'name': 'state',
+                    'in': 'query',
+                    'required': False,
+                    'type': 'string',
+                },
+                {
+                    'name': 'queue',
+                    'in': 'query',
+                    'required': False,
+                    'type': 'string',
+                }
+            ]
+
+    responses = {
+            200: {
+                    'description': 'entries purged',
+                }
+        }
+
+    def get(self):
+        queue = Queue()
+        n = queue.purge()
+        return jsonify(
+                nentries=n
+            )
+
+app.add_url_rule(
+         '/tasks/purge',
+          view_func=TaskPurgeView.as_view('api_tasks_purge'),
+          methods=['GET']
+)
 
 app.add_url_rule(
          '/tasks',

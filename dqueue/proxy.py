@@ -7,16 +7,15 @@ from hashlib import sha224
 from collections import OrderedDict, defaultdict
 import glob
 import logging
-import io
+from io import StringIO
 import re
 import click
-import urllib.parse
+import urllib.parse as urlparse# type: ignore
+
+from .core import Queue
 
 from bravado.client import SwaggerClient
 
-from io import StringIO
-
-import urllib.parse as urlparse# type: ignore
 
 
 class QueueProxy(Queue):
@@ -143,8 +142,8 @@ class QueueProxy(Queue):
                 TaskEntry.delete().where(TaskEntry.key==key).execute()
         
     def purge(self):
-        nentries=TaskEntry.delete().execute()
-        log("deleted %i"%nentries)
+        nentries = self.client.tasks.get_tasks_purge().response().result
+        self.logger.info("deleted %s", nentries)
 
 
     def list(self, **kwargs):
