@@ -143,7 +143,7 @@ def task_info(key):
         r = dict(
             entry=entry,
             history=history,
-            formatted_exception=formatted_exception)
+            formatted_exception=formatted_exception
         )
     except:
         r = entry['entry']
@@ -151,12 +151,10 @@ def task_info(key):
     db.close()
     return r
 
-@app.route('/purge')
 def purge():
     nentries=core.TaskEntry.delete().execute()
     return make_response("deleted %i"%nentries)
 
-@app.route('/resubmit/<string:scope>/<string:selector>')
 def resubmit(scope, selector):
     if scope=="state":
         if selector=="all":
@@ -180,7 +178,6 @@ def resubmit(scope, selector):
                     .where(core.TaskEntry.key==selector)\
                     .execute()
 
-    return make_response("resubmitted %i"%nentries)
-
+    return nentries
 
 

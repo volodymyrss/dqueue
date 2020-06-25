@@ -6,10 +6,10 @@ setup(name='dqueue',
       author='Volodymyr Savchenko',
       author_email='vladimir.savchenko@gmail.com',
       license='MIT',
-      py_modules=['dqueue'],
+      packages=['dqueue'],
       entry_points={
           'console_scripts':  [
-              'dqueue=dqueue:cli',
+              'dqueue=dqueue.cli:main',
                 ]
           },
       install_requires=[

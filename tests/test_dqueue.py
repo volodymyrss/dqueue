@@ -75,8 +75,9 @@ def test_one():
     
     print((queue.info))
 
-    dqueue.n_failed_retries = 3
-    n_tries = dqueue.n_failed_retries - 1
+    dqueue.core.n_failed_retries = 3
+    dqueue.core.sleep_multiplier = 0
+    n_tries = dqueue.core.n_failed_retries - 1
 
     while n_tries>0:
         print("tries left",n_tries)

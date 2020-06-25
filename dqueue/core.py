@@ -27,6 +27,7 @@ import peewee # type: ignore
 from playhouse.db_url import connect # type: ignore
 from playhouse.shortcuts import model_to_dict, dict_to_model # type: ignore
 
+sleep_multiplier = 1
 n_failed_retries = int(os.environ.get('DQUEUE_FAILED_N_RETRY','20'))
 
 logger=logging.getLogger(__name__)
@@ -567,7 +568,7 @@ class Queue:
         if n_failed < n_failed_retries:
             next_state = "waiting"
             self.log_task("task failure forgiven, to waiting",task,"waiting")
-            time.sleep(5+2**int(n_failed/2))
+            time.sleep( (5+2**int(n_failed/2))*sleep_multiplier )
         else:
             next_state = "failed"
             self.log_task("task failure permanent",task,"waiting")
