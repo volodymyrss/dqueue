@@ -8,6 +8,7 @@ from collections import OrderedDict, defaultdict
 import glob
 import logging
 import io
+import re
 import click
 import urllib.parse
 
@@ -185,13 +186,6 @@ def list_queues(pattern=None):
 
 class Queue:
 
-    @classmethod
-    def from_uri(cls, queue_uri):
-        if queue_uri.startswith("http://") or queue_uri.startswith("https://"):
-            return QueueProxy(queue_uri)
-
-        return cls(queue_uri)
-
     def __init__(self,queue="default"):
         self.worker_id=self.get_worker_id()
         self.queue=queue
@@ -306,123 +300,6 @@ class Queue:
              modified=datetime.datetime.now(),
         ))
 
-        raise NotImplementedError
-
-    def get(self):
-        if self.current_task is not None:
-            raise CurrentTaskUnfinished(self.current_task)
-
-       # tasks=self.list("waiting")
-       # task=tasks[-1]
-       # self.current_task = Task.from_entry(task['task_entry'].entry)
-
-    
-    def task_locked(self,depends_on):
-        pass
-
-    def task_done(self):
-        pass
-
-    def clear_task_history(self):
-        pass
-
-    def task_failed(self,update=lambda x:None):
-        pass
-
-    def move_task(self,fromk,tok,task):
-        pass
-
-    def remove_task(self,fromk,taskname=None):
-        pass
-
-    def wipe(self,wipe_from=["waiting"]):
-        pass
-        
-    def purge(self):
-        pass
-
-    def list(self,kind=None,kinds=None,fullpath=False):
-        if kinds is None:
-            kinds=["waiting"]
-        if kind is not None:
-            kinds=[kind]
-
-        kind_jobs = []
-
-        for kind in kinds:
-            for task_entry in TaskEntry.select().where(TaskEntry.state==kind, TaskEntry.queue==self.queue):
-                kind_jobs.append(task_entry.key)
-        return kind_jobs
-
-    @property
-    def info(self):
-        r={}
-        for kind in "waiting","running","done","failed","locked":
-            r[kind]=len(self.list(kind))
-        return r
-
-    def show(self):
-        r=""
-        for kind in "waiting","running","done","failed","locked":
-            r+="\n= "+kind+"\n"
-            for task_entry in TaskEntry.select().where(TaskEntry.state==kind, TaskEntry.queue==self.queue):
-                r+=" - "+repr(model_to_dict(task_entry))+"\n"
-        return r
-
-    def watch(self,delay=1):
-        while True:
-            log(self.info())
-            time.sleep(delay)
-
-class QueueProxy(Queue):
-
-    def __init__(self, queue_uri="http://localhost:5000@default"):
-        r = re.search("(https?://.*?)@(.*)")
-        if not r:
-            raise Exception("uri does not match queue")
-
-        self.master = r.groups()[0]
-        self.queue = r.groups()[1]
-
-        self.worker_id=self.get_worker_id()
-        self.queue=queue
-        self.current_task=None
-        self.current_task_status=None
-
-        if master is None:
-            logger.error("proxy queue needs url")
-            raise NotImplementedError
-
-    @property
-    def client(self):
-        if getattr(self, '_client', None) is None:
-            self._client = SwaggerClient.from_url(self.master+"/apispec_1.json")
-        return self._client
-
-    def find_task_instances(self,task,klist=None):
-        raise NotImplementedError
-    
-    
-    def select_task_entry(self,key):
-        raise NotImplementedError
-    
-    def log_task(self,message,task=None,state=None):
-        raise NotImplementedError
-
-
-    def insert_task_entry(self,task,state):
-        self.log_task("task created",task,state)
-
-        log("to insert_task_entry: ", dict(
-             queue=self.queue,
-             key=task.key,
-             state=state,
-             worker_id=self.worker_id,
-             entry=task.serialize(),
-             created=datetime.datetime.now(),
-             modified=datetime.datetime.now(),
-        ))
-
         try:
             TaskEntry.insert(
                              queue=self.queue,
@@ -484,6 +361,22 @@ class QueueProxy(Queue):
         instance_for_key=self.find_task_instances(task)[0]
         recovered_task=Task.from_entry(instance_for_key['task_entry'].entry)
 
+        if recovered_task.key != task.key:
+            log("inconsitent storage:")
+            log("stored:",task.filename_instance)
+            log("recovered:", recovered_task.filename_instance)
+    
+            nfn=self.queue_dir("conflict") + "/put_original_" + task.filename_instance
+            open(nfn, "w").write(task.serialize())
+        
+            nfn=self.queue_dir("conflict") + "/put_recovered_" + recovered_task.filename_instance
+            open(nfn, "w").write(recovered_task.serialize())
+            
+            nfn=self.queue_dir("conflict") + "/put_stored_" + os.path.basename(fn)
+            open(nfn, "w").write(open(fn).read())
+
+            raise Exception("Inconsistent storage")
+
         log("successfully put in queue:",instance_for_key['task_entry'].entry)
         return dict(state="submitted",task_entry=instance_for_key['task_entry'].entry)
 
@@ -544,6 +437,90 @@ class QueueProxy(Queue):
 
         return self.current_task
 
+    def find_dependecies_states(self,task):
+        if task.depends_on is None:
+            raise Exception("can not inspect dependecies in an independent task!")
+
+        log("find_dependecies_states for",task.key)
+
+        dependencies=[]
+        for i_dep,dependency in enumerate(task.depends_on):
+            dependency_task=Task(dependency)
+
+            print(("task",task.key,"depends on task",dependency_task.key,i_dep,"/",len(task.depends_on)))
+            dependency_instances=self.find_task_instances(dependency_task)
+            print(("task instances for",dependency_task.key,len(dependency_instances)))
+
+            dependencies.append(dict(states=[]))
+
+            for i_i,i in enumerate(dependency_instances):
+                # if i['state']=="done"]) == 0:
+                #log("dependency incomplete")
+                dependencies[-1]['states'].append(i['state'])
+                dependencies[-1]['task']=dependency_task
+                print(("task instance for",dependency_task.key,"is",i['state'],"from",i_i,"/",len(dependency_instances)))
+
+            if len(dependencies[-1]['states'])==0:
+                print(("job dependencies do not exist, expecting %s"%dependency_task.key))
+                #print(dependency_task.serialize())
+                raise Exception("job dependencies do not exist, expecting %s"%dependency_task.key)
+
+            if 'done' in dependencies[-1]['states']:
+                dependencies[-1]['state']='done'
+            elif 'failed' in dependencies[-1]['states']:
+                dependencies[-1]['state']='failed'
+            else:
+                dependencies[-1]['state']='incomplete'
+            
+            try:
+                log("dependency:",dependencies[-1]['state'],dependencies[-1]['states'], dependencies[-1]['task'].key, dependency_instances[0])
+            except KeyError:
+                log("problematic dependency:",dependencies[-1])
+                raise Exception("problematic dependency:",dependencies[-1])
+            #log("dependency:",dependencies[-1]['state'],dependencies[-1]['states'], dependency, dependency_instances)
+
+        return dependencies
+
+
+
+
+    def task_locked(self,depends_on):
+        log("locking task",self.current_task)
+        self.log_task("task to lock...",state="locked")
+        if self.current_task is None:
+            raise Exception("task must be available to lock")
+
+        self.current_task.depends_on=depends_on
+        serialized=self.current_task.serialize()
+
+        self.log_task("task to lock: serialized to %i"%len(serialized),state="locked")
+
+        n_tries_left=10
+        retry_delay=2
+        while n_tries_left>0:
+            try:
+                r=TaskEntry.update({
+                            TaskEntry.state:"locked",
+                            TaskEntry.entry:serialized,
+                        }).where(
+                            TaskEntry.key==self.current_task.key,
+                            TaskEntry.state=="running",
+                         ).execute()
+            except Exception as e:
+                log('failed to lock:',repr(e))
+                self.log_task("task to failed lock: %s; serialized to %i"%(repr(e),len(serialized)),state="failed_to_lock")
+                time.sleep(retry_delay)
+                if n_tries_left==1:
+                    raise
+                n_tries_left-=1
+            else:
+                break
+        
+        self.log_task("task locked from "+self.current_task_status,state="locked")
+
+        self.current_task_status="locked"
+        self.current_task=None
+
 
     def task_done(self):
         log("task done, closing:",self.current_task.key,self.current_task)
@@ -590,7 +567,7 @@ class QueueProxy(Queue):
         if n_failed < n_failed_retries:
             next_state = "waiting"
             self.log_task("task failure forgiven, to waiting",task,"waiting")
-            time.sleep(5+2**int(n_failed/2))
+            time.sleep( (5+2**int(n_failed/2))*sleep_multiplier )
         else:
             next_state = "failed"
             self.log_task("task failure permanent",task,"waiting")
@@ -612,6 +589,9 @@ class QueueProxy(Queue):
                     })\
                     .where(TaskEntry.state==fromk,TaskEntry.key==task.key).execute()
 
+    def remove_task(self,fromk,taskname=None):
+        pass
+
     def wipe(self,wipe_from=["waiting"]):
         for fromk in wipe_from:
             for key in self.list(fromk):
@@ -622,9 +602,177 @@ class QueueProxy(Queue):
         nentries=TaskEntry.delete().execute()
         log("deleted %i"%nentries)
 
+    def list(self,kind=None,kinds=None,fullpath=False):
+        if kinds is None:
+            kinds=["waiting"]
+        if kind is not None:
+            kinds=[kind]
 
-    def list(self,**kwargs):
-        return [task for task in self.client.tasks.get_tasks(**kwargs).response().result['tasks']]
+        kind_jobs = []
+
+        for kind in kinds:
+            for task_entry in TaskEntry.select().where(TaskEntry.state==kind, TaskEntry.queue==self.queue):
+                kind_jobs.append(task_entry.key)
+        return kind_jobs
+
+    @property
+    def info(self):
+        r={}
+        for kind in "waiting","running","done","failed","locked":
+            r[kind]=len(self.list(kind))
+        return r
+
+    def show(self):
+        r=""
+        for kind in "waiting","running","done","failed","locked":
+            r+="\n= "+kind+"\n"
+            for task_entry in TaskEntry.select().where(TaskEntry.state==kind, TaskEntry.queue==self.queue):
+                r+=" - "+repr(model_to_dict(task_entry))+"\n"
+        return r
+
+    def watch(self,delay=1):
+        while True:
+            log(self.info())
+            time.sleep(delay)
+
+    @classmethod
+    def from_uri(cls, queue_uri):
+        if queue_uri.startswith("http://") or queue_uri.startswith("https://"):
+            return QueueProxy(queue_uri)
+
+        return cls(queue_uri)
+
+    def __init__(self,queue="default"):
+        self.logger = logging.getLogger(repr(self))
+
+        self.worker_id=self.get_worker_id()
+        self.queue=queue
+        self.current_task=None
+        self.current_task_status=None
+
+
+    def get_worker_id(self):
+        d=dict(
+            time=time.time(),
+            utc=time.strftime("%Y%m%d-%H%M%S"),
+            hostname=socket.gethostname(),
+            fqdn=socket.getfqdn(),
+            pid=os.getpid(),
+        )
+        return "{fqdn}.{pid}".format(**d)
+
+
+    def find_task_instances(self,task,klist=None):
+        log("find_task_instances for",task.key,"in",self.queue)
+        if klist is None:
+            klist=["waiting", "running", "done", "failed", "locked"]
+
+        instances_for_key=[
+                dict(task_entry=task_entry) for task_entry in TaskEntry.select().where(TaskEntry.state << klist, TaskEntry.key==task.key, TaskEntry.queue==self.queue)
+            ]
+
+        log("found task instances for",task.key,"N == ",len(instances_for_key))
+        for i in instances_for_key:
+            i['state'] = i['task_entry'].state
+            log(i['state'], i['task_entry'])
+
+        return instances_for_key
+    
+    def try_all_locked(self):
+        r=[]
+        for task_key in self.list("locked"):
+            task_entry=self.select_task_entry(task_key)
+            log("trying to unlock", task_entry.key)
+            #log("trying to unlock", task_key,task_entry,task_entry.key,task_entry.entry)
+            r.append(self.try_to_unlock(Task.from_entry(task_entry.entry)))
+        return r
+
+    def try_to_unlock(self,task):
+        dependency_states=self.find_dependecies_states(task)
+        
+
+        if all([d['state']=="done" for d in dependency_states]):
+            self.log_task("task dependencies complete: unlocking",task,"locked")
+            log("dependecies complete, will unlock", task)
+            self.move_task("locked", "waiting", task)
+            return dict(state="waiting", key=task.key)
+
+        if any([d['state']=="failed" for d in dependency_states]):
+            log("dependecies complete, will unlock", task)
+            self.log_task("task dependencies failed: unlocking to fail",task,"failed")
+            self.move_task("locked", "failed", task)
+            return dict(state="failed", key=task.key)
+
+        if not any([d['state'] in ["running","waiting","locked","incomplete"] for d in dependency_states]):
+            log("dependecies incomplete, but nothing will come of this anymore, will unlock", task)
+            #self.log_task("task dependencies INcomplete: unlocking",task,"locked")
+
+            from collections import defaultdict
+            dd=defaultdict(int)
+            for d in dependency_states:
+                dd[d['state']]+=1
+
+            self.log_task("task dependencies INcomplete: "+repr(dict(dd)),task,"locked")
+           # self.move_task("locked", "waiting", task)
+          #  return dict(state="waiting", key=task.key)
+
+        log("task still locked", task.key)
+        return dict(state="locked",key=task.key)
+    
+    def remember(self,task_data,submission_data=None):
+        task=Task(task_data,submission_data=submission_data)
+        nfn=self.queue_dir("problem") + "/"+task.filename_instance
+        open(nfn, "w").write(task.serialize())
+            
+    
+    def select_task_entry(self,key):
+        r=TaskEntry.select().where(
+                         TaskEntry.key==key,
+                        ).execute()
+        assert len(r)==1
+        return r[0]
+    
+    def log_task(self,message,task=None,state=None):
+        if task is None:
+            task=self.current_task
+        if state is None:
+            state=self.current_task_status
+        return TaskHistory.insert(
+                             queue=self.queue,
+                             key=task.key,
+                             state=state,
+                             worker_id=self.worker_id,
+                             timestamp=datetime.datetime.now(),
+                             message=message,
+                        ).execute()
+
+    def insert_task_entry(self,task,state):
+        self.log_task("task created",task,state)
+
+        log("to insert_task_entry: ", dict(
+             queue=self.queue,
+             key=task.key,
+             state=state,
+             worker_id=self.worker_id,
+             entry=task.serialize(),
+             created=datetime.datetime.now(),
+             modified=datetime.datetime.now(),
+        ))
+
+        raise NotImplementedError
+
+    def list(self,kind=None,kinds=None,fullpath=False):
+        if kinds is None:
+            kinds=["waiting"]
+        if kind is not None:
+            kinds=[kind]
+
+        kind_jobs = []
+
+        for kind in kinds:
+            for task_entry in TaskEntry.select().where(TaskEntry.state==kind, TaskEntry.queue==self.queue):
+                kind_jobs.append(task_entry.key)
+        return kind_jobs
 
     @property
     def info(self):

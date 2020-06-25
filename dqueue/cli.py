@@ -12,7 +12,7 @@ from dqueue.core import Queue, QueueProxy
 @click.option("--queue", default=None)
 @click.pass_obj
 def cli(obj, queue):
-    obj['queue']=queue
+    obj['queue'] = Queue.from_uri(queue)
 
 @cli.command()
 @click.pass_obj

@@ -1,8 +1,8 @@
 import pytest
 
-import dqueue.app
+import dqueue.api
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def app():
-    app = dqueue.app.app
+    app = dqueue.api.app
     return app
