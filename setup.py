@@ -12,5 +12,10 @@ setup(name='dqueue',
               'dqueue=dqueue:cli',
                 ]
           },
+      install_requires=[
+          'marshmallow',
+          'apispec',
+          'flasgger',
+          ],
       zip_safe=False,
      )

@@ -11,12 +11,67 @@ import logging
 import io
 import urllib.parse
 
-from dqueue import * #??
+import dqueue.core as core
+from dqueue.core import model_to_dict
+
+import peewee
 
 from flask import Flask
 from flask import render_template,make_response,request,jsonify
+from flasgger import Swagger, SwaggerView, Schema, fields
+
+db = core.db
+
+class TaskSchema(Schema):
+    state = fields.Str()
+    queue = fields.Str()
+    id = fields.Str()
+
+class TaskListSchema(Schema):
+    tasks = fields.Nested(TaskSchema, many=True)
+
+
+class TaskView(SwaggerView):
+    parameters = [
+        {
+            "name": "state",
+            "in": "query",
+            "type": "string",
+            "enum": ["submitted", "waiting", "done", "all"],
+            "required": False,
+            "default": "all",
+        }
+    ]
+    responses = {
+        200: {
+            "description": "A list of tasks",
+            "schema": TaskListSchema
+        }
+    }
+
+    def get(self, state="all"):
+        """
+        get list of tasks
+        """
+
+        #if output_json:
+        #    return jsonify(entries)
+        #else:
+        #    return render_template('task_list.html', entries=entries)
+
+        return jsonify(
+                tasks=list_tasks()
+            )
+
 
 app = Flask(__name__)
+swagger = Swagger(app)
+
+app.add_url_rule(
+         '/tasks',
+          view_func=TaskView.as_view('tasks'),
+          methods=['GET']
+)
 
 decoded_entries={} # type: ignore
 
@@ -64,7 +119,7 @@ def stats():
     print("searching for entries")
     date_N_days_ago = datetime.datetime.now() - datetime.timedelta(days=float(request.args.get('since',1)))
 
-    entries=[entry for entry in TaskEntry.select().where(TaskEntry.modified >= date_N_days_ago).order_by(TaskEntry.modified.desc()).execute()]
+    entries=[entry for entry in core.TaskEntry.select().where(core.TaskEntry.modified >= date_N_days_ago).order_by(core.TaskEntry.modified.desc()).execute()]
 
     bystate = defaultdict(int)
     #bystate = defaultdict(list)
@@ -82,8 +137,7 @@ def stats():
         return render_template('task_stats.html', bystate=bystate)
     #return jsonify({k:len(v) for k,v in bystate.items()})
 
-@app.route('/list')
-def list():
+def list_tasks():
     try:
         db.connect()
     except peewee.OperationalError as e:
@@ -102,14 +156,14 @@ def list():
 
     if pick_state != "any":
         if json_filter:
-            entries=[model_to_dict(entry) for entry in TaskEntry.select().where((TaskEntry.state == pick_state) & (TaskEntry.modified >= date_N_days_ago) & (TaskEntry.entry.contains(json_filter))).order_by(TaskEntry.modified.desc()).execute()]
+            entries=[model_to_dict(entry) for entry in core.TaskEntry.select().where((core.TaskEntry.state == pick_state) & (core.TaskEntry.modified >= date_N_days_ago) & (core.TaskEntry.entry.contains(json_filter))).order_by(core.TaskEntry.modified.desc()).execute()]
         else:
-            entries=[model_to_dict(entry) for entry in TaskEntry.select().where((TaskEntry.state == pick_state) & (TaskEntry.modified >= date_N_days_ago)).order_by(TaskEntry.modified.desc()).execute()]
+            entries=[model_to_dict(entry) for entry in core.TaskEntry.select().where((core.TaskEntry.state == pick_state) & (core.TaskEntry.modified >= date_N_days_ago)).order_by(core.TaskEntry.modified.desc()).execute()]
     else:
         if json_filter:
-            entries=[model_to_dict(entry) for entry in TaskEntry.select().where((TaskEntry.modified >= date_N_days_ago) & (TaskEntry.entry.contains(json_filter))).order_by(TaskEntry.modified.desc()).execute()]
+            entries=[model_to_dict(entry) for entry in core.TaskEntry.select().where((core.TaskEntry.modified >= date_N_days_ago) & (core.TaskEntry.entry.contains(json_filter))).order_by(core.TaskEntry.modified.desc()).execute()]
         else:
-            entries=[model_to_dict(entry) for entry in TaskEntry.select().where(TaskEntry.modified >= date_N_days_ago).order_by(TaskEntry.modified.desc()).execute()]
+            entries=[model_to_dict(entry) for entry in core.TaskEntry.select().where(core.TaskEntry.modified >= date_N_days_ago).order_by(core.TaskEntry.modified.desc()).execute()]
 
 
     print(("found entries",len(entries)))
@@ -143,14 +197,13 @@ def list():
 
     db.close()
 
-    if output_json:
-        return jsonify(entries)
-    else:
-        return render_template('task_list.html', entries=entries)
+
+    return entries
+
 
 @app.route('/task/info/<string:key>')
 def task_info(key):
-    entry=[model_to_dict(entry) for entry in TaskEntry.select().where(TaskEntry.key==key).execute()]
+    entry=[model_to_dict(entry) for entry in core.TaskEntry.select().where(core.TaskEntry.key==key).execute()]
     if len(entry)==0:
         return make_response("no such entry found")
 
@@ -183,31 +236,31 @@ def task_info(key):
 
 @app.route('/purge')
 def purge():
-    nentries=TaskEntry.delete().execute()
+    nentries=core.TaskEntry.delete().execute()
     return make_response("deleted %i"%nentries)
 
 @app.route('/resubmit/<string:scope>/<string:selector>')
 def resubmit(scope,selector):
     if scope=="state":
         if selector=="all":
-            nentries=TaskEntry.update({
-                            TaskEntry.state:"waiting",
-                            TaskEntry.modified:datetime.datetime.now(),
+            nentries=core.TaskEntry.update({
+                            core.TaskEntry.state:"waiting",
+                            core.TaskEntry.modified:datetime.datetime.now(),
                         })\
                         .execute()
         else:
-            nentries=TaskEntry.update({
-                            TaskEntry.state:"waiting",
-                            TaskEntry.modified:datetime.datetime.now(),
+            nentries=core.TaskEntry.update({
+                            core.TaskEntry.state:"waiting",
+                            core.TaskEntry.modified:datetime.datetime.now(),
                         })\
-                        .where(TaskEntry.state==selector)\
+                        .where(core.TaskEntry.state==selector)\
                         .execute()
     elif scope=="task":
-        nentries=TaskEntry.update({
-                        TaskEntry.state:"waiting",
-                        TaskEntry.modified:datetime.datetime.now(),
+        nentries=core.TaskEntry.update({
+                        core.TaskEntry.state:"waiting",
+                        core.TaskEntry.modified:datetime.datetime.now(),
                     })\
-                    .where(TaskEntry.key==selector)\
+                    .where(core.TaskEntry.key==selector)\
                     .execute()
 
     return make_response("resubmitted %i"%nentries)
@@ -224,8 +277,8 @@ def healthcheck():
             )
 
 def listen():
-    app.run(port=5555,debug=True,host=args.host,threaded=True)
+    app.run(port=8000) #,debug=True,host=args.host,threaded=True)
 
 if __name__ == "__main__":
-    pass
+    listen()
 
