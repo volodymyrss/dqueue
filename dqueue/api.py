@@ -24,14 +24,21 @@ decoded_entries={} # type: ignore
 
 db = core.db
 
-class TaskSchema(Schema):
+
+## === schemas
+
+class Task(Schema):
     state = fields.Str()
     queue = fields.Str()
     id = fields.Str()
 
-class TaskListSchema(Schema):
-    tasks = fields.Nested(TaskSchema, many=True)
+class TaskList(Schema):
+    tasks = fields.Nested(Task, many=True)
 
+class Status(Schema):
+    status = fields.Str()
+
+## === views
 
 class TaskListView(SwaggerView):
     parameters = [
@@ -47,7 +54,7 @@ class TaskListView(SwaggerView):
     responses = {
         200: {
             "description": "A list of tasks",
-            "schema": TaskListSchema
+            "schema": TaskList
         }
     }
 
@@ -62,10 +69,20 @@ class TaskListView(SwaggerView):
 
 class TaskView(SwaggerView):
     definitions = {
-            'User': User, 
-            'Another': Another, 
-            "parameters" : parameters, 
-            "parameters2" : parameters2
+            'Task': Task, 
+            'Status': Status, 
+            "parameters_get" : [
+                    {
+                        'name': 'id',
+                        'in': 'path',
+                    }
+                ], 
+            "parameters_post" : [
+                    {
+                        'name': Task,
+                        'in': 'query',
+                    }
+                ], 
             }
 
     def get(self, state="all"):
@@ -74,14 +91,14 @@ class TaskView(SwaggerView):
         ---
         parameters:
             schema:
-              $ref: '#/definitions/parameters'
+              $ref: '#/definitions/parameters_get'
         responses:
           200:
             schema:
-              $ref: '#/definitions/User'
+              $ref: '#/definitions/Task'
         """
         return jsonify(
-                get_task()
+                task_info()
             )
 
     def post(self, state="all"):
@@ -90,14 +107,14 @@ class TaskView(SwaggerView):
         ---
         parameters:
             schema:
-              $ref: '#/definitions/parameters'
+              $ref: '#/definitions/parameters_post'
         responses:
           200:
             schema:
-              $ref: '#/definitions/User'
+              $ref: '#/definitions/Status'
         """
         return jsonify(
-                get_task()
+                {'status': 'success'}
             )
 
 app = Flask(__name__)
@@ -253,7 +270,7 @@ def task_info(key):
     try:
         entry_data=yaml.load(io.StringIO(entry['entry']))
         entry['entry']=entry_data
-            
+
         from ansi2html import ansi2html# type: ignore
 
         if entry['entry']['execution_info'] is not None:

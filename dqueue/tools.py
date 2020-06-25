@@ -24,131 +24,9 @@ decoded_entries={} # type: ignore
 
 db = core.db
 
-class TaskSchema(Schema):
-    state = fields.Str()
-    queue = fields.Str()
-    id = fields.Str()
-
-class TaskListSchema(Schema):
-    tasks = fields.Nested(TaskSchema, many=True)
-
-
-class TaskListView(SwaggerView):
-    parameters = [
-        {
-            "name": "state",
-            "in": "query",
-            "type": "string",
-            "enum": ["submitted", "waiting", "done", "all"],
-            "required": False,
-            "default": "all",
-        }
-    ]
-    responses = {
-        200: {
-            "description": "A list of tasks",
-            "schema": TaskListSchema
-        }
-    }
-
-    def get(self, state="all"):
-        """
-        get list of tasks
-        """
-
-        return jsonify(
-                tasks=list_tasks()
-            )
-
-class TaskView(SwaggerView):
-    definitions = {
-            'User': User, 
-            'Another': Another, 
-            "parameters" : parameters, 
-            "parameters2" : parameters2
-            }
-
-    def get(self, state="all"):
-        """
-        get task description
-        ---
-        parameters:
-            schema:
-              $ref: '#/definitions/parameters'
-        responses:
-          200:
-            schema:
-              $ref: '#/definitions/User'
-        """
-        return jsonify(
-                get_task()
-            )
-
-    def post(self, state="all"):
-        """
-        get task description
-        ---
-        parameters:
-            schema:
-              $ref: '#/definitions/parameters'
-        responses:
-          200:
-            schema:
-              $ref: '#/definitions/User'
-        """
-        return jsonify(
-                get_task()
-            )
-
-app = Flask(__name__)
-swagger = Swagger(app)
-
-app.add_url_rule(
-         '/api/v1.0/tasks',
-          view_func=TaskListView.as_view('tasks'),
-          methods=['GET']
-)
-
-app.add_url_rule(
-         '/api/v1.0/task',
-          view_func=TaskView.as_view('task'),
-          methods=['GET', 'POST']
-)
-
 
 logger=logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-handler=logging.StreamHandler()
-logger.addHandler(handler)
-formatter = logging.Formatter('%(asctime)s %(levelname)8s %(name)s | %(message)s')
-handler.setFormatter(formatter)
 
-class ReverseProxied(object):
-    def __init__(self, app):
-        self.app = app
-
-    def __call__(self, environ, start_response):
-        script_name = environ.get('HTTP_X_FORWARDED_PREFIX', '')
-        if script_name:
-            environ['SCRIPT_NAME'] = script_name
-            path_info = environ['PATH_INFO']
-            if path_info.startswith(script_name):
-                environ['PATH_INFO'] = path_info[len(script_name):]
-
-        scheme = environ.get('HTTP_X_SCHEME', '')
-        if scheme:
-            environ['wsgi.url_scheme'] = scheme
-        return self.app(environ, start_response)
-
-app.wsgi_app = ReverseProxied(app.wsgi_app)# type: ignore
-
-@app.errorhandler(peewee.OperationalError)
-def handle_dberror(e):
-    logger.error("db access error: %s", e)
-    logger.error(traceback.format_exc())
-    return "server DB error! please contact me (you know how)!", 500
-
-@app.route('/stats')
 def stats():
     try:
         db.connect()
@@ -172,11 +50,7 @@ def stats():
 
     db.close()
 
-    if request.args.get('json') is not None:
-        return jsonify({k:v for k,v in bystate.items()})
-    else:
-        return render_template('task_stats.html', bystate=bystate)
-    #return jsonify({k:len(v) for k,v in bystate.items()})
+    return {k:v for k,v in bystate.items()}
 
 def list_tasks():
     try:
@@ -253,7 +127,7 @@ def task_info(key):
     try:
         entry_data=yaml.load(io.StringIO(entry['entry']))
         entry['entry']=entry_data
-            
+
         from ansi2html import ansi2html# type: ignore
 
         if entry['entry']['execution_info'] is not None:
@@ -309,28 +183,4 @@ def resubmit(scope, selector):
     return make_response("resubmitted %i"%nentries)
 
 
-@app.route('/task/info/<string:key>')
-def view_task_info(key):
-    r = render_template('task_info.html', 
-            entry=entry,
-            history=history,
-            formatted_exception=formatted_exception)
-    return r
-
-
-@app.route('/healthcheck')
-@app.route('/')
-def healthcheck():
-    return jsonify(
-                dict(
-                        status="OK",
-                        version="undefined",
-                    )
-            )
-
-def listen():
-    app.run(port=8000,debug=True,threaded=True)
-
-if __name__ == "__main__":
-    listen()
 
