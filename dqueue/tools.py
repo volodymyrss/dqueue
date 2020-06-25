@@ -118,7 +118,7 @@ def list_tasks():
 def task_info(key):
     entry=[model_to_dict(entry) for entry in core.TaskEntry.select().where(core.TaskEntry.key==key).execute()]
     if len(entry)==0:
-        return make_response("no such entry found")
+        return 
 
     entry=entry[0]
 

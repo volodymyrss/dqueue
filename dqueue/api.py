@@ -38,7 +38,7 @@ logger=logging.getLogger(__name__)
 class Task(Schema):
     state = fields.Str()
     queue = fields.Str()
-    id = fields.Str()
+    task_id = fields.Str()
 
 class TaskList(Schema):
     tasks = fields.Nested(Task, many=True)
@@ -76,66 +76,41 @@ class TaskListView(SwaggerView):
             )
 
 class TaskView(SwaggerView):
-    definitions = {
-            'Task': Task, 
-            'Status': Status, 
-            "parameters_get" : [
-                    {
-                        'name': 'id',
-                        'in': 'path',
-                    }
-                ], 
-            "parameters_post" : [
-                    {
-                        'name': Task,
-                        'in': 'query',
-                    }
-                ], 
-            }
+    parameters = [
+                {
+                    'name': 'task_id',
+                    'in': 'path',
+                    'required': True,
+                    'type': 'string',
+                }
+            ]
 
-    def get(self, state="all"):
-        """
-        get task description
-        ---
-        parameters:
-            schema:
-              $ref: '#/definitions/parameters_get'
-        responses:
-          200:
-            schema:
-              $ref: '#/definitions/Task'
-        """
-        return jsonify(
-                task_info()
-            )
+    responses = {
+            200: {
+                    'description': 'task data',
+                    'schema': Task,
+                }
+        }
 
-    def post(self, state="all"):
-        """
-        get task description
-        ---
-        parameters:
-            schema:
-              $ref: '#/definitions/parameters_post'
-        responses:
-          200:
-            schema:
-              $ref: '#/definitions/Status'
-        """
+    def get(self, task_id):
+        info = tools.task_info(task_id)
+        logger.warning("requested task_id %s %s", task_id, info)
         return jsonify(
-                {'status': 'success'}
+                task_id=task_id,
+                task_info=info,
             )
 
 
 app.add_url_rule(
-         '/api/v1.0/tasks',
+         '/tasks',
           view_func=TaskListView.as_view('api_tasks'),
           methods=['GET']
 )
 
 app.add_url_rule(
-         '/api/v1.0/task',
+         '/task/<task_id>',
           view_func=TaskView.as_view('api_task'),
-          methods=['GET', 'POST']
+          methods=['GET']
 )
 
 print("app added rules", id(app))

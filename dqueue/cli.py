@@ -1,11 +1,12 @@
 import click
 import logging
+from termcolor import colored
 
 logger = logging.getLogger()
 
 log = lambda *x,**xx:logger.info(*x, **xx)
 
-from dqueue.core import Queue
+from dqueue.core import Queue, QueueProxy
 
 @click.group()
 @click.option("--queue", default=None)
@@ -31,19 +32,12 @@ def purge(queue):
         q.purge()
 
 @cli.command()
-def explore():
-    from bravado.client import SwaggerClient
-    client = SwaggerClient.from_url('http://localhost:8000/apispec_1.json')
-    print(client)
-    print(client.tasks) #.list().response().result)
-
-    r = client.tasks.get_tasks().response().result
-
-    print(r)
-
-    for task in r.tasks:
-        print(task)
-
+@click.pass_obj
+def list(obj):
+    for task in obj['queue'].list():
+        print(colored("found", "red"), task)
+        print('task_id', task['task_id'])
+    
 
 def main():
     cli(obj={})
