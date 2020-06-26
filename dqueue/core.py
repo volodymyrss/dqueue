@@ -186,11 +186,15 @@ def list_queues(pattern=None):
 
 class Queue:
 
-    def __init__(self,queue="default"):
+    def __init__(self,queue="default", worker_id=None):
         ""
         self.logger = logging.getLogger(repr(self))
 
-        self.worker_id=self.get_worker_id()
+        if worker_id is None:
+            self.worker_id=self.get_worker_id()
+        else:
+            self.worker_id=worker_id
+
         self.queue=queue
         self.current_task=None
         self.current_task_status=None

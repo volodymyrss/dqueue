@@ -39,6 +39,7 @@ class Task(Schema):
     state = fields.Str()
     queue = fields.Str()
     task_id = fields.Str()
+    task_data = fields.Dict()
 
 class TaskList(Schema):
     tasks = fields.Nested(Task, many=True)
@@ -75,6 +76,43 @@ class TaskListView(SwaggerView):
                 tasks=tools.list_tasks()
             )
 
+app.add_url_rule(
+         '/tasks',
+          view_func=TaskListView.as_view('api_tasks'),
+          methods=['GET']
+)
+
+class WorkerOffer(SwaggerView):
+    parameters = [
+                {
+                    'name': 'worker_id',
+                    'in': 'query',
+                    'required': True,
+                    'type': 'string',
+                }
+            ]
+
+    responses = {
+            200: {
+                    'description': 'task data',
+                    'schema': Task,
+                }
+        }
+
+    def get(self):
+        queue = dqueue.core.Queue()
+        task = queue.get()
+        logger.warning("got task: %s", task)
+        return jsonify(
+                task_data=task.task_data,
+            )
+
+app.add_url_rule(
+         '/worker/offer',
+          view_func=WorkerOffer.as_view('worker_offer_task'),
+          methods=['GET']
+)
+
 class TaskView(SwaggerView):
     parameters = [
                 {
@@ -100,49 +138,35 @@ class TaskView(SwaggerView):
                 task_info=info,
             )
 
-class TaskPurgeView(SwaggerView):
-    parameters = [
-                {
-                    'name': 'state',
-                    'in': 'query',
-                    'required': False,
-                    'type': 'string',
-                },
-                {
-                    'name': 'queue',
-                    'in': 'query',
-                    'required': False,
-                    'type': 'string',
-                }
-            ]
 
-    responses = {
-            200: {
-                    'description': 'entries purged',
-                }
-        }
+@app.route("/tasks/purge")
+def tasks_purge():
+    """
+    ---
+    parameters:
+    - name: 'state'
+      in: 'query'
+      required: false
+      type: 'string'
+    - name: 'queue'
+      in: 'query'
+      required: false
+      type: 'string'
 
-    def get(self):
-        queue = Queue()
-        n = queue.purge()
-        return jsonify(
-                nentries=n
-            )
+    responses:
+        200: 
+            description: 'entries purged'
+    """
+
+    queue = dqueue.core.Queue()
+    n = queue.purge()
+    return jsonify(
+            nentries=n
+        )
+
 
 app.add_url_rule(
-         '/tasks/purge',
-          view_func=TaskPurgeView.as_view('api_tasks_purge'),
-          methods=['GET']
-)
-
-app.add_url_rule(
-         '/tasks',
-          view_func=TaskListView.as_view('api_tasks'),
-          methods=['GET']
-)
-
-app.add_url_rule(
-         '/task/<task_id>',
+         '/task/view/<task_id>',
           view_func=TaskView.as_view('api_task'),
           methods=['GET']
 )

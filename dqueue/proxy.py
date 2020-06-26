@@ -34,7 +34,7 @@ class QueueProxy(Queue):
     @property
     def client(self):
         if getattr(self, '_client', None) is None:
-            self._client = SwaggerClient.from_url(self.master+"/apispec_1.json")
+            self._client = SwaggerClient.from_url(self.master+"/apispec_1.json") #, config={'use_models': False})
         return self._client
 
     def find_task_instances(self,task,klist=None):
@@ -88,7 +88,9 @@ class QueueProxy(Queue):
         if self.current_task is not None:
             raise CurrentTaskUnfinished(self.current_task)
 
-        raise NotImplementedError
+        print(dir(self.client.worker))
+
+        return self.client.worker.get_worker_offer(worker_id=self.worker_id).response().result.task_data
 
 
     def task_done(self):
@@ -147,6 +149,7 @@ class QueueProxy(Queue):
 
 
     def list(self, **kwargs):
+        print(dir(self.client.tasks))
         l = [task for task in self.client.tasks.get_tasks(**kwargs).response().result['tasks']]
         self.logger.info(f"found tasks: {len(l)}")
         return l
