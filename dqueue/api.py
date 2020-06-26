@@ -113,6 +113,42 @@ app.add_url_rule(
           methods=['GET']
 )
 
+class WorkerDeposit(SwaggerView):
+    parameters = [
+                {
+                    'name': 'worker_id',
+                    'in': 'query',
+                    'required': True,
+                    'type': 'string',
+                },
+                {
+                    'name': 'task_data',
+                    'in': 'query',
+                    'required': True,
+                    'type': Task, 
+                },
+            ]
+
+    responses = {
+            200: {
+                    'description': 'task data',
+                }
+        }
+
+    def get(self, worker_id, task_data):
+        queue = dqueue.core.Queue(worker_id=worker_id)
+        task = queue.put(task_data)
+        logger.warning("deposited task: %s", task)
+        return jsonify(
+                {}
+            )
+
+app.add_url_rule(
+     '/worker/deposit',
+      view_func=WorkerDeposit.as_view('worker_deposit_task'),
+      methods=['GET']
+)
+
 class TaskView(SwaggerView):
     parameters = [
                 {

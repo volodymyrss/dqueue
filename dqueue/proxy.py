@@ -82,7 +82,10 @@ class QueueProxy(Queue):
                             ).execute()
 
     def put(self,task_data,submission_data=None, depends_on=None):
-        pass
+        print(dir(self.client.worker))
+
+        return self.client.worker.get_worker_deposit(worker_id=self.worker_id, task_data=task_data).response().result
+
 
     def get(self):
         if self.current_task is not None:

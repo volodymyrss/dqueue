@@ -1,5 +1,6 @@
 import click
 import logging
+import json
 from termcolor import colored
 
 logger = logging.getLogger()
@@ -43,6 +44,20 @@ def list(obj):
         print(colored("found", "red"), task)
         print('task_id', task['task_id'])
     
+
+@cli.command()
+@click.pass_obj
+def offer(obj):
+    task_data=obj['queue'].get()
+    print(colored("offered:", "green"), task_data)
+
+@cli.command()
+@click.argument("task_data")
+@click.pass_obj
+def deposit(obj, task_data):
+    j_task_data=json.loads(task_data)
+    r = obj['queue'].put(j_task_data)
+    print(colored("deposited:", "green"), j_task_data, ":", r)
 
 def main():
     cli(obj={})
