@@ -15,6 +15,8 @@ run: build
 	        #-e ODATESTS_BOT_PASSWORD=$(shell cat testbot-password.txt) \
 
 build:
+	rm -fv dist/*
+	python setup.py sdist
 	docker build -t $(IMAGE) .
 
 push: build

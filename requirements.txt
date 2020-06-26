@@ -5,3 +5,4 @@ flask
 ansi2html
 gunicorn
 flask-rest-api
+bravado
