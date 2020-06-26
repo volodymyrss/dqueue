@@ -11,4 +11,4 @@ ADD dist/* /dist/
 RUN pip install /dist/*
 
 
-ENTRYPOINT gunicorn dqueue.api:app -b 0.0.0.0:8000 --log-level INFO
+ENTRYPOINT gunicorn dqueue.api:app -b 0.0.0.0:8000 --log-level DEBUG

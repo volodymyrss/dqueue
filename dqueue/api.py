@@ -16,6 +16,7 @@ import dqueue.app
 import dqueue.tools as tools
 
 import peewee
+import json
 
 from flask import Flask
 from flask import render_template,make_response,request,jsonify
@@ -125,7 +126,7 @@ class WorkerDeposit(SwaggerView):
                     'name': 'task_data',
                     'in': 'query',
                     'required': True,
-                    'type': Task, 
+                    'type': 'string', 
                 },
             ]
 
@@ -137,7 +138,7 @@ class WorkerDeposit(SwaggerView):
 
     def get(self, worker_id, task_data):
         queue = dqueue.core.Queue(worker_id=worker_id)
-        task = queue.put(task_data)
+        task = queue.put(json.loads(task_data))
         logger.warning("deposited task: %s", task)
         return jsonify(
                 {}
