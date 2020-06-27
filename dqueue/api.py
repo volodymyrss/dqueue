@@ -125,7 +125,13 @@ class WorkerOffer(SwaggerView):
                     'in': 'query',
                     'required': False,
                     'type': 'string',
-                }
+                },
+                {
+                    'name': 'token',
+                    'in': 'query',
+                    'required': True,
+                    'type': 'string',
+                },
             ]
 
     responses = {
@@ -162,8 +168,8 @@ app.add_url_rule(
           methods=['GET']
 )
 
-class WorkerAnswer(SwaggerView):
-    operationId = "answerTask"
+class WorkerQuestion(SwaggerView):
+    operationId = "questionTask"
 
     parameters = [
                 {
@@ -177,6 +183,12 @@ class WorkerAnswer(SwaggerView):
                     'in': 'body',
                     'required': True,
                     'schema': Task, 
+                },
+                {
+                    'name': 'token',
+                    'in': 'query',
+                    'required': True,
+                    'type': 'string',
                 },
             ]
 
@@ -196,14 +208,14 @@ class WorkerAnswer(SwaggerView):
 
         task = queue.put(task_data)
 
-        logger.warning("answered task: %s", task)
+        logger.warning("questioned task: %s", task)
         return jsonify(
                 {}
             )
 
 app.add_url_rule(
-     '/worker/answer',
-      view_func=WorkerAnswer.as_view('worker_answer_task'),
+     '/worker/question',
+      view_func=WorkerQuestion.as_view('worker_question_task'),
       methods=['POST']
 )
 

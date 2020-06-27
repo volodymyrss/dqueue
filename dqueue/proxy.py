@@ -89,7 +89,7 @@ class QueueProxy(Queue):
     def put(self,task_data,submission_data=None, depends_on=None):
         print(dir(self.client.worker))
 
-        return self.client.worker.answerTask(
+        return self.client.worker.questionTask(
                     worker_id=self.worker_id,
                     task_data=task_data,
                 ).response().result

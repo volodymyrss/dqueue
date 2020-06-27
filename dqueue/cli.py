@@ -2,6 +2,7 @@ import click
 import logging
 import json
 import os
+import pprint
 from termcolor import colored
 
 logger = logging.getLogger()
@@ -48,10 +49,13 @@ def purge(obj):
             q.purge()
 
 @cli.command()
+@click.option("-d", "--debug", default=False, is_flag=True)
 @click.pass_obj
-def list(obj):
+def list(obj, debug):
     for task in obj['queue'].list():
         print(colored("found", "red"), task['queue'], task['entry']['task_data'])
+        if debug:
+            print(pprint.pformat(task))
         #print('task_id', task['task_id'])
     
 
@@ -64,10 +68,10 @@ def get(obj):
 @cli.command()
 @click.argument("task_data")
 @click.pass_obj
-def answer(obj, task_data):
+def question(obj, task_data):
     j_task_data=json.loads(task_data)
     r = obj['queue'].put(j_task_data)
-    print(colored("answered:", "green"), task_data, ":", r)
+    print(colored("questioned:", "green"), task_data, ":", r)
 
 @cli.command()
 @click.pass_obj
