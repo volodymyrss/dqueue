@@ -101,7 +101,7 @@ class TaskListView(SwaggerView):
         """
 
         return jsonify(
-                tasks=[e for e in tools.list_tasks()]
+                tasks=[e for e in tools.list_tasks(include_task_data=True)]
             )
 
 app.add_url_rule(

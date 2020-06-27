@@ -133,7 +133,7 @@ class Task(object):
 
     @classmethod
     def from_entry(cls,entry):
-        task_dict=yaml.load(io.StringIO(entry))
+        task_dict=yaml.load(io.StringIO(entry) , Loader=yaml.Loader )
 
         self=cls(task_dict['task_data'])
         self.depends_on=task_dict['depends_on']

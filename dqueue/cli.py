@@ -13,12 +13,19 @@ from dqueue.core import Queue
 from dqueue.proxy import QueueProxy
 
 @click.group()
+@click.option("-d", "--debug", default=False, is_flag=True)
 @click.option("-q", "--queue", default=None)
 @click.pass_obj
-def cli(obj, queue):
+def cli(obj, debug, queue):
+    if debug:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
+
     if queue is None:
         queue = os.environ.get('DQUEUE_MASTER', None)
     obj['queue'] = from_uri(queue)
+    logger.info("using queue: %s", obj['queue'])
 
 @cli.command()
 @click.pass_obj
@@ -44,8 +51,8 @@ def purge(obj):
 @click.pass_obj
 def list(obj):
     for task in obj['queue'].list():
-        print(colored("found", "red"), task)
-        print('task_id', task['task_id'])
+        print(colored("found", "red"), task['queue'], task['entry']['task_data'])
+        #print('task_id', task['task_id'])
     
 
 @cli.command()

@@ -52,7 +52,7 @@ def stats():
 
     return {k:v for k,v in bystate.items()}
 
-def list_tasks():
+def list_tasks(include_task_data=True):
     try:
         db.connect()
     except peewee.OperationalError as e:

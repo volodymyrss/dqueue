@@ -19,6 +19,11 @@ from bravado.client import SwaggerClient
 
 
 class QueueProxy(Queue):
+    master = None
+    queue = None
+
+    def __repr__(self):
+        return f"[ {self.__class__.__name__}: {self.master}@{self.queue} ]"
 
     def __init__(self, queue_uri="http://localhost:5000@default"):
         super().__init__()
@@ -96,10 +101,12 @@ class QueueProxy(Queue):
 
         print(dir(self.client.worker))
 
-        r = self.client.worker.getOffer(worker_id=self.worker_id).response()
+        r = self.client.worker.getOffer(worker_id=self.worker_id, queue=self.queue).response()
 
         if r.result is None:
             raise Empty()
+
+        print("got", len(r.result))
 
         return r.result.task_data
 
