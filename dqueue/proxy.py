@@ -89,7 +89,7 @@ class QueueProxy(Queue):
     def put(self,task_data,submission_data=None, depends_on=None):
         print(dir(self.client.worker))
 
-        return self.client.worker.depositTask(
+        return self.client.worker.answerTask(
                     worker_id=self.worker_id,
                     task_data=task_data,
                 ).response().result
@@ -105,8 +105,6 @@ class QueueProxy(Queue):
 
         if r.result is None:
             raise Empty()
-
-        print("got", len(r.result))
 
         return r.result.task_data
 

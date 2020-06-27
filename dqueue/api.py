@@ -162,8 +162,8 @@ app.add_url_rule(
           methods=['GET']
 )
 
-class WorkerDeposit(SwaggerView):
-    operationId = "depositTask"
+class WorkerAnswer(SwaggerView):
+    operationId = "answerTask"
 
     parameters = [
                 {
@@ -196,14 +196,14 @@ class WorkerDeposit(SwaggerView):
 
         task = queue.put(task_data)
 
-        logger.warning("deposited task: %s", task)
+        logger.warning("answered task: %s", task)
         return jsonify(
                 {}
             )
 
 app.add_url_rule(
-     '/worker/deposit',
-      view_func=WorkerDeposit.as_view('worker_deposit_task'),
+     '/worker/answer',
+      view_func=WorkerAnswer.as_view('worker_answer_task'),
       methods=['POST']
 )
 
