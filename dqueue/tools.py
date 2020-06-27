@@ -84,18 +84,20 @@ def list_tasks():
     print(("found entries",len(entries)))
     for entry in entries:
         print(("decoding",len(entry['entry'])))
+        print("full entry:", entry)
         if entry['entry'] in decoded_entries:
             entry_data=decoded_entries[entry['entry']]
         else:
             try:
                 entry_data=yaml.load(io.StringIO(entry['entry']))
                 entry_data['submission_info']['callback_parameters']={}
-                for callback in entry_data['submission_info']['callbacks']:
+                for callback in entry_data['submission_info'].get('callbacks', []):
                     if callback is not None:
                         entry_data['submission_info']['callback_parameters'].update(urllib.parse.parse_qs(callback.split("?",1)[1]))
                     else:
                         entry_data['submission_info']['callback_parameters'].update(dict(job_id="unset",session_id="unset"))
             except Exception as e:
+                traceback.print_exc()
                 print("problem decoding", repr(e))
                 entry_data={'task_data':
                                 {'object_identity':

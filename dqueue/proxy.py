@@ -84,7 +84,10 @@ class QueueProxy(Queue):
     def put(self,task_data,submission_data=None, depends_on=None):
         print(dir(self.client.worker))
 
-        return self.client.worker.get_worker_deposit(worker_id=self.worker_id, task_data=task_data).response().result
+        return self.client.worker.depositTask(
+                    worker_id=self.worker_id,
+                    task_data=task_data,
+                ).response().result
 
 
     def get(self):
@@ -93,7 +96,7 @@ class QueueProxy(Queue):
 
         print(dir(self.client.worker))
 
-        return self.client.worker.get_worker_offer(worker_id=self.worker_id).response().result.task_data
+        return self.client.worker.getOffer(worker_id=self.worker_id).response().result.task_data
 
 
     def task_done(self):
@@ -147,13 +150,13 @@ class QueueProxy(Queue):
                 TaskEntry.delete().where(TaskEntry.key==key).execute()
         
     def purge(self):
-        nentries = self.client.tasks.get_tasks_purge().response().result
+        nentries = self.client.tasks.purge().response().result
         self.logger.info("deleted %s", nentries)
 
 
     def list(self, **kwargs):
         print(dir(self.client.tasks))
-        l = [task for task in self.client.tasks.get_tasks(**kwargs).response().result['tasks']]
+        l = [task for task in self.client.tasks.listTasks(**kwargs).response().result['tasks']]
         self.logger.info(f"found tasks: {len(l)}")
         return l
 
@@ -167,6 +170,9 @@ class QueueProxy(Queue):
     def show(self):
         r=""
         return r
+
+    def resubmit(self, scope, selector):
+        return self.client.tasks.resubmit(scope=scope, selector=selector)
 
     def watch(self,delay=1):
         while True:

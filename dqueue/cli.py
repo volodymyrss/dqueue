@@ -12,7 +12,7 @@ from dqueue.core import Queue
 from dqueue.proxy import QueueProxy
 
 @click.group()
-@click.option("--queue", default=None)
+@click.option("-q", "--queue", default=None)
 @click.pass_obj
 def cli(obj, queue):
     obj['queue'] = from_uri(queue)
@@ -57,7 +57,13 @@ def offer(obj):
 def deposit(obj, task_data):
     j_task_data=json.loads(task_data)
     r = obj['queue'].put(j_task_data)
-    print(colored("deposited:", "green"), j_task_data, ":", r)
+    print(colored("deposited:", "green"), task_data, ":", r)
+
+@cli.command()
+@click.pass_obj
+def resubmit(obj):
+    r = obj['queue'].resubmit('state', 'all').response().result
+    print(colored("resubmitted:", "green"), ":", r)
 
 def main():
     cli(obj={})

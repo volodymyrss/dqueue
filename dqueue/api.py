@@ -77,6 +77,7 @@ class Status(Schema):
 ## === views
 
 class TaskListView(SwaggerView):
+    operationId = "listTasks"
     parameters = [
         {
             "name": "state",
@@ -100,7 +101,7 @@ class TaskListView(SwaggerView):
         """
 
         return jsonify(
-                tasks=tools.list_tasks()
+                tasks=[e for e in tools.list_tasks()]
             )
 
 app.add_url_rule(
@@ -110,6 +111,8 @@ app.add_url_rule(
 )
 
 class WorkerOffer(SwaggerView):
+    operationId = "getOffer"
+
     parameters = [
                 {
                     'name': 'worker_id',
@@ -141,6 +144,8 @@ app.add_url_rule(
 )
 
 class WorkerDeposit(SwaggerView):
+    operationId = "depositTask"
+
     parameters = [
                 {
                     'name': 'worker_id',
@@ -150,9 +155,9 @@ class WorkerDeposit(SwaggerView):
                 },
                 {
                     'name': 'task_data',
-                    'in': 'query',
+                    'in': 'body',
                     'required': True,
-                    'type': 'string', 
+                    'schema': Task, 
                 },
             ]
 
@@ -162,9 +167,16 @@ class WorkerDeposit(SwaggerView):
                 }
         }
 
-    def get(self, worker_id, task_data):
+    def post(self):
+        worker_id = request.args.get('worker_id')
+        task_data = request.json
+
         queue = dqueue.core.Queue(worker_id=worker_id)
-        task = queue.put(json.loads(task_data))
+
+        print("got:", worker_id, task_data)
+
+        task = queue.put(task_data)
+
         logger.warning("deposited task: %s", task)
         return jsonify(
                 {}
@@ -173,7 +185,7 @@ class WorkerDeposit(SwaggerView):
 app.add_url_rule(
      '/worker/deposit',
       view_func=WorkerDeposit.as_view('worker_deposit_task'),
-      methods=['GET']
+      methods=['POST']
 )
 
 class TaskView(SwaggerView):
@@ -201,11 +213,44 @@ class TaskView(SwaggerView):
                 task_info=info,
             )
 
+@app.route("/tasks/resubmit/<string:scope>/<string:selector>")
+def tasks_resubmit(scope, selector):
+    """
+    ---
+    operationId: 'resubmit'
+    parameters:
+    - name: 'queue'
+      in: 'query'
+      required: false
+      type: 'string'
+
+    - name: 'scope'
+      in: 'path'
+      enum: ['state', 'task']
+      required: true 
+      type: 'string'
+
+    - name: 'selector'
+      in: 'path'
+      required: True
+      type: 'string'
+
+    responses:
+        200: 
+            description: 'entries purged'
+    """
+
+    #queue = dqueue.core.Queue(queue)
+    n = tools.resubmit(scope, selector)
+    return jsonify(
+            nentries=n
+        )
 
 @app.route("/tasks/purge")
 def tasks_purge():
     """
     ---
+    operationId: 'purge'
     parameters:
     - name: 'state'
       in: 'query'
