@@ -12,7 +12,7 @@ import re
 import click
 import urllib.parse as urlparse# type: ignore
 
-from .core import Queue, Empty
+from .core import Queue, Empty, Task
 
 from bravado.client import SwaggerClient
 
@@ -21,6 +21,7 @@ from bravado.client import SwaggerClient
 class QueueProxy(Queue):
     master = None
     queue = None
+    token = ""
 
     def __repr__(self):
         return f"[ {self.__class__.__name__}: {self.master}@{self.queue} ]"
@@ -39,7 +40,7 @@ class QueueProxy(Queue):
     @property
     def client(self):
         if getattr(self, '_client', None) is None:
-            self._client = SwaggerClient.from_url(self.master+"/apispec_1.json") #, config={'use_models': False})
+            self._client = SwaggerClient.from_url(self.master+"/apispec_1.json", config={'use_models': False})
         return self._client
 
     def find_task_instances(self,task,klist=None):
@@ -92,6 +93,7 @@ class QueueProxy(Queue):
         return self.client.worker.questionTask(
                     worker_id=self.worker_id,
                     task_data=task_data,
+                    token=self.token,
                 ).response().result
 
 
@@ -101,12 +103,14 @@ class QueueProxy(Queue):
 
         print(dir(self.client.worker))
 
-        r = self.client.worker.getOffer(worker_id=self.worker_id, queue=self.queue).response()
+        r = self.client.worker.getOffer(worker_id=self.worker_id, queue=self.queue, token=self.token).response()
 
         if r.result is None:
             raise Empty()
 
-        return r.result.task_data
+        self.current_task = Task.from_entry(r.result)
+
+        return self.current_task
 
 
     def task_done(self):

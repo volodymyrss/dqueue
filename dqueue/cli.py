@@ -10,7 +10,7 @@ logger = logging.getLogger()
 log = lambda *x,**xx:logger.info(*x, **xx)
 
 from dqueue import from_uri
-from dqueue.core import Queue
+from dqueue.core import Queue, Task
 from dqueue.proxy import QueueProxy
 
 @click.group()
@@ -53,7 +53,7 @@ def purge(obj):
 @click.pass_obj
 def list(obj, debug):
     for task in obj['queue'].list():
-        print(colored("found", "red"), task['queue'], task['entry']['task_data'])
+        print(colored("found", "red"), task['queue'], colored(task['state'], 'blue'), task['entry']['task_data'])
         if debug:
             print(pprint.pformat(task))
         #print('task_id', task['task_id'])

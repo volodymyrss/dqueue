@@ -151,7 +151,7 @@ class WorkerOffer(SwaggerView):
             task = queue.get()
             logger.warning("got task: %s", task)
             return jsonify(
-                    task_data=task.task_data,
+                    task.as_dict,
                 )
         except dqueue.Empty:
             r = jsonify(

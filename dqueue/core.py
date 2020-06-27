@@ -119,24 +119,33 @@ class Task(object):
             fqdn=socket.getfqdn(),
             pid=os.getpid(),
         )
-
-    def serialize(self):
-        return yaml.dump(dict(
+    
+    @property
+    def as_dict(self):
+        return dict(
                 submission_info=self.submission_info,
                 task_data=self.task_data,
                 execution_info=self.execution_info,
                 depends_on=self.depends_on,
-            ),
+            )
+
+    def serialize(self):
+        return yaml.dump(self.as_dict,
             default_flow_style=False, default_style=''
         )
 
 
     @classmethod
     def from_entry(cls,entry):
-        task_dict=yaml.load(io.StringIO(entry) , Loader=yaml.Loader )
+        if isinstance(entry, str):
+            task_dict = yaml.load(io.StringIO(entry) , Loader=yaml.Loader )
+        else:
+            task_dict = entry
+
+        print(task_dict['task_data'].keys())
 
         self=cls(task_dict['task_data'])
-        self.depends_on=task_dict['depends_on']
+        self.depends_on=task_dict.get('depends_on', [])
         self.submission_info=task_dict['submission_info']
 
         return self
