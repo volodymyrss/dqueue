@@ -12,7 +12,7 @@ import re
 import click
 import urllib.parse as urlparse# type: ignore
 
-from .core import Queue
+from .core import Queue, Empty
 
 from bravado.client import SwaggerClient
 
@@ -96,7 +96,12 @@ class QueueProxy(Queue):
 
         print(dir(self.client.worker))
 
-        return self.client.worker.getOffer(worker_id=self.worker_id).response().result.task_data
+        r = self.client.worker.getOffer(worker_id=self.worker_id).response()
+
+        if r.result is None:
+            raise Empty()
+
+        return r.result.task_data
 
 
     def task_done(self):

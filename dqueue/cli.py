@@ -50,7 +50,7 @@ def list(obj):
 
 @cli.command()
 @click.pass_obj
-def offer(obj):
+def get(obj):
     task_data=obj['queue'].get()
     print(colored("offered:", "green"), task_data)
 

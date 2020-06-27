@@ -119,6 +119,12 @@ class WorkerOffer(SwaggerView):
                     'in': 'query',
                     'required': True,
                     'type': 'string',
+                },
+                {
+                    'name': 'queue',
+                    'in': 'query',
+                    'required': False,
+                    'type': 'string',
                 }
             ]
 
@@ -126,16 +132,29 @@ class WorkerOffer(SwaggerView):
             200: {
                     'description': 'task data',
                     'schema': Task,
+                },
+            204: {
+                    'description': 'problem: no tasks can be offered',
                 }
         }
 
     def get(self):
-        queue = dqueue.core.Queue()
-        task = queue.get()
-        logger.warning("got task: %s", task)
-        return jsonify(
-                task_data=task.task_data,
-            )
+        queue = dqueue.core.Queue(request.args.get('queue', 'default'))
+
+        try:
+            task = queue.get()
+            logger.warning("got task: %s", task)
+            return jsonify(
+                    task_data=task.task_data,
+                )
+        except dqueue.Empty:
+            r = jsonify(
+                    problem="no entries"
+                )
+
+            r.status_code = 204
+            return r
+
 
 app.add_url_rule(
          '/worker/offer',
