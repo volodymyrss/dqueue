@@ -1,6 +1,7 @@
 import click
 import logging
 import json
+import os
 from termcolor import colored
 
 logger = logging.getLogger()
@@ -15,6 +16,8 @@ from dqueue.proxy import QueueProxy
 @click.option("-q", "--queue", default=None)
 @click.pass_obj
 def cli(obj, queue):
+    if queue is None:
+        queue = os.environ.get('DQUEUE_MASTER', None)
     obj['queue'] = from_uri(queue)
 
 @cli.command()

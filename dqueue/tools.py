@@ -89,7 +89,7 @@ def list_tasks():
             entry_data=decoded_entries[entry['entry']]
         else:
             try:
-                entry_data=yaml.load(io.StringIO(entry['entry']))
+                entry_data=yaml.load(io.StringIO(entry['entry']), Loader=yaml.Loader)
                 entry_data['submission_info']['callback_parameters']={}
                 for callback in entry_data['submission_info'].get('callbacks', []):
                     if callback is not None:
