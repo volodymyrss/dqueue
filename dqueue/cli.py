@@ -30,11 +30,14 @@ def cli(obj, debug, queue):
 
 @cli.command()
 @click.pass_obj
-def show(obj):
-    for q in Queue.list_queues(obj['queue']):
-        log(q.info)
-        log(q.list(kinds=["waiting","done","failed","running"]))
-        print(q.show())
+def info(obj):
+    for q in obj['queue'].list_queues(None):
+        log(colored(q, 'green'))
+        for k,v in q.info.items():
+            print(k, ":", len(v), end="; ")
+        print("\n")
+        #log(q.list(kinds=["waiting","done","failed","running"]))
+        #print(q.show())
 
 @cli.command()
 @click.pass_obj
@@ -45,7 +48,6 @@ def purge(obj):
         for q in Queue.list_queues(queue):
             log(q.info)
             log(q.list(kinds=["waiting","done","failed","running"]))
-            print(q.show())
             q.purge()
 
 @cli.command()

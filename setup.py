@@ -1,7 +1,7 @@
 from setuptools import setup
 
-setup(name='dqueue',
-      version='1.0',
+setup(name='dda-queue',
+      version='1.1.0',
       description='a queue manager (yet another)',
       author='Volodymyr Savchenko',
       author_email='vladimir.savchenko@gmail.com',
@@ -16,6 +16,7 @@ setup(name='dqueue',
           'marshmallow',
           'apispec',
           'flasgger',
+          'bravado',
           ],
       zip_safe=False,
      )

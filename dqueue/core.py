@@ -12,6 +12,7 @@ import re
 import click
 import urllib.parse
 
+
 from bravado.client import SwaggerClient
 
 try:
@@ -187,13 +188,15 @@ def makedir_if_neccessary(directory):
 
 def list_queues(pattern=None):
     if pattern is None:
-        return [ Queue.from_url(task_entry.queue) for task_entry in 
+        return [ Queue(task_entry.queue) for task_entry in 
                 TaskEntry.select(TaskEntry.queue).distinct() ]
     else:
         return [ Queue(task_entry.queue) for task_entry in 
                 TaskEntry.select(TaskEntry.queue).where(TaskEntry.queue % pattern).distinct(TaskEntry.queue) ]
 
 class Queue:
+    def list_queues(self, pattern=None):
+        return list_queues(pattern)
 
     def __init__(self,queue="default", worker_id=None):
         ""

@@ -36,6 +36,9 @@ class QueueProxy(Queue):
         self.master = r.groups()[0]
         self.queue = r.groups()[1]
 
+    def list_queues(self, pattern):
+        print(self.client.queues.list().response().result)
+        return [QueueProxy(self.master+"@"+q) for q in self.client.queues.list().response().result]
 
     @property
     def client(self):
@@ -94,6 +97,7 @@ class QueueProxy(Queue):
                     worker_id=self.worker_id,
                     task_data=task_data,
                     token=self.token,
+                    queue=self.queue,
                 ).response().result
 
 
@@ -170,15 +174,16 @@ class QueueProxy(Queue):
 
     def list(self, **kwargs):
         print(dir(self.client.tasks))
-        l = [task for task in self.client.tasks.listTasks(**kwargs).response().result['tasks']]
+        l = [task for task in self.client.tasks.listTasks().response().result['tasks']]
         self.logger.info(f"found tasks: {len(l)}")
         return l
 
     @property
     def info(self):
         r={}
+        tasks = self.list()
         for kind in "waiting","running","done","failed","locked":
-            r[kind]=len(self.list(kind))
+            r[kind]=[t for t in tasks if t['state'] == kind]
         return r
 
     def show(self):

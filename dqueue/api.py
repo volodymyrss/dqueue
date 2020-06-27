@@ -71,6 +71,9 @@ class Task(Schema):
 class TaskList(Schema):
     tasks = fields.Nested(Task, many=True)
 
+class QueueList(Schema):
+    queues = fields.Nested(fields.Str(), many=True)
+
 class Status(Schema):
     status = fields.Str()
 
@@ -190,6 +193,12 @@ class WorkerQuestion(SwaggerView):
                     'required': True,
                     'type': 'string',
                 },
+                {
+                    'name': 'queue',
+                    'in': 'query',
+                    'required': False,
+                    'type': 'string',
+                },
             ]
 
     responses = {
@@ -199,10 +208,11 @@ class WorkerQuestion(SwaggerView):
         }
 
     def post(self):
+        queue = request.args.get('queue', 'default')
         worker_id = request.args.get('worker_id')
         task_data = request.json
 
-        queue = dqueue.core.Queue(worker_id=worker_id)
+        queue = dqueue.core.Queue(worker_id=worker_id, queue=queue)
 
         print("got:", worker_id, task_data)
 
@@ -275,6 +285,38 @@ def tasks_resubmit(scope, selector):
     n = tools.resubmit(scope, selector)
     return jsonify(
             nentries=n
+        )
+
+@app.route("/queues/list")
+def list_queues():
+    """
+    ---
+    operationId: 'list'
+
+    definitions:
+        QueueList:
+            type: 'array'
+            items: 
+                type: 'string'
+
+    responses:
+        200: 
+            description: 'queue list'
+            schema:
+                $ref: '#/definitions/QueueList'
+    """
+
+    
+    queue = dqueue.core.Queue()
+
+    ql = queue.list_queues()
+
+    print("queues on the server:", ql)
+    r = [q.queue for q in ql]
+    print("r:", r)
+
+    return jsonify(
+            r
         )
 
 @app.route("/tasks/purge")
