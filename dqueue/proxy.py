@@ -113,6 +113,7 @@ class QueueProxy(Queue):
             raise Empty()
 
         self.current_task = Task.from_entry(r.result)
+        self.current_task_stored_key = self.current_task.key
 
         return self.current_task
 
