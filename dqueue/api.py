@@ -10,6 +10,7 @@ import glob
 import logging
 import io
 import urllib.parse
+import traceback
 
 import dqueue.core 
 import dqueue.app
@@ -62,11 +63,14 @@ logger=logging.getLogger(__name__)
 
 ## === schemas
 
+class TaskData(Schema):
+    pass
+
 class Task(Schema):
     state = fields.Str()
     queue = fields.Str()
     task_id = fields.Str()
-    task_data = fields.Dict()
+    task_data = TaskData
 
 class TaskList(Schema):
     tasks = fields.Nested(Task, many=True)
@@ -171,6 +175,66 @@ app.add_url_rule(
           methods=['GET']
 )
 
+class WorkerAnswer(SwaggerView):
+    operationId = "answer"
+
+    parameters = [
+                {
+                    'name': 'worker_id',
+                    'in': 'query',
+                    'required': True,
+                    'type': 'string',
+                },
+                {
+                    'name': 'queue',
+                    'in': 'query',
+                    'required': False,
+                    'type': 'string',
+                },
+                {
+                    'name': 'token',
+                    'in': 'query',
+                    'required': True,
+                    'type': 'string',
+                },
+                {
+                    'name': 'task_dict',
+                    'in': 'body',
+                    'required': True,
+                    'schema': Task, 
+                },
+            ]
+
+    responses = {
+            200: {
+                    'description': 'its ok',
+                },
+        }
+
+    def post(self):
+        queue = dqueue.core.Queue(request.args.get('queue', 'default'))
+
+        task_dict = request.json
+
+        logger.debug("setting current task in %s to %s", queue, task_dict)
+
+        queue.state = "done"
+        queue.current_task = dqueue.core.Task.from_entry(task_dict)
+        queue.current_task_stored_key = queue.current_task.key
+
+        queue.task_done()
+
+        return jsonify(
+                "success",
+            )
+
+
+app.add_url_rule(
+         '/worker/answer',
+          view_func=WorkerAnswer.as_view('worker_answer_task'),
+          methods=['POST']
+)
+
 class WorkerQuestion(SwaggerView):
     operationId = "questionTask"
 
@@ -185,7 +249,7 @@ class WorkerQuestion(SwaggerView):
                     'name': 'task_data',
                     'in': 'body',
                     'required': True,
-                    'schema': Task, 
+                    'schema': TaskData,
                 },
                 {
                     'name': 'token',
@@ -345,6 +409,11 @@ def tasks_purge():
             nentries=n
         )
 
+@app.errorhandler(Exception)
+def handle(error):
+    logger.error("error: %s", repr(error))
+
+    traceback.print_exc()
 
 app.add_url_rule(
          '/task/view/<task_id>',

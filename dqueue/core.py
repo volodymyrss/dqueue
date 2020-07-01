@@ -647,7 +647,7 @@ class Queue:
         return "{fqdn}.{pid}".format(**d)
 
 
-    def log_task(self,message,task=None,state=None):
+    def log_task(self, message, task=None, state='undefined'):
         ""
         if task is None:
             task=self.current_task

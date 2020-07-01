@@ -12,7 +12,7 @@ import re
 import click
 import urllib.parse as urlparse# type: ignore
 
-from .core import Queue, Empty, Task
+from .core import Queue, Empty, Task, CurrentTaskUnfinished
 
 from bravado.client import SwaggerClient
 
@@ -119,8 +119,17 @@ class QueueProxy(Queue):
 
 
     def task_done(self):
-        self.logger.info("task done, closing:",self.current_task.key,self.current_task)
-        self.logger.info("task done, stored key:",self.current_task_stored_key)
+        self.logger.info("task done, closing: %s",self.current_task.key,self.current_task)
+        self.logger.info("task done, stored key: %s",self.current_task_stored_key)
+        self.logger.info("current task: %s", self.current_task.as_dict)
+
+        r = self.client.worker.answer(worker_id=self.worker_id, 
+                                      queue=self.queue, 
+                                      token=self.token,
+                                      task_dict=self.current_task.as_dict,
+                                      ).response()
+
+        self.current_task = None
 
     def clear_task_history(self):
         print('this is very descructive')
