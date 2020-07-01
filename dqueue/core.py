@@ -161,7 +161,7 @@ class Task(object):
     def get_key(self,key=True):
         components = []
 
-        task_data_string = yaml.dump(self.task_data, encoding='utf-8')
+        task_data_string = yaml.dump(order_task_data(self.task_data), encoding='utf-8')
 
 
         components.append(sha224(task_data_string).hexdigest()[:8])
@@ -198,6 +198,14 @@ def list_queues(pattern=None):
     else:
         return [ Queue(task_entry.queue) for task_entry in 
                 TaskEntry.select(TaskEntry.queue).where(TaskEntry.queue % pattern).distinct(TaskEntry.queue) ]
+
+
+def order_task_data(d):
+    if isinstance(d, dict) or isinstance(d, OrderedDict) or isinstance(d, defaultdict):
+        return OrderedDict({
+                k:order_task_data(v) for k, v in sorted(d.items())
+            })
+
 
 class Queue:
     def list_queues(self, pattern=None):
