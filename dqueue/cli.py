@@ -55,7 +55,7 @@ def purge(obj):
 @click.pass_obj
 def list(obj, debug):
     for task in obj['queue'].list():
-        print(colored("found", "red"), task['queue'], colored(task['state'], 'blue'), task['entry']['task_data'])
+        print(task['key'], colored("found", "red"), task['queue'], colored(task['state'], 'blue'), task['entry']['task_data'])
         if debug:
             print(pprint.pformat(task))
         #print('task_id', task['task_id'])

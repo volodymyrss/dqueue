@@ -69,7 +69,7 @@ class TaskData(Schema):
 class Task(Schema):
     state = fields.Str()
     queue = fields.Str()
-    task_id = fields.Str()
+    task_key = fields.Str()
     task_data = TaskData
 
 class TaskList(Schema):
@@ -208,8 +208,9 @@ class WorkerAnswer(SwaggerView):
     responses = {
             200: {
                     'description': 'its ok',
-                },
-        }
+                    'schema': Task,
+                 }
+            }
 
     def post(self):
         queue = dqueue.core.Queue(request.args.get('queue', 'default'))
@@ -221,12 +222,13 @@ class WorkerAnswer(SwaggerView):
         queue.state = "done"
         queue.current_task = dqueue.core.Task.from_entry(task_dict)
         queue.current_task_stored_key = queue.current_task.key
+        task = queue.current_task
 
         queue.task_done()
 
         return jsonify(
-                "success",
-            )
+                    { 'task_key': task.key, **task.as_dict}
+               )
 
 
 app.add_url_rule(
@@ -296,7 +298,7 @@ app.add_url_rule(
 class TaskView(SwaggerView):
     parameters = [
                 {
-                    'name': 'task_id',
+                    'name': 'task_key',
                     'in': 'path',
                     'required': True,
                     'type': 'string',
@@ -310,11 +312,11 @@ class TaskView(SwaggerView):
                 }
         }
 
-    def get(self, task_id):
-        info = tools.task_info(task_id)
-        logger.warning("requested task_id %s %s", task_id, info)
+    def get(self, task_key):
+        info = tools.task_info(task_key)
+        logger.warning("requested task_key %s %s", task_key, info)
         return jsonify(
-                task_id=task_id,
+                task_key=task_key,
                 task_info=info,
             )
 
@@ -416,7 +418,7 @@ def handle(error):
     traceback.print_exc()
 
 app.add_url_rule(
-         '/task/view/<task_id>',
+         '/task/view/<task_key>',
           view_func=TaskView.as_view('api_task'),
           methods=['GET']
 )

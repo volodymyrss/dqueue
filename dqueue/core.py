@@ -159,9 +159,10 @@ class Task(object):
         return self.get_key(True)
 
     def get_key(self,key=True):
-        components=[]
+        components = []
 
-        task_data_string=yaml.dump(self.task_data,encoding='utf-8')
+        task_data_string = yaml.dump(self.task_data, encoding='utf-8')
+
 
         components.append(sha224(task_data_string).hexdigest()[:8])
         #log("encoding: "+repr(components))
@@ -175,7 +176,11 @@ class Task(object):
 
             components.append(sha224(str(OrderedDict(sorted(self.submission_info.items()))).encode('utf-8')).hexdigest()[:8])
 
-        return "_".join(components)
+        key = "_".join(components)
+
+        logger.warning("generating key %s from %s", key, task_data_string)
+
+        return key
 
     def __repr__(self):
         return "[{}: {}]".format(self.__class__.__name__,self.task_data)

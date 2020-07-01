@@ -127,9 +127,11 @@ class QueueProxy(Queue):
                                       queue=self.queue, 
                                       token=self.token,
                                       task_dict=self.current_task.as_dict,
-                                      ).response()
+                                      ).response().result
 
         self.current_task = None
+
+        return r
 
     def clear_task_history(self):
         print('this is very descructive')
