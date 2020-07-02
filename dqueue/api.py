@@ -269,7 +269,8 @@ class WorkerQuestion(SwaggerView):
 
     responses = {
             200: {
-                    'description': 'task data',
+                    'description': 'task dict',
+                    'schema': Task
                 }
         }
 
@@ -282,11 +283,11 @@ class WorkerQuestion(SwaggerView):
 
         print("got:", worker_id, task_data)
 
-        task = queue.put(task_data)
+        task_dict = queue.put(task_data)
 
         logger.warning("questioned task: %s", task)
         return jsonify(
-                {}
+                task_dict
             )
 
 app.add_url_rule(

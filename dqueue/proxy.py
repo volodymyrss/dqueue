@@ -43,7 +43,7 @@ class QueueProxy(Queue):
     @property
     def client(self):
         if getattr(self, '_client', None) is None:
-            self._client = SwaggerClient.from_url(self.master+"/apispec_1.json", config={'use_models': False})
+            self._client = SwaggerClient.from_url(self.master.strip("/")+"/apispec_1.json", config={'use_models': False})
         return self._client
 
     def find_task_instances(self,task,klist=None):
