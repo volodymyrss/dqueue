@@ -54,7 +54,12 @@ class QueueProxy(Queue):
         raise NotImplementedError
     
     def log_task(self,message,task=None,state=None):
-        raise NotImplementedError
+        if task is None:
+            task = self.current_task
+
+        task_key = task.key
+
+        self.client.worker.tasklog.logTask(message, task_key=task_key, state=state)
 
     def insert_task_entry(self,task,state):
         raise NotImplementedError

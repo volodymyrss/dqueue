@@ -430,14 +430,20 @@ class Queue:
         print('this is very descructive')
         TaskHistory.delete().execute()
 
-    def move_task(self,fromk,tok,task):
+    def move_task(self, fromk, tok, task, update_entry=False):
         ""
+
+        extra = {}
+        if update_entry:
+            extra = {TaskEntry.entry: self.current_task.serialize()}
+
         r=TaskEntry.update({
                         TaskEntry.state:tok,
                         TaskEntry.worker_id:self.worker_id,
                         TaskEntry.modified:datetime.datetime.now(),
+                        **extra
                     })\
-                    .where(TaskEntry.state==fromk,TaskEntry.key==task.key).execute()
+                    .where(TaskEntry.state==fromk, TaskEntry.key==task.key).execute()
 
     def purge(self):
         ""
@@ -561,13 +567,16 @@ class Queue:
         retry_delay=2
         while n_tries_left>0:
             try:
-                r=TaskEntry.update({
-                            TaskEntry.state:"locked",
-                            TaskEntry.entry:serialized,
-                        }).where(
-                            TaskEntry.key==self.current_task.key,
-                            TaskEntry.state=="running",
-                         ).execute()
+
+                self.move_task('running', 'locked', task, update_entry=True)
+
+               # r=TaskEntry.update({
+               #             TaskEntry.state:"locked",
+               #             TaskEntry.entry:serialized,
+               #         }).where(
+               #             TaskEntry.key==self.current_task.key,
+               #             TaskEntry.state=="running",
+               #          ).execute()
             except Exception as e:
                 log('failed to lock:',repr(e))
                 self.log_task("task to failed lock: %s; serialized to %i"%(repr(e),len(serialized)),state="failed_to_lock")
@@ -683,15 +692,23 @@ class Queue:
         return "{fqdn}.{pid}".format(**d)
 
 
-    def log_task(self, message, task=None, state='undefined'):
+    def log_task(self, message, task=None, state=None, task_key=None):
         ""
-        if task is None:
-            task=self.current_task
+
+        if task_key is not None:
+            key=task_key
+        else:
+            if task is None:
+                task=self.current_task
+
+            task_key = task.key
+
         if state is None:
-            state=self.current_task_status
+            state="undefined"
+
         return TaskHistory.insert(
                              queue=self.queue,
-                             key=task.key,
+                             key=task_key,
                              state=state,
                              worker_id=self.worker_id,
                              timestamp=datetime.datetime.now(),

@@ -237,6 +237,77 @@ app.add_url_rule(
           methods=['POST']
 )
 
+
+class TaskLog(SwaggerView):
+    operationId = "logTask"
+
+    parameters = [
+                {
+                    'name': 'message',
+                    'in': 'query',
+                    'required': True,
+                    'type': 'string',
+                },
+                {
+                    'name': 'state',
+                    'in': 'query',
+                    'required': True,
+                    'type': 'string',
+                },
+                {
+                    'name': 'queue',
+                    'in': 'query',
+                    'required': True,
+                    'type': 'string',
+                },
+                {
+                    'name': 'worker_id',
+                    'in': 'query',
+                    'required': True,
+                    'type': 'string',
+                },
+                {
+                    'name': 'task_key',
+                    'in': 'query',
+                    'required': True,
+                    'type': 'string',
+                },
+                {
+                    'name': 'token',
+                    'in': 'query',
+                    'required': True,
+                    'type': 'string',
+                },
+            ]
+
+    responses = {
+            200: {
+                    'description': 'task dict',
+                }
+        }
+
+    def post(self):
+        message = request.args.get('message')
+        queue = request.args.get('queue')
+        task_key = request.args.get('task_key')
+        worker_id = request.args.get('worker_id')
+
+        queue = dqueue.core.Queue(worker_id=worker_id, queue=queue)
+
+        logger.info("task log worker_id %s task_key %s", worker_id, task_key)
+
+        queue.log_task(message, task_key=task_key, state=state)
+
+        return jsonify(
+                    message
+                )
+
+app.add_url_rule(
+     '/worker/tasklog',
+      view_func=TaskLog.as_view('worker_task_log'),
+      methods=['POST']
+)
+
 class WorkerQuestion(SwaggerView):
     operationId = "questionTask"
 
