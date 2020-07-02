@@ -388,13 +388,16 @@ class Queue:
 
         entries=TaskEntry.select().where(TaskEntry.worker_id==self.worker_id,TaskEntry.state=="running").order_by(TaskEntry.modified.desc()).limit(1).execute()
         if len(entries)>1:
-            raise Exception("what?")
+            raise Exception(f"several tasks ({len(entries)}) are running for this worker: impossible!")
 
         entry=entries[0]
         self.current_task=Task.from_entry(entry.entry)
         self.current_task_stored_key=self.current_task.key
 
-        assert self.current_task.key==entry.key
+        if self.current_task.key != entry.key:
+            logger.error("current task key computed now does not match that found in record")
+            logger.error("current task key: %s task: %s", self.current_task.key, self.current_task)
+            logger.error("fetched task key: %s entry: %s", entry.key, entry)
 
         log(self.current_task.key)
         
