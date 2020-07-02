@@ -168,6 +168,8 @@ class Task:
 
         task_data_string = yaml.dump(order_task_data(self.task_data), encoding='utf-8')
 
+        logger.debug("task data: %s", self.task_data)
+        logger.debug("task data string: %s", task_data_string)
 
         components.append(sha224(task_data_string).hexdigest()[:8])
         #log("encoding: "+repr(components))
@@ -213,6 +215,8 @@ def order_task_data(d):
         return OrderedDict({
                 k:order_task_data(v) for k, v in sorted(d.items())
             })
+
+    return d
 
 
 class Queue:
@@ -293,8 +297,9 @@ class Queue:
         return r[0]
     
     def put(self, task_data: TaskData, submission_data=None, depends_on=None) -> TaskDict:
+        logger.info("putting in queue task_data %s", task_data)
 
-        assert depends_on is None or type(depends_on) in [list,tuple]
+        assert depends_on is None or type(depends_on) in [list, tuple]
 
         task=Task(task_data,submission_data=submission_data,depends_on=depends_on)
 
@@ -353,7 +358,11 @@ class Queue:
             raise Exception("Inconsistent storage")
 
         log("successfully put in queue:",instance_for_key['task_entry'].entry)
-        return dict(state="submitted",task_entry=instance_for_key['task_entry'].entry)
+
+        #return dict(state="submitted", task_entry=instance_for_key['task_entry'].entry)
+        d = model_to_dict(instance_for_key['task_entry'])
+        d['state'] = 'submitted'
+        return d
 
     def get(self):
         ""

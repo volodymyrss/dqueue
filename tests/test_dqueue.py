@@ -1,4 +1,6 @@
+import logging
 
+logging.basicConfig(level=logging.DEBUG)
 
 import pytest
 import glob
@@ -25,17 +27,25 @@ def test_one():
     assert queue.list('waiting')==[]
 
 
-    r=queue.put(t1)
-    assert r['state'] == "submitted"
+    s1 = queue.put(t1)
+    print("s1", s1)
+
+    assert s1['state'] == "submitted"
 
     print((queue.info))
     assert queue.info['waiting'] == 1
 
     assert queue.put(t1)['state'] == "waiting"
+    assert queue.put(t1)['state'] == "waiting"
+    assert queue.put(t1)['state'] == "waiting"
 
     time.sleep(0.1)
 
-    assert queue.put(t2)['state'] == "submitted"
+    s2 = queue.put(t2)
+
+    print("s2", s2)
+
+    assert s2['state'] == "submitted"
 
     assert queue.info['waiting'] == 2
 
