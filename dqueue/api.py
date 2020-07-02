@@ -285,7 +285,7 @@ class WorkerQuestion(SwaggerView):
 
         task_dict = queue.put(task_data)
 
-        logger.warning("questioned task: %s", task)
+        logger.warning("questioned task: %s", task_dict)
         return jsonify(
                 task_dict
             )
@@ -408,6 +408,7 @@ def tasks_purge():
 
     queue = dqueue.core.Queue()
     n = queue.purge()
+
     return jsonify(
             nentries=n
         )

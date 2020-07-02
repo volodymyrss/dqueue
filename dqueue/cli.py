@@ -17,7 +17,7 @@ from dqueue.proxy import QueueProxy
 @click.option("-d", "--debug", default=False, is_flag=True)
 @click.option("-q", "--queue", default=None)
 @click.pass_obj
-def cli(obj, debug, queue):
+def cli(obj, debug=False, queue=None):
     if debug:
         logging.basicConfig(level=logging.DEBUG)
     else:
@@ -45,7 +45,7 @@ def purge(obj):
     if True:
         obj['queue'].purge()
     else:
-        for q in Queue.list_queues(queue):
+        for q in Queue().list_queues():
             log(q.info)
             log(q.list(kinds=["waiting","done","failed","running"]))
             q.purge()

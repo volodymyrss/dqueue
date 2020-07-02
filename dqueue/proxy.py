@@ -12,7 +12,7 @@ import re
 import click
 import urllib.parse as urlparse# type: ignore
 
-from .core import Queue, Empty, Task, CurrentTaskUnfinished
+from .core import Queue, Empty, Task, CurrentTaskUnfinished, TaskEntry
 
 from bravado.client import SwaggerClient
 
@@ -56,39 +56,8 @@ class QueueProxy(Queue):
     def log_task(self,message,task=None,state=None):
         raise NotImplementedError
 
-
     def insert_task_entry(self,task,state):
-        self.log_task("task created",task,state)
-
-        log("to insert_task_entry: ", dict(
-             queue=self.queue,
-             key=task.key,
-             state=state,
-             worker_id=self.worker_id,
-             entry=task.serialize(),
-             created=datetime.datetime.now(),
-             modified=datetime.datetime.now(),
-        ))
-
-        try:
-            TaskEntry.insert(
-                             queue=self.queue,
-                             key=task.key,
-                             state=state,
-                             worker_id=self.worker_id,
-                             entry=task.serialize(),
-                             created=datetime.datetime.now(),
-                             modified=datetime.datetime.now(),
-                            ).execute()
-        except (pymysql.err.IntegrityError, peewee.IntegrityError) as e:
-            log("task already inserted, reasserting the queue to",self.queue)
-
-            # deadlock
-            TaskEntry.update(
-                                queue=self.queue,
-                            ).where(
-                                TaskEntry.key == task.key,
-                            ).execute()
+        raise NotImplementedError
 
     def put(self,task_data,submission_data=None, depends_on=None):
         print(dir(self.client.worker))
@@ -119,8 +88,8 @@ class QueueProxy(Queue):
 
 
     def task_done(self):
-        self.logger.info("task done, closing: %s",self.current_task.key,self.current_task)
-        self.logger.info("task done, stored key: %s",self.current_task_stored_key)
+        self.logger.info("task done, closing: %s : %s", self.current_task.key, self.current_task)
+        self.logger.info("task done, stored key: %s", self.current_task_stored_key)
         self.logger.info("current task: %s", self.current_task.as_dict)
 
         r = self.client.worker.answer(worker_id=self.worker_id, 
@@ -134,36 +103,10 @@ class QueueProxy(Queue):
         return r
 
     def clear_task_history(self):
-        print('this is very descructive')
-        TaskHistory.delete().execute()
+        raise NotImplementedError
 
     def task_failed(self,update=lambda x:None):
-        update(self.current_task)
-
-        task= self.current_task
-
-        self.log_task("task failed",self.current_task,"failed")
-        
-        history=[model_to_dict(en) for en in TaskHistory.select().where(TaskHistory.key==task.key).order_by(TaskHistory.id.desc()).execute()]
-        n_failed = len([he for he in history if he['state'] == "failed"])
-
-        self.log_task("task failed %i times already"%n_failed,task,"failed")
-        if n_failed < n_failed_retries:
-            next_state = "waiting"
-            self.log_task("task failure forgiven, to waiting",task,"waiting")
-            time.sleep(5+2**int(n_failed/2))
-        else:
-            next_state = "failed"
-            self.log_task("task failure permanent",task,"waiting")
-
-        r=TaskEntry.update({
-                    TaskEntry.state:next_state,
-                    TaskEntry.entry:self.current_task.serialize(),
-                    TaskEntry.modified:datetime.datetime.now(),
-                }).where(TaskEntry.key==self.current_task.key).execute()
-
-        self.current_task_status = next_state
-        self.current_task = None
+        raise NotImplementedError
 
     def move_task(self,fromk,tok,task):
         r=TaskEntry.update({
@@ -171,20 +114,20 @@ class QueueProxy(Queue):
                         TaskEntry.worker_id:self.worker_id,
                         TaskEntry.modified:datetime.datetime.now(),
                     })\
-                    .where(TaskEntry.state==fromk,TaskEntry.key==task.key).execute()
+                    .where(TaskEntry.state==fromk, TaskEntry.key==task.key).execute()
 
     def wipe(self,wipe_from=["waiting"]):
-        for fromk in wipe_from:
-            for key in self.list(fromk):
-                log("removing",fromk + "/" + key)
-                TaskEntry.delete().where(TaskEntry.key==key).execute()
+        #for fromk in wipe_from:
+        for key in self.list():
+            self.logger.info("removing %s", key)
+            TaskEntry.delete().where(TaskEntry.key==key).execute()
         
     def purge(self):
         nentries = self.client.tasks.purge().response().result
         self.logger.info("deleted %s", nentries)
 
 
-    def list(self, **kwargs):
+    def list(self):
         print(dir(self.client.tasks))
         l = [task for task in self.client.tasks.listTasks().response().result['tasks']]
         self.logger.info(f"found tasks: {len(l)}")
@@ -204,9 +147,4 @@ class QueueProxy(Queue):
 
     def resubmit(self, scope, selector):
         return self.client.tasks.resubmit(scope=scope, selector=selector)
-
-    def watch(self,delay=1):
-        while True:
-            log(self.info())
-            time.sleep(delay)
 

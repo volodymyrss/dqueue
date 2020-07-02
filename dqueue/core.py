@@ -25,6 +25,11 @@ try:
 except ImportError:
     import urllib.parse as urlparse# type: ignore
 
+from typing import NewType, Dict
+
+TaskDict = NewType('TaskDict', Dict)
+TaskData = NewType('TaskData', Dict)
+
 import pymysql
 import peewee # type: ignore
 from playhouse.db_url import connect # type: ignore
@@ -101,7 +106,7 @@ except peewee.OperationalError:
 except Exception:
     has_mysql = False
 
-class Task(object):
+class Task:
     def __init__(self,task_data,execution_info=None, submission_data=None, depends_on=None):
         self.task_data=task_data
         self.submission_info=self.construct_submission_info()
@@ -184,6 +189,9 @@ class Task(object):
 
     def __repr__(self):
         return "[{}: {}]".format(self.__class__.__name__,self.task_data)
+
+    def filename_instance(self):
+        return "unset"
 
 def makedir_if_neccessary(directory):
     try:
@@ -284,8 +292,7 @@ class Queue:
         assert len(r)==1
         return r[0]
     
-    def put(self,task_data,submission_data=None, depends_on=None):
-        ""
+    def put(self, task_data: TaskData, submission_data=None, depends_on=None) -> TaskDict:
 
         assert depends_on is None or type(depends_on) in [list,tuple]
 
@@ -332,14 +339,14 @@ class Queue:
             log("stored:",task.filename_instance)
             log("recovered:", recovered_task.filename_instance)
     
-            nfn=self.queue_dir("conflict") + "/put_original_" + task.filename_instance
-            open(nfn, "w").write(task.serialize())
+            #nfn=self.queue_dir("conflict") + "/put_original_" + task.filename_instance
+            #open(nfn, "w").write(task.serialize())
         
-            nfn=self.queue_dir("conflict") + "/put_recovered_" + recovered_task.filename_instance
-            open(nfn, "w").write(recovered_task.serialize())
+            #nfn=self.queue_dir("conflict") + "/put_recovered_" + recovered_task.filename_instance
+            #open(nfn, "w").write(recovered_task.serialize())
             
-            nfn=self.queue_dir("conflict") + "/put_stored_" + os.path.basename(fn)
-            open(nfn, "w").write(open(fn).read())
+            #nfn=self.queue_dir("conflict") + "/put_stored_" + os.path.basename(fn)
+            #open(nfn, "w").write(open(fn).read())
 
             raise Exception("Inconsistent storage")
 
@@ -383,14 +390,14 @@ class Queue:
 
         if self.current_task.key != entry.key:
             log("inconsitent storage:")
-            log(">>>> stored:", task_name)
-            log(">>>> recovered:", self.current_task.filename_instance)
+            log(">>>> stored:", entry)
+            log(">>>> recovered:", self.current_task)
 
-            fn=self.queue_dir("conflict") + "/get_stored_" + self.current_task.filename_instance
-            open(fn, "w").write(self.current_task.serialize())
+            #fn=self.queue_dir("conflict") + "/get_stored_" + self.current_task.filename_instance
+            #open(fn, "w").write(self.current_task.serialize())
         
-            fn=self.queue_dir("conflict") + "/get_recovered_" + task_name
-            open(fn, "w").write(open(self.queue_dir("waiting")+"/"+task_name).read())
+            #fn=self.queue_dir("conflict") + "/get_recovered_" + task_name
+            #open(fn, "w").write(open(self.queue_dir("waiting")+"/"+task_name).read())
 
             raise Exception("Inconsistent storage")
 
@@ -423,6 +430,8 @@ class Queue:
         nentries=TaskEntry.delete().execute()
         log("deleted %i"%nentries)
 
+        return nentries
+
     
     def try_all_locked(self):
         ""
@@ -437,8 +446,8 @@ class Queue:
     def remember(self,task_data,submission_data=None):
         ""
         task=Task(task_data,submission_data=submission_data)
-        nfn=self.queue_dir("problem") + "/"+task.filename_instance
-        open(nfn, "w").write(task.serialize())
+        #nfn=self.queue_dir("problem") + "/"+task.filename_instance
+        #open(nfn, "w").write(task.serialize())
             
 
     def insert_task_entry(self,task,state):
@@ -645,7 +654,7 @@ class Queue:
     def watch(self,delay=1):
         """"""
         while True:
-            log(self.info())
+            log(self.info)
             time.sleep(delay)
 
     def get_worker_id(self):

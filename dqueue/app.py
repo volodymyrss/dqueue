@@ -16,6 +16,7 @@ from flask import Flask
 from flask import render_template,make_response,request,jsonify
 
 import dqueue.core as core
+import dqueue.tools as tools
 from dqueue.core import model_to_dict
 
 import dqueue.api
@@ -41,6 +42,7 @@ class ReverseProxied(object):
         scheme = environ.get('HTTP_X_SCHEME', '')
         if scheme:
             environ['wsgi.url_scheme'] = scheme
+
         return self.app(environ, start_response)
 
 app.wsgi_app = ReverseProxied(app.wsgi_app)# type: ignore
@@ -70,8 +72,8 @@ def resubmit(scope, selector):
 
 
 @app.route('/task/info/<string:key>')
-def task_info(key):
-    r = render_template('task_info.html', **tools.task_info())
+def task_info(key=None):
+    r = render_template('task_info.html', **tools.task_info(key))
     return r
 
 
