@@ -568,7 +568,7 @@ class Queue:
         while n_tries_left>0:
             try:
 
-                self.move_task('running', 'locked', task, update_entry=True)
+                self.move_task('running', 'locked', self.current_task, update_entry=True)
 
                # r=TaskEntry.update({
                #             TaskEntry.state:"locked",
