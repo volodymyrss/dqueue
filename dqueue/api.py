@@ -283,12 +283,12 @@ class WorkerQuestion(SwaggerView):
 
         print("got:", worker_id, task_data)
 
-        task_dict = queue.put(task_data)
+        task_entry = queue.put(task_data)
 
-        logger.warning("questioned task: %s", task_dict)
+        logger.warning("questioned task: %s", task_entry)
         return jsonify(
-                task_dict
-            )
+                    task_entry
+                )
 
 app.add_url_rule(
      '/worker/question',

@@ -322,7 +322,9 @@ class Queue:
         if instance_for_key is not None:
             log("found existing instance(s) for this key, no need to put:",instances_for_key)
             self.log_task("task already found",task,instance_for_key['state'])
-            return instance_for_key
+            d = model_to_dict(instance_for_key['task_entry'])
+            log("task entry:", d)
+            return d
 
         if depends_on is None:
             self.insert_task_entry(task,"waiting")
