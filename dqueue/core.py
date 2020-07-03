@@ -167,7 +167,7 @@ class Task:
         components = []
 
         task_data_string_unordered = yaml.dump(self.task_data, encoding='utf-8')
-        task_data_string = yaml.dump(order_task_data(self.task_data), encoding='utf-8')
+        task_data_string = yaml.dump(order_nested_dict(self.task_data), encoding='utf-8')
 
         logger.debug("task data: %s", self.task_data)
         logger.debug("task data string: %s", task_data_string)
@@ -182,7 +182,8 @@ class Task:
             components.append("%.14lg"%self.submission_info['time'])
             components.append(self.submission_info['utc'])
 
-            components.append(sha224(str(OrderedDict(sorted(self.submission_info.items()))).encode('utf-8')).hexdigest()[:8])
+            s = yaml.dump(order_nested_dict(self.submission_info), encoding='utf-8')
+            components.append(sha224(s).hexdigest()[:8])
 
         key = "_".join(components)
 
@@ -216,10 +217,10 @@ def list_queues(pattern=None):
                 TaskEntry.select(TaskEntry.queue).where(TaskEntry.queue % pattern).distinct(TaskEntry.queue) ]
 
 
-def order_task_data(d):
+def order_nested_dict(d):
     if isinstance(d, dict) or isinstance(d, OrderedDict) or isinstance(d, defaultdict):
         return OrderedDict({
-                k:order_task_data(v) for k, v in sorted(d.items())
+                k:order_nested_dict(v) for k, v in sorted(d.items())
             })
 
     return d

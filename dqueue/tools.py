@@ -5,7 +5,7 @@ import os
 import time
 import socket
 from hashlib import sha224
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 import glob
 import logging
 import io
