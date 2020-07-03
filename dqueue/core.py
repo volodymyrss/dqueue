@@ -223,6 +223,9 @@ def order_nested_dict(d):
                 k:order_nested_dict(v) for k, v in sorted(d.items())
             })
 
+    if isinstance(d, tuple) or isinstance(d, list):
+        return [order_nested_dict(i) for i in d]
+
     return d
 
 
