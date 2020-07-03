@@ -291,6 +291,7 @@ class TaskLog(SwaggerView):
         queue = request.args.get('queue')
         task_key = request.args.get('task_key')
         worker_id = request.args.get('worker_id')
+        state = request.args.get('state')
 
         queue = dqueue.core.Queue(worker_id=worker_id, queue=queue)
 

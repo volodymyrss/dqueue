@@ -119,13 +119,6 @@ class QueueProxy(Queue):
     def task_failed(self,update=lambda x:None):
         raise NotImplementedError
 
-    def move_task(self,fromk,tok,task):
-        r=TaskEntry.update({
-                        TaskEntry.state:tok,
-                        TaskEntry.worker_id:self.worker_id,
-                        TaskEntry.modified:datetime.datetime.now(),
-                    })\
-                    .where(TaskEntry.state==fromk, TaskEntry.key==task.key).execute()
 
     def wipe(self,wipe_from=["waiting"]):
         #for fromk in wipe_from:
