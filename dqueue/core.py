@@ -587,7 +587,7 @@ class Queue:
             else:
                 break
         
-        self.log_task("task locked from "+self.current_task_status,state="locked")
+        self.log_task("task locked from "+str(self.current_task_status),state="locked")
 
         self.current_task_status="locked"
         self.current_task=None
