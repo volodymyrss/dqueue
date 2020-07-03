@@ -187,7 +187,7 @@ class Task:
 
         logger.warning("generating key %s", key)
         print(">>> task_data_string")
-        print(task_data_string)
+        print(task_data_string.decode())
         print("<<< task_data_string")
 
         return key
