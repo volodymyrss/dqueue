@@ -58,6 +58,10 @@ def list(obj, debug):
         print(task['key'], colored("found", "red"), task['queue'], colored(task['state'], 'blue'), task['entry']['task_data'])
         if debug:
             print(pprint.pformat(task))
+            t = Task.from_entry(task['entry'])
+            print("Task: ", t)
+            print("Task key: ", t.key)
+
         #print('task_id', task['task_id'])
     
 

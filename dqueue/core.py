@@ -185,7 +185,10 @@ class Task:
 
         key = "_".join(components)
 
-        logger.warning("generating key %s from %s", key, task_data_string)
+        logger.warning("generating key %s", key)
+        print(">>> task_data_string")
+        print(task_data_string)
+        print("<<< task_data_string")
 
         return key
 
