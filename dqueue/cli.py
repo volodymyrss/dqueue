@@ -73,7 +73,13 @@ def list(obj, debug):
         s.append(task['created'])
 
         if 'object_identity' in td:
-            s.append( colored(td['object_identity']['full_name'], "yellow"))
+            oi = td['object_identity']
+
+            if 'full_name' in oi:
+                s.append( colored(oi['full_name'], "yellow"))
+            elif 'name' in oi:
+                s.append( colored(oi['name'], "yellow"))
+
 
         s.append(repr(td))
 

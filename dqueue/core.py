@@ -144,7 +144,11 @@ class Task:
     @classmethod
     def from_entry(cls,entry):
         if isinstance(entry, str):
-            task_dict = yaml.load(io.StringIO(entry) , Loader=yaml.Loader )
+            try:
+                task_dict = yaml.load(io.StringIO(entry) , Loader=yaml.Loader )
+            except Exception as e:
+                logger.error("problem decoding yaml from task entry:")
+                print(entry)
         else:
             task_dict = entry
 
