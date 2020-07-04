@@ -147,8 +147,11 @@ class Task:
             try:
                 task_dict = yaml.load(io.StringIO(entry) , Loader=yaml.Loader )
             except Exception as e:
-                logger.error("problem decoding yaml from task entry:")
-                print(entry)
+                logger.error("problem decoding yaml from task entry: %s", e)
+                for e in entry.splitlines():
+                    print("problematic yaml: ", e)
+                open("problematic_entry.yaml", "wt").write(entry)
+                raise
         else:
             task_dict = entry
 
