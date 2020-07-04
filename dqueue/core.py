@@ -148,9 +148,9 @@ class Task:
                 task_dict = yaml.load(io.StringIO(entry) , Loader=yaml.Loader )
             except Exception as e:
                 logger.error("problem decoding yaml from task entry: %s", e)
-                for e in entry.splitlines():
-                    print("problematic yaml: ", e)
-                open("problematic_entry.yaml", "wt").write(entry)
+                for i, e in enumerate(entry.splitlines()):
+                    print(f"problematic yaml: {i:5d}", e)
+                open("/tmp/problematic_entry.yaml", "wt").write(entry)
                 raise
         else:
             task_dict = entry
@@ -345,7 +345,7 @@ class Queue:
             log("found existing instance(s) for this key, no need to put:",instances_for_key)
             self.log_task("task already found",task,instance_for_key['state'])
             d = model_to_dict(instance_for_key['task_entry'])
-            logger.debug("task entry:", d)
+            logger.debug("task entry: %s", d)
             return d
 
         if depends_on is None:
