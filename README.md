@@ -19,5 +19,4 @@ t=queue.get().task_data
 
 # registers current task as done
 queue.task_done()
-
 ```
