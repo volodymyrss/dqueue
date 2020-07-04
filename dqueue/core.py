@@ -195,11 +195,12 @@ class Task:
         key = "_".join(components)
 
         logger.warning("generating key %s", key)
-        print(">>> task_data_string for key %s"%key)
-        print(task_data_string.decode())
-        print("--- unordered task_data_string for key %s"%key)
-        print(task_data_string_unordered.decode())
-        print("<<< task_data_string")
+
+        #print(">>> task_data_string for key %s"%key)
+        #print(task_data_string.decode())
+        #print("--- unordered task_data_string for key %s"%key)
+        #print(task_data_string_unordered.decode())
+        #print("<<< task_data_string")
 
         return key
 
