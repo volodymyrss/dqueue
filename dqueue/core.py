@@ -136,7 +136,7 @@ class Task:
             )
 
     def serialize(self):
-        return yaml.dump(self.as_dict,
+        return yaml.dump(normalize_nested_dict(self.as_dict),
             default_flow_style=False, default_style=''
         )
 
@@ -222,6 +222,17 @@ def list_queues(pattern=None):
     else:
         return [ Queue(task_entry.queue) for task_entry in 
                 TaskEntry.select(TaskEntry.queue).where(TaskEntry.queue % pattern).distinct(TaskEntry.queue) ]
+
+def normalize_nested_dict(d):
+    if isinstance(d, dict) or isinstance(d, OrderedDict) or isinstance(d, defaultdict):
+        return {
+                k:normalize_nested_dict(v) for k, v in sorted(d.items())
+            }
+
+    if isinstance(d, tuple) or isinstance(d, list):
+        return [ normalize_nested_dict(i) for i in d ]
+
+    return d
 
 
 def order_nested_dict(d):
