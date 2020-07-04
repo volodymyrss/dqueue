@@ -49,13 +49,37 @@ def purge(obj):
             log(q.info)
             log(q.list(kinds=["waiting","done","failed","running"]))
             q.purge()
+            
+
+def console_size():
+    try:
+        return [int(i) for i in os.popen('stty size', 'r').read().split()]
+    except Exception as e:
+        logger.warning("problem getting console size: %s", e)
+        return 40, 200
 
 @cli.command()
 @click.option("-d", "--debug", default=False, is_flag=True)
 @click.pass_obj
 def list(obj, debug):
     for task in obj['queue'].list():
-        print(task['key'], colored("found", "red"), task['queue'], colored(task['state'], 'blue'), task['entry']['task_data'])
+
+        td = task['entry']['task_data']
+
+        
+
+        s = [colored(task['key'], "red"), task['queue'], colored(task['state'], 'blue')]
+
+        s.append(task['created'])
+
+        if 'object_identity' in td:
+            s.append( colored(td['object_identity']['full_name'], "yellow"))
+
+        s.append(repr(td))
+
+
+        print((" ".join(s))[:console_size()[1]])
+
         if debug:
             print(pprint.pformat(task))
             t = Task.from_entry(task['entry'])
