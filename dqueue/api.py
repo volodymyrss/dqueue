@@ -75,6 +75,13 @@ class Task(Schema):
 class TaskList(Schema):
     tasks = fields.Nested(Task, many=True)
 
+class TaskLogEntry(Schema):
+    state = fields.Str()
+    task_key = fields.Str()
+
+class TaskLog(Schema):
+    task_log = fields.Nested(TaskLogEntry, many=True)
+
 class QueueList(Schema):
     queues = fields.Nested(fields.Str(), many=True)
 
@@ -237,6 +244,49 @@ app.add_url_rule(
           methods=['POST']
 )
 
+class TaskViewLog(SwaggerView):
+    operationId = "view_log"
+
+    parameters = [
+                {
+                    'name': 'task_key',
+                    'in': 'query',
+                    'required': False,
+                    'type': 'string',
+                },
+                {
+                    'name': 'token',
+                    'in': 'query',
+                    'required': True,
+                    'type': 'string',
+                },
+            ]
+
+    responses = {
+            200: {
+                    'description': 'task log dict',
+                    'schema': TaskLog,
+                }
+        }
+
+    def get(self):
+        task_key = request.args.get('task_key', None)
+
+        queue = dqueue.core.Queue()
+
+        r = queue.view_log(task_key=task_key)
+
+        logger.info("view_log api returns %s", r)
+
+        return jsonify(
+                    task_log=r
+                )
+
+app.add_url_rule(
+     '/task/view_log',
+      view_func=TaskViewLog.as_view('task_view_log'),
+      methods=['GET']
+)
 
 class TaskLog(SwaggerView):
     operationId = "logTask"
@@ -295,9 +345,12 @@ class TaskLog(SwaggerView):
 
         queue = dqueue.core.Queue(worker_id=worker_id, queue=queue)
 
-        logger.info("task log worker_id %s task_key %s", worker_id, task_key)
+        logger.info("log_task worker_id %s task_key %s", worker_id, task_key)
 
         queue.log_task(message, task_key=task_key, state=state)
+
+        logger.debug("task log: %s", queue.view_log())
+        assert len(queue.view_log()) > 0
 
         return jsonify(
                     message

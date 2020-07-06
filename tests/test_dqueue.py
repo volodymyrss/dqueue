@@ -121,6 +121,7 @@ def test_locked_jobs():
 
     queue=dqueue.Queue("test-queue")
     queue.wipe(["waiting","done","running","locked","failed"])
+    queue.clear_task_history()
 
     print(("status:\n",queue.show()))
 
@@ -136,6 +137,17 @@ def test_locked_jobs():
 
     print((queue.info))
 
+    print("waiting:", queue.list("waiting")[0])
+    task_key = queue.list("waiting")[0]
+
+    task_log =  queue.view_log(task_key)
+    print("task_log:", task_log)
+
+    assert len(task_log) == 1
+
+    for tle in task_log:
+        print('task_log', tle['timestamp'], tle['message'])
+
     assert len(queue.list("waiting")) == 1
     assert len(queue.list("locked")) == 1
     print((queue.info))
@@ -145,6 +157,14 @@ def test_locked_jobs():
 
 
     t=queue.get().task_data
+    
+    task_log =  queue.view_log(task_key)
+    print("task_log:", task_log)
+
+    assert len(task_log) == 2
+
+    for tle in task_log:
+        print('task_log', tle['timestamp'], tle['message'])
 
     print(("from queue",t))
     print(("original",t2))
@@ -177,3 +197,9 @@ def test_locked_jobs():
     with pytest.raises(dqueue.Empty):
         queue.get()
     print((queue.info))
+    
+
+    for tle in task_log:
+        print('task_log', tle['timestamp'], tle['message'])
+    
+    assert len(task_log) == 2

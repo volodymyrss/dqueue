@@ -12,6 +12,7 @@ import re
 import click
 import urllib.parse
 
+import dqueue.extralogging
 
 from bravado.client import SwaggerClient
 
@@ -720,6 +721,12 @@ class Queue:
         )
         return "{fqdn}.{pid}".format(**d)
 
+    def view_log(self, task_key=None):
+        if task_key is None:
+            history=[model_to_dict(en) for en in TaskHistory.select().order_by(TaskHistory.id.desc()).execute()]
+        else:
+            history=[model_to_dict(en) for en in TaskHistory.select().where(TaskHistory.key==task_key).order_by(TaskHistory.id.desc()).execute()]
+        return history
 
     def log_task(self, message, task=None, state=None, task_key=None):
         ""
