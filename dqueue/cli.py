@@ -60,8 +60,9 @@ def console_size():
 
 @cli.command()
 @click.option("-d", "--debug", default=False, is_flag=True)
+@click.option("-l", "--log", default=False, is_flag=True)
 @click.pass_obj
-def list(obj, debug):
+def list(obj, debug, log):
     for task in obj['queue'].list():
 
         td = task['entry']['task_data']
@@ -91,6 +92,10 @@ def list(obj, debug):
             t = Task.from_entry(task['entry'])
             print("Task: ", t)
             print("Task key: ", t.key)
+
+        if log:
+            for l in obj['queue'].view_log(task['key'])['task_log']:
+                print("  {timestamp} {message}".format(**l))
 
         #print('task_id', task['task_id'])
     

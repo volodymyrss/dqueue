@@ -723,9 +723,9 @@ class Queue:
 
     def view_log(self, task_key=None):
         if task_key is None:
-            history=[model_to_dict(en) for en in TaskHistory.select().order_by(TaskHistory.id.desc()).execute()]
+            history=[model_to_dict(en) for en in TaskHistory.select().order_by(TaskHistory.id.asc()).execute()]
         else:
-            history=[model_to_dict(en) for en in TaskHistory.select().where(TaskHistory.key==task_key).order_by(TaskHistory.id.desc()).execute()]
+            history=[model_to_dict(en) for en in TaskHistory.select().where(TaskHistory.key==task_key).order_by(TaskHistory.id.asc()).execute()]
         return history
 
     def log_task(self, message, task=None, state=None, task_key=None):
