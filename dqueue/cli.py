@@ -58,7 +58,7 @@ def console_size():
         logger.warning("problem getting console size: %s", e)
         return 40, 200
 
-@cli.command()
+@cli.command("ls")
 @click.option("-d", "--debug", default=False, is_flag=True)
 @click.option("-l", "--log", default=False, is_flag=True)
 @click.pass_obj
