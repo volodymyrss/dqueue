@@ -288,7 +288,7 @@ app.add_url_rule(
       methods=['GET']
 )
 
-class TaskLog(SwaggerView):
+class TaskLogView(SwaggerView):
     operationId = "logTask"
 
     parameters = [
@@ -358,7 +358,7 @@ class TaskLog(SwaggerView):
 
 app.add_url_rule(
      '/worker/tasklog',
-      view_func=TaskLog.as_view('worker_task_log'),
+      view_func=TaskLogView.as_view('worker_task_log'),
       methods=['POST']
 )
 
