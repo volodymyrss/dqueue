@@ -102,6 +102,14 @@ def list(obj, debug, log):
 
 @cli.command()
 @click.pass_obj
+def viewlog(obj):
+    for l in obj['queue'].view_log()['task_log']:
+        logging.debug(l)
+        print(" {timestamp} {key} {message}".format(**l))
+
+
+@cli.command()
+@click.pass_obj
 def get(obj):
     task_data=obj['queue'].get()
     print(colored("offered:", "green"), task_data)
