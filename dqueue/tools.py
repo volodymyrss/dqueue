@@ -66,6 +66,7 @@ def decode_entry_data(entry):
     except Exception as e:
         traceback.print_exc()
         print("problem decoding", repr(e))
+        print("raw entry (undecodable)", entry['entry'])
         entry_data={'task_data':
                         {'object_identity':
                             {'factory_name':'??'}},
