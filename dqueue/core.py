@@ -413,7 +413,7 @@ class Queue:
                     .where( (TaskEntry.state=="waiting") & (TaskEntry.queue==self.queue) ).limit(1).execute()
 
         if r==0:
-            self.try_all_locked()
+            #self.try_all_locked()
             raise Empty()
 
         entries=TaskEntry.select().where(TaskEntry.worker_id==self.worker_id,TaskEntry.state=="running").order_by(TaskEntry.modified.desc()).limit(1).execute()
