@@ -10,7 +10,7 @@ import logging
 import io
 import urllib.parse
 
-import peewee
+import peewee # type: ignore
 
 from flask import Flask
 from flask import render_template,make_response,request,jsonify
@@ -61,7 +61,7 @@ def stats():
 
 @app.route('/purge')
 def purge():
-    nentries=core.TaskEntry.delete().execute()
+    nentries=core.TaskEntry.delete().execute(database=None)
     return make_response("deleted %i"%nentries)
 
 @app.route('/resubmit/<string:scope>/<string:selector>')

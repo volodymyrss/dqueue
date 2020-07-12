@@ -56,6 +56,14 @@ class QueueProxy(Queue):
     def view_log(self, task_key=None):
         return self.client.task.view_log(task_key=task_key, token=self.token).response().result
     
+    def log_queue(self, message, spent_s=0):
+        self.logger.info("log queue %s", message)
+
+        return self.client.worker.logQueue(message=message,
+                                   spent_s=spent_s,
+                                   worker_id=self.worker_id,
+                                   token=self.token).response().result
+    
     def log_task(self, message, task=None, state=None, task_key=None):
         self.logger.info("log_task %s", message)
 
@@ -129,7 +137,7 @@ class QueueProxy(Queue):
         #for fromk in wipe_from:
         for key in self.list():
             self.logger.info("removing %s", key)
-            TaskEntry.delete().where(TaskEntry.key==key).execute()
+            TaskEntry.delete().where(TaskEntry.key==key).execute(database=None)
         
     def purge(self):
         nentries = self.client.tasks.purge().response().result

@@ -16,12 +16,12 @@ import dqueue.core
 import dqueue.app
 import dqueue.tools as tools
 
-import peewee
+import peewee # type: ignore
 import json
 
 from flask import Flask
 from flask import render_template,make_response,request,jsonify
-from flasgger import Swagger, SwaggerView, Schema, fields
+from flasgger import Swagger, SwaggerView, Schema, fields # type: ignore
 
 decoded_entries={} # type: ignore
 
@@ -76,11 +76,14 @@ class TaskList(Schema):
     tasks = fields.Nested(Task, many=True)
 
 class TaskLogEntry(Schema):
+    message = fields.Str()
+
+class QueueLogEntry(Schema):
     state = fields.Str()
     task_key = fields.Str()
 
-class TaskLog(Schema):
-    task_log = fields.Nested(TaskLogEntry, many=True)
+class ViewLog(Schema):
+    event_log = fields.Nested(TaskLogEntry, many=True)
 
 class QueueList(Schema):
     queues = fields.Nested(fields.Str(), many=True)
@@ -130,7 +133,7 @@ class WorkerOffer(SwaggerView):
     parameters = [
                 {
                     'name': 'worker_id',
-                    'in': 'query',
+                    'in': 'path',
                     'required': True,
                     'type': 'string',
                 },
@@ -158,8 +161,8 @@ class WorkerOffer(SwaggerView):
                 }
         }
 
-    def get(self):
-        queue = dqueue.core.Queue(request.args.get('queue', 'default'))
+    def get(self, worker_id):
+        queue = dqueue.core.Queue(request.args.get('queue', 'default'), worker_id=worker_id)
 
         try:
             task = queue.get()
@@ -177,7 +180,7 @@ class WorkerOffer(SwaggerView):
 
 
 app.add_url_rule(
-         '/worker/offer',
+          '/worker/<string:worker_id>/offer',
           view_func=WorkerOffer.as_view('worker_offer_task'),
           methods=['GET']
 )
@@ -265,7 +268,7 @@ class TaskViewLog(SwaggerView):
     responses = {
             200: {
                     'description': 'task log dict',
-                    'schema': TaskLog,
+                    'schema': ViewLog,
                 }
         }
 
@@ -279,7 +282,7 @@ class TaskViewLog(SwaggerView):
         logger.info("view_log api returns %s", r)
 
         return jsonify(
-                    task_log=r
+                    event_log=r,
                 )
 
 app.add_url_rule(
@@ -307,7 +310,7 @@ class TaskLogView(SwaggerView):
                 {
                     'name': 'queue',
                     'in': 'query',
-                    'required': True,
+                    'required': False,
                     'type': 'string',
                 },
                 {
@@ -338,7 +341,7 @@ class TaskLogView(SwaggerView):
 
     def post(self):
         message = request.args.get('message')
-        queue = request.args.get('queue')
+        queue = request.args.get('queue', 'default')
         task_key = request.args.get('task_key')
         worker_id = request.args.get('worker_id')
         state = request.args.get('state')
@@ -357,8 +360,72 @@ class TaskLogView(SwaggerView):
                 )
 
 app.add_url_rule(
-     '/worker/tasklog',
-      view_func=TaskLogView.as_view('worker_task_log'),
+     '/worker/log',
+      view_func=TaskLogView.as_view('worker_log'),
+      methods=['POST']
+)
+
+class QueueLogView(SwaggerView):
+    operationId = "logQueue"
+
+    parameters = [
+                {
+                    'name': 'message',
+                    'in': 'query',
+                    'required': True,
+                    'type': 'string',
+                },
+                {
+                    'name': 'spent_s',
+                    'in': 'query',
+                    'required': True,
+                    'type': 'number',
+                },
+                {
+                    'name': 'queue',
+                    'in': 'query',
+                    'required': False,
+                    'type': 'string',
+                },
+                {
+                    'name': 'worker_id',
+                    'in': 'query',
+                    'required': True,
+                    'type': 'string',
+                },
+                {
+                    'name': 'token',
+                    'in': 'query',
+                    'required': False,
+                    'type': 'string',
+                },
+            ]
+
+    responses = {
+            200: {
+                    'description': 'task dict',
+                }
+        }
+
+    def post(self):
+        message = request.args.get('message')
+        spent_s = request.args.get('spent_s', type=float)
+        worker_id = request.args.get('worker_id')
+        queue = request.args.get('queue', 'default')
+
+        queue = dqueue.core.Queue(worker_id=worker_id, queue=queue)
+
+        logger.info("log_queue worker_id %s message %s spent %s", worker_id, message, spent_s)
+
+        logger.info("log queue returns: %s", queue.log_queue(message, spent_s, worker_id=worker_id))
+
+        return jsonify(
+                    message
+                )
+
+app.add_url_rule(
+     '/worker/queuelog',
+      view_func=QueueLogView.as_view('worker_queue_log'),
       methods=['POST']
 )
 

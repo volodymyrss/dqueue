@@ -73,6 +73,8 @@ except Exception as e:
     
 
 class TaskEntry(peewee.Model):
+    database = None
+
     queue = peewee.CharField(default="default")
 
     key = peewee.CharField(primary_key=True)
@@ -86,21 +88,25 @@ class TaskEntry(peewee.Model):
     class Meta:
         database = db
 
-class TaskHistory(peewee.Model):
+
+class EventLog(peewee.Model):
     queue = peewee.CharField(default="default")
 
-    key = peewee.CharField()
-    state = peewee.CharField()
+    task_key = peewee.CharField(default="unset")
+    state = peewee.CharField(default="unset")
+
     worker_id = peewee.CharField()
 
     timestamp = peewee.DateTimeField()
     message = peewee.CharField()
+    
+    spent_s = peewee.FloatField(default=0)
 
     class Meta:
         database = db
 
 try:
-    db.create_tables([TaskEntry,TaskHistory])
+    db.create_tables([TaskEntry, EventLog])
     has_mysql = True
 except peewee.OperationalError:
     has_mysql = False
@@ -322,7 +328,7 @@ class Queue:
 
         r=TaskEntry.select().where(
                          TaskEntry.key==key,
-                        ).execute()
+                        ).execute(database=None)
         assert len(r)==1
         return r[0]
     
@@ -410,13 +416,13 @@ class Queue:
                         TaskEntry.modified:datetime.datetime.now(),
                     })\
                     .order_by(TaskEntry.created)\
-                    .where( (TaskEntry.state=="waiting") & (TaskEntry.queue==self.queue) ).limit(1).execute()
+                    .where( (TaskEntry.state=="waiting") & (TaskEntry.queue==self.queue) ).limit(1).execute(database=None)
 
         if r==0:
             #self.try_all_locked()
             raise Empty()
 
-        entries=TaskEntry.select().where(TaskEntry.worker_id==self.worker_id,TaskEntry.state=="running").order_by(TaskEntry.modified.desc()).limit(1).execute()
+        entries=TaskEntry.select().where(TaskEntry.worker_id==self.worker_id,TaskEntry.state=="running").order_by(TaskEntry.modified.desc()).limit(1).execute(database=None)
         if len(entries)>1:
             raise Exception(f"several tasks ({len(entries)}) are running for this worker: impossible!")
 
@@ -454,11 +460,15 @@ class Queue:
         log('task',self.current_task.submission_info)
 
         return self.current_task
-
+    
     def clear_task_history(self):
+        # compatibility
+        return self.clear_event_log()
+
+    def clear_event_log(self):
         ""
         print('this is very descructive')
-        TaskHistory.delete().execute()
+        EventLog.delete().execute(database=None)
 
     def move_task(self, fromk, tok, task, update_entry=False):
         ""
@@ -473,11 +483,11 @@ class Queue:
                         TaskEntry.modified:datetime.datetime.now(),
                         **extra
                     })\
-                    .where(TaskEntry.state==fromk, TaskEntry.key==task.key).execute()
+                    .where(TaskEntry.state==fromk, TaskEntry.key==task.key).execute(database=None)
 
     def purge(self):
         ""
-        nentries=TaskEntry.delete().execute()
+        nentries=TaskEntry.delete().execute(database=None)
         log("deleted %i"%nentries)
 
         return nentries
@@ -522,7 +532,7 @@ class Queue:
                              entry=task.serialize(),
                              created=datetime.datetime.now(),
                              modified=datetime.datetime.now(),
-                            ).execute()
+                            ).execute(database=None)
         except (pymysql.err.IntegrityError, peewee.IntegrityError) as e:
             log("task already inserted, reasserting the queue to",self.queue)
 
@@ -531,7 +541,7 @@ class Queue:
                                 queue=self.queue,
                             ).where(
                                 TaskEntry.key == task.key,
-                            ).execute()
+                            ).execute(database=None)
 
 
     def find_dependecies_states(self,task):
@@ -606,7 +616,7 @@ class Queue:
                #         }).where(
                #             TaskEntry.key==self.current_task.key,
                #             TaskEntry.state=="running",
-               #          ).execute()
+               #          ).execute(database=None)
             except Exception as e:
                 log('failed to lock:',repr(e))
                 self.log_task("task to failed lock: %s; serialized to %i"%(repr(e),len(serialized)),state="failed_to_lock")
@@ -633,14 +643,14 @@ class Queue:
                     TaskEntry.state:"done",
                     TaskEntry.entry:self.current_task.serialize(),
                     TaskEntry.modified:datetime.datetime.now(),
-                }).where(TaskEntry.key==self.current_task.key).execute()
+                }).where(TaskEntry.key==self.current_task.key).execute(database=None)
 
         if self.current_task_stored_key != self.current_task.key:
             r=TaskEntry.update({
                         TaskEntry.state:"done",
                         TaskEntry.entry:self.current_task.serialize(),
                         TaskEntry.modified:datetime.datetime.now(),
-                    }).where(TaskEntry.key==self.current_task_stored_key).execute()
+                    }).where(TaskEntry.key==self.current_task_stored_key).execute(database=None)
 
 
         self.current_task_status="done"
@@ -658,7 +668,7 @@ class Queue:
 
         self.log_task("task failed",self.current_task,"failed")
         
-        history=[model_to_dict(en) for en in TaskHistory.select().where(TaskHistory.key==task.key).order_by(TaskHistory.id.desc()).execute()]
+        history=[model_to_dict(en) for en in EventLog.select().where(EventLog.task_key==task.key).order_by(EventLog.id.desc()).execute(database=None)]
         n_failed = len([he for he in history if he['state'] == "failed"])
 
         self.log_task("task failed %i times already"%n_failed,task,"failed")
@@ -674,7 +684,7 @@ class Queue:
                     TaskEntry.state:next_state,
                     TaskEntry.entry:self.current_task.serialize(),
                     TaskEntry.modified:datetime.datetime.now(),
-                }).where(TaskEntry.key==self.current_task.key).execute()
+                }).where(TaskEntry.key==self.current_task.key).execute(database=None)
 
         self.current_task_status = next_state
         self.current_task = None
@@ -684,7 +694,7 @@ class Queue:
         for fromk in wipe_from:
             for key in self.list(fromk):
                 log("removing",fromk + "/" + key)
-                TaskEntry.delete().where(TaskEntry.key==key).execute()
+                TaskEntry.delete().where(TaskEntry.key==key).execute(database=None)
         
     @property
     def info(self):
@@ -720,13 +730,25 @@ class Queue:
             pid=os.getpid(),
         )
         return "{fqdn}.{pid}".format(**d)
+    
 
     def view_log(self, task_key=None):
         if task_key is None:
-            history=[model_to_dict(en) for en in TaskHistory.select().order_by(TaskHistory.id.asc()).execute()]
+            history=[model_to_dict(en) for en in EventLog.select().order_by(EventLog.id.asc()).execute(database=None)]
         else:
-            history=[model_to_dict(en) for en in TaskHistory.select().where(TaskHistory.key==task_key).order_by(TaskHistory.id.asc()).execute()]
+            history=[model_to_dict(en) for en in EventLog.select().where(EventLog.task_key==task_key).order_by(EventLog.id.asc()).execute(database=None)]
         return history
+    
+    def log_queue(self, message, spent_s, worker_id):
+        ""
+        return EventLog.insert(
+                             queue=self.queue,
+                             worker_id=self.worker_id,
+                             timestamp=datetime.datetime.now(),
+                             message=message,
+                             spent_s=spent_s,
+                        ).execute(database=None)
+
 
     def log_task(self, message, task=None, state=None, task_key=None):
         ""
@@ -742,14 +764,14 @@ class Queue:
         if state is None:
             state="undefined"
 
-        return TaskHistory.insert(
+        return EventLog.insert(
                              queue=self.queue,
-                             key=task_key,
+                             task_key=task_key,
                              state=state,
                              worker_id=self.worker_id,
                              timestamp=datetime.datetime.now(),
                              message=message,
-                        ).execute()
+                        ).execute(database=None)
 
     def list(self,kind=None,kinds=None,fullpath=False):
         ""
