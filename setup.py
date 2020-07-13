@@ -17,6 +17,7 @@ setup(name='dda-queue',
           'apispec',
           'flasgger',
           'bravado',
+          'termcolor',
           ],
       zip_safe=False,
      )

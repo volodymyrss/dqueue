@@ -19,12 +19,12 @@ from bravado.client import SwaggerClient
 
 
 class QueueProxy(Queue):
-    master = None
+    leader = None
     queue = None
     token = ""
 
     def __repr__(self):
-        return f"[ {self.__class__.__name__}: {self.master}@{self.queue} ]"
+        return f"[ {self.__class__.__name__}: {self.leader}@{self.queue} ]"
 
     def __init__(self, queue_uri="http://localhost:5000@default"):
         super().__init__()
@@ -33,17 +33,17 @@ class QueueProxy(Queue):
         if not r:
             raise Exception("uri does not match queue")
 
-        self.master = r.groups()[0]
+        self.leader = r.groups()[0]
         self.queue = r.groups()[1]
 
     def list_queues(self, pattern):
         print(self.client.queues.list().response().result)
-        return [QueueProxy(self.master+"@"+q) for q in self.client.queues.list().response().result]
+        return [QueueProxy(self.leader+"@"+q) for q in self.client.queues.list().response().result]
 
     @property
     def client(self):
         if getattr(self, '_client', None) is None:
-            self._client = SwaggerClient.from_url(self.master.strip("/")+"/apispec_1.json", config={'use_models': False})
+            self._client = SwaggerClient.from_url(self.leader.strip("/")+"/apispec_1.json", config={'use_models': False})
         return self._client
 
     def find_task_instances(self,task,klist=None):

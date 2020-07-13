@@ -15,6 +15,18 @@ run: build
                 --name $(CONTAINER) $(IMAGE)
 	        #-e ODATESTS_BOT_PASSWORD=$(shell cat testbot-password.txt) \
 
+run-guardian: build
+	docker rm -f $(CONTAINER) || true
+	docker run \
+          -p 8100:8000 \
+          -it \
+		      -e API_BASE=/ \
+			  	-e APP_MODE=guardian \
+					-e DQUEUE_LEADER="http://in.internal.odahub.io/staging-1-3/dqueue@queue-osa11" \
+	        --rm \
+                --name $(CONTAINER) $(IMAGE)
+	        #-e ODATESTS_BOT_PASSWORD=$(shell cat testbot-password.txt) \
+
 build:
 	rm -fv dist/*
 	python setup.py sdist
