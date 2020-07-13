@@ -1,4 +1,3 @@
-import yaml
 import traceback
 import datetime
 import os

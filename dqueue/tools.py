@@ -1,4 +1,3 @@
-import yaml
 import traceback
 import datetime
 import os
@@ -115,7 +114,7 @@ def task_info(key):
     print(("decoding",len(entry['entry'])))
 
     try:
-        entry_data=yaml.load(io.StringIO(entry['entry']))
+        entry_data=json.loads(entry['entry'])
         entry['entry']=entry_data
 
         from ansi2html import ansi2html# type: ignore

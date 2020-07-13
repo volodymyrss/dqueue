@@ -1,6 +1,6 @@
-import yaml
 import datetime
 import os
+import json
 import time
 import socket
 from hashlib import sha224
@@ -166,8 +166,8 @@ class Task:
         return dict(task_key=self.key)
 
     def serialize(self):
-        return yaml.dump(normalize_nested_dict(self.as_dict),
-            default_flow_style=False, default_style=''
+        return json.dumps(normalize_nested_dict(self.as_dict),
+            sort_keys=True,
         )
 
 
@@ -175,12 +175,12 @@ class Task:
     def from_entry(cls, entry):
         if isinstance(entry, str):
             try:
-                task_dict = yaml.load(io.StringIO(entry) , Loader=yaml.Loader )
+                task_dict = json.loads(entry)
             except Exception as e:
-                logger.error("problem decoding yaml from task entry: %s", e)
+                logger.error("problem decoding json from task entry: %s", e)
                 for i, e in enumerate(entry.splitlines()):
-                    print(f"problematic yaml: {i:5d}", e)
-                open("/tmp/problematic_entry.yaml", "wt").write(entry)
+                    print(f"problematic json: {i:5d}", e)
+                open("/tmp/problematic_entry.json", "wt").write(entry)
                 raise
         else:
             task_dict = entry
@@ -213,13 +213,12 @@ class Task:
 
         components = []
 
-        task_data_string_unordered = yaml.dump(self.task_data, encoding='utf-8')
-        task_data_string = yaml.dump(order_nested_dict(self.task_data), encoding='utf-8')
+        task_data_string = json.dumps(order_nested_dict(self.task_data), sort_keys=True)
 
         logger.debug("task data: %s", self.task_data)
         logger.debug("task data string: %s", task_data_string)
 
-        components.append(sha224(task_data_string).hexdigest()[:8])
+        components.append(sha224(task_data_string.encode()).hexdigest()[:8])
         #log("encoding: "+repr(components))
         #log(task_data_string)
         #log("encoding: "+repr(components),severity="debug")
@@ -229,18 +228,12 @@ class Task:
             components.append("%.14lg"%self.submission_info['time'])
             components.append(self.submission_info['utc'])
 
-            s = yaml.dump(order_nested_dict(self.submission_info), encoding='utf-8')
-            components.append(sha224(s).hexdigest()[:8])
+            s = json.dumps(order_nested_dict(self.submission_info), sort_keys=True)
+            components.append(sha224(s.encode()).hexdigest()[:8])
 
         key = "_".join(components)
 
         logger.warning("generating key %s", key)
-
-        #print(">>> task_data_string for key %s"%key)
-        #print(task_data_string.decode())
-        #print("--- unordered task_data_string for key %s"%key)
-        #print(task_data_string_unordered.decode())
-        #print("<<< task_data_string")
 
         return key
 
