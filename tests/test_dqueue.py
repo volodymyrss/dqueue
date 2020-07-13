@@ -130,7 +130,7 @@ def test_locked_jobs():
     t1 = dict(test=1, data=2)
     t2 = dict(test=1, data=3)
 
-    assert queue.put(t1,depends_on=[t2])['state']=="submitted"
+    assert queue.put(t1, depends_on=[t2])['state']=="submitted"
 
     time.sleep(0.1)
     queue.put(t2)

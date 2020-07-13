@@ -126,11 +126,19 @@ except Exception:
     has_mysql = False
 
 class Task:
-    def __init__(self,task_data,execution_info=None, submission_data=None, depends_on=None):
-        self.task_data=task_data
-        self.submission_info=self.construct_submission_info()
-        self.depends_on=depends_on
+    reference_task = False
 
+    def __init__(self,task_data,execution_info=None, submission_data=None, depends_on=None):
+        if 'task_key' in task_data:
+            self._key = task_data['task_key']
+            self.task_data = None
+            self.reference_task = True
+            logger.debug('creating referenced task %s from %s', self, task_data)
+        else:
+            self.task_data = task_data
+            self.depends_on = depends_on
+
+        self.submission_info=self.construct_submission_info()
         if submission_data is not None:
             self.submission_info.update(submission_data)
 
@@ -153,6 +161,10 @@ class Task:
                 execution_info=self.execution_info,
                 depends_on=self.depends_on,
             )
+
+    @property
+    def reference_dict(self):
+        return dict(task_key=self.key)
 
     def serialize(self):
         return yaml.dump(normalize_nested_dict(self.as_dict),
@@ -190,6 +202,9 @@ class Task:
         return self.get_key(True)
 
     def get_key(self,key=True):
+        if hasattr(self, '_key'):
+            return self._key
+
         components = []
 
         task_data_string_unordered = yaml.dump(self.task_data, encoding='utf-8')
@@ -224,7 +239,7 @@ class Task:
         return key
 
     def __repr__(self):
-        return "[{}: {}]".format(self.__class__.__name__,self.task_data)
+        return "[{}: {}: {}]".format(self.__class__.__name__, self.key, self.task_data)
 
     def filename_instance(self):
         return "unset"
@@ -335,21 +350,29 @@ class Queue:
         return dict(state="locked",key=task.key)
     
     
-    def task_entry_by_key(self,key):
+    def task_by_key(self, key):
         ""
 
         r=TaskEntry.select().where(
                          TaskEntry.key==key,
                         ).execute(database=None)
-        assert len(r)==1
+
+        if len(r) != 1:
+            raise RuntimeError(f"found multiple entries for key {key}: suspecting database inconsistency!")
+
         return r[0]
+
+
     
     def put(self, task_data: TaskData, submission_data=None, depends_on=None) -> TaskDict:
         logger.info("putting in queue task_data %s", task_data)
 
-        assert depends_on is None or type(depends_on) in [list, tuple]
+        assert depends_on is None or type(depends_on) in [list, tuple] # runtime typing!
 
-        task=Task(task_data,submission_data=submission_data,depends_on=depends_on)
+        if depends_on is not None:
+            depends_on = [ Task(dep).reference_dict for dep in depends_on ]
+
+        task=Task(task_data, submission_data=submission_data, depends_on=depends_on)
 
         ntry_race=10
         retry_sleep_race=2
@@ -380,10 +403,10 @@ class Queue:
             return d
 
         if depends_on is None:
-            self.insert_task_entry(task,"waiting")
+            self.insert_task_entry(task, "waiting")
             log("task inserted as waiting")
         else:
-            self.insert_task_entry(task,"locked")
+            self.insert_task_entry(task, "locked")
             log("task inserted as locked")
 
         instance_for_key=self.find_task_instances(task)[0]
@@ -516,7 +539,7 @@ class Queue:
         logger.info("found %d locked tasks", len(locked_tasks))
 
         for task_key in locked_tasks:
-            task_entry=self.task_entry_by_key(task_key)
+            task_entry=self.task_by_key(task_key)
             logger.info("trying to unlock %s", task_entry.key)
 
             r.append(self.try_to_unlock(Task.from_entry(task_entry.entry)))
@@ -577,7 +600,7 @@ class Queue:
         log("find_dependecies_states for",task.key)
 
         dependencies=[]
-        for i_dep,dependency in enumerate(task.depends_on):
+        for i_dep, dependency in enumerate(task.depends_on):
             dependency_task=Task(dependency)
 
             print(("task",task.key,"depends on task",dependency_task.key,i_dep,"/",len(task.depends_on)))
@@ -617,17 +640,31 @@ class Queue:
 
 
 
-    def task_locked(self,depends_on):
+    def task_locked(self, depends_on):
         ""
         log("locking task",self.current_task)
         self.log_task("task to lock...",state="locked")
         if self.current_task is None:
             raise Exception("task must be available to lock")
 
-        self.current_task.depends_on=depends_on
+        self.current_task.depends_on = [] 
+        
+        for dependency in depends_on:
+            dependency_key = dependency['task_ke']
+
+            dependency_task = self.task_by_key(dependency_key)
+
+
+
+            dependency_reference = dict(
+                        task_key=dependency_key,
+                    )
+
+            self.current_task.depends_on.append(dependency_reference)
+
         serialized=self.current_task.serialize()
 
-        self.log_task("task to lock: serialized to %i"%len(serialized),state="locked")
+        self.log_task("task to lock: serialized to %i"%len(serialized), state="locked")
 
         n_tries_left=10
         retry_delay=2

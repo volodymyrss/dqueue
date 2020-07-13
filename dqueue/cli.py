@@ -48,9 +48,8 @@ def purge(obj):
     else:
         for q in Queue().list_queues():
             log(q.info)
-            log(q.list(kinds=["waiting","done","failed","running"]))
+            log(q.list_task(kinds=["waiting","done","failed","running"]))
             q.purge()
-            
 
 def console_size():
     try:
@@ -64,11 +63,10 @@ def console_size():
 @click.option("-l", "--log", default=False, is_flag=True)
 @click.pass_obj
 def list(obj, debug, log):
-    for task in obj['queue'].list():
+    for task in obj['queue'].list_tasks():
 
         td = task['decoded_entry']['task_data']
 
-        
 
         s = [colored(task['key'], "red"), task['queue'], colored(task['state'], 'blue')]
 
