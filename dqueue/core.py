@@ -12,7 +12,6 @@ import re
 import click
 import urllib.parse
 
-import dqueue.extralogging
 
 from bravado.client import SwaggerClient
 
@@ -26,10 +25,10 @@ try:
 except ImportError:
     import urllib.parse as urlparse# type: ignore
 
-from typing import NewType, Dict
+from typing import NewType, Dict, Union
 
-TaskDict = NewType('TaskDict', Dict)
-TaskData = NewType('TaskData', Dict)
+from dqueue.typing import *
+from dqueue.entry import decode_entry_data
 
 import pymysql
 import peewee # type: ignore
@@ -356,22 +355,29 @@ class Queue:
         log("task still locked", task.key)
         return dict(state="locked",key=task.key)
     
-    
-    def task_by_key(self, key):
+    def task_by_key(self, key: str, decode: bool=False) -> Union[TaskDictType, None]:
         ""
 
         r=TaskEntry.select().where(
                          TaskEntry.key==key,
                         ).execute(database=None)
 
-        if len(r) != 1:
+        if len(r) > 1:
             raise RuntimeError(f"found multiple entries for key {key}: suspecting database inconsistency!")
+        
+        if len(r) == 0:
+            return None
 
-        return model_to_dict(r[0])
+        r = model_to_dict(r[0])
+
+        if decode:
+            decode_entry_data(r)
+
+        return r
 
 
     
-    def put(self, task_data: TaskData, submission_data=None, depends_on=None) -> TaskDict:
+    def put(self, task_data: TaskDataType, submission_data=None, depends_on=None) -> TaskDictType:
         logger.info("putting in queue task_data %s", task_data)
 
         assert depends_on is None or type(depends_on) in [list, tuple] # runtime typing!

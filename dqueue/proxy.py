@@ -12,7 +12,8 @@ import re
 import click
 import urllib.parse as urlparse# type: ignore
 
-from .core import Queue, Empty, Task, CurrentTaskUnfinished, TaskEntry
+from .core import Queue, Empty, Task, CurrentTaskUnfinished, TaskEntry, TaskDictType
+from dqueue import tools
 
 from bravado.client import SwaggerClient
 
@@ -52,9 +53,16 @@ class QueueProxy(Queue):
     
     def select_task_entry(self,key):
         raise NotImplementedError
+    
+    def task_info(self, key):
+        return self.client.task.task_info(task_key=key).response().result
 
-    def task_by_key(self, key):
-        r = self.client.task.byKey(key=key).response().result
+    def task_by_key(self, key: str, decode: bool=False) -> TaskDictType:
+        r = self.client.task.task_info(task_key=key).response().result
+
+        if decode:
+            r['task_dict'] = tools.decode_entry_data(r)
+
         return r
     
     def view_log(self, task_key=None, since=0):

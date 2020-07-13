@@ -15,14 +15,18 @@ from dqueue.core import Queue, Task
 from dqueue.proxy import QueueProxy
 
 @click.group()
+@click.option("-q", "--quiet", default=False, is_flag=True)
 @click.option("-d", "--debug", default=False, is_flag=True)
 @click.option("-q", "--queue", default=None)
 @click.pass_obj
-def cli(obj, debug=False, queue=None):
-    if debug:
-        logging.basicConfig(level=logging.DEBUG)
+def cli(obj, quiet=False, debug=False, queue=None):
+    if quiet:
+        logging.basicConfig(level=logging.CRITICAL)
     else:
-        logging.basicConfig(level=logging.INFO)
+        if debug:
+            logging.basicConfig(level=logging.DEBUG)
+        else:
+            logging.basicConfig(level=logging.INFO)
 
     if queue is None:
         queue = os.environ.get('DQUEUE_LEADER', None)
@@ -62,11 +66,12 @@ def console_size():
 @cli.command("ls")
 @click.option("-d", "--debug", default=False, is_flag=True)
 @click.option("-l", "--log", default=False, is_flag=True)
+@click.option("-i", "--info", default=False, is_flag=True)
 @click.pass_obj
-def list(obj, debug, log):
+def list(obj, debug, log, info):
     for task in obj['queue'].list_tasks():
 
-        td = task['decoded_entry']['task_data']
+        td = task['task_dict']['task_data']
 
 
         s = [colored(task['key'], "red"), task['queue'], colored(task['state'], 'blue')]
@@ -80,6 +85,10 @@ def list(obj, debug, log):
                 s.append( colored(oi['full_name'], "yellow"))
             elif 'name' in oi:
                 s.append( colored(oi['name'], "yellow"))
+
+        if info:
+            ti = obj['queue'].task_info(task['key'])
+            print(ti['task_info']['task_data']['object_identity']['factory_name'] )#['task_dict'])
 
 
         s.append(repr(td))
@@ -96,7 +105,7 @@ def list(obj, debug, log):
 
         if debug:
             print(pprint.pformat(task))
-            t = Task.from_entry(task['decoded_entry'])
+            t = Task.from_entry(task['task_dict'])
             print("Task: ", t)
             print("Task key: ", t.key)
 
@@ -106,6 +115,14 @@ def list(obj, debug, log):
 
         #print('task_id', task['task_id'])
     
+@cli.command()
+@click.pass_obj
+@click.argument("key")
+@click.option("--follow", "-f", is_flag=True, default=False)
+def viewtask(obj, key, follow):
+    ti = obj['queue'].task_info(key)
+
+    print(json.dumps(ti))
 
 @cli.command()
 @click.pass_obj
@@ -118,6 +135,8 @@ def viewlog(obj, follow):
     info_cadence = 10
     till_next_info = info_cadence
 
+    task_info_cache={}
+
     while True:
         new_messages = obj['queue'].view_log(since=since)['event_log']
 
@@ -129,7 +148,28 @@ def viewlog(obj, follow):
                 print("")
                 waiting=False
 
-            print("{timestamp} {task_key} {message}".format(**l))
+            if l['task_key'] not in task_info_cache:
+                ti = obj['queue'].task_by_key(l['task_key'], decode=True)
+                task_info_cache[l['task_key']] = ti
+
+
+            ti = task_info_cache[l['task_key']]
+
+            #print(ti)
+
+            if ti is not None:
+                try:
+                    name = ti['task_dict']['task_data']['object_identity']['factory_name']
+                except Exception as e:
+                    logger.error("very stange task: %s; %s", ti.keys(), e)
+                    name = "unnamed"
+            else:
+                name = "unnamed"
+
+            print("{timestamp} {task_key} {message} {name}".format(
+                    name=name,
+                    **l))
+            
 
             since = l['id']+1
 

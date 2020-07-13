@@ -356,9 +356,9 @@ class TaskViewLog(SwaggerView):
 
         r = queue.view_log(task_key=task_key, since=since)
 
-        logger.info("view_log api returns %s", r)
-        for e in r:
-            logger.info("view_log api returns entry: %s", e)
+        logger.info("view_log api returns %d entris", len(r))
+        #for e in r:
+        #    logger.info("view_log api returns entry: %s", e)
 
         return jsonify(
                     event_log=r,
@@ -567,7 +567,9 @@ app.add_url_rule(
       methods=['POST']
 )
 
-class TaskView(SwaggerView):
+class TaskInfoView(SwaggerView):
+    operationId = "task_info"
+
     parameters = [
                 {
                     'name': 'task_key',
@@ -585,12 +587,23 @@ class TaskView(SwaggerView):
         }
 
     def get(self, task_key):
-        info = tools.task_info(task_key)
-        logger.warning("requested task_key %s %s", task_key, info)
+        queue = dqueue.core.Queue()
+
+        task_dict = queue.task_by_key(task_key)
+        logger.warning("requested task_key %s %s", task_key, task_dict)
+
+        if task_dict is None:
+            return jsonify()
+
         return jsonify(
-                task_key=task_key,
-                task_info=info,
+                **task_dict
             )
+
+app.add_url_rule(
+         '/task/view/<task_key>',
+          view_func=TaskInfoView.as_view('view_task_info'),
+          methods=['GET']
+)
 
 @app.route("/tasks/resubmit/<string:scope>/<string:selector>")
 def tasks_resubmit(scope, selector):
@@ -690,10 +703,5 @@ def handle(error):
 
     traceback.print_exc()
 
-app.add_url_rule(
-         '/task/view/<task_key>',
-          view_func=TaskView.as_view('api_task'),
-          methods=['GET']
-)
 
 print("app added rules", id(app))

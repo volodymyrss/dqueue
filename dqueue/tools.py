@@ -12,7 +12,8 @@ import io
 import urllib.parse
 
 import dqueue.core as core
-from dqueue.core import model_to_dict
+from dqueue.core import model_to_dict, TaskDataType, TaskDictType, TaskEntryType
+from dqueue.entry import decode_entry_data
 
 import peewee # type: ignore
 
@@ -54,31 +55,6 @@ def stats():
 
 
 
-def decode_entry_data(entry):
-    try:
-        entry_data=yaml.load(io.StringIO(entry['entry']), Loader=yaml.Loader)
-        entry_data['submission_info']['callback_parameters']={}
-        for callback in entry_data['submission_info'].get('callbacks', []):
-            if callback is not None:
-                entry_data['submission_info']['callback_parameters'].update(urllib.parse.parse_qs(callback.split("?",1)[1]))
-            else:
-                entry_data['submission_info']['callback_parameters'].update(dict(job_id="unset",session_id="unset"))
-    except Exception as e:
-        traceback.print_exc()
-        print("problem decoding", repr(e))
-        print("raw entry (undecodable)", entry['entry'])
-        entry_data={'task_data':
-                        {'object_identity':
-                            {'factory_name':'??'}},
-                    'submission_info':
-                        {'callback_parameters':
-                            {'job_id':['??'],
-                             'session_id':['??']}}
-                    }
-
-    return entry_data
-
-
 def list_tasks(include_task_data=True, decode=True, state="any", json_filter=None):
     try:
         db.connect()
@@ -115,7 +91,7 @@ def list_tasks(include_task_data=True, decode=True, state="any", json_filter=Non
 
                 decoded_entries[entry['key']] = decode_entry_data(entry)
 
-            entry['decoded_entry'] = decoded_entries[entry['key']]
+            entry['task_dict'] = decoded_entries[entry['key']]
 
 
         tspent = time.time()-t0
@@ -128,6 +104,8 @@ def list_tasks(include_task_data=True, decode=True, state="any", json_filter=Non
     return entries
 
 def task_info(key):
+    raise NotImplementedError
+
     entry=[model_to_dict(entry) for entry in core.TaskEntry.select().where(core.TaskEntry.key==key).execute(database=None)]
     if len(entry)==0:
         return 
