@@ -79,43 +79,48 @@ def decode_entry_data(entry):
     return entry_data
 
 
-def list_tasks(include_task_data=True):
+def list_tasks(include_task_data=True, decode=True, state="any", json_filter=None):
     try:
         db.connect()
     except peewee.OperationalError as e:
         pass
 
-    output_json = request.args.get('json', False)
-
-    pick_state = request.args.get('state', 'any')
-
-    json_filter = request.args.get('json_filter')
-
-    decode = bool(request.args.get('raw'))
-
     logger.info("searching for entries")
     date_N_days_ago = datetime.datetime.now() - datetime.timedelta(days=float(request.args.get('since',1)))
 
-    if pick_state != "any":
-        if json_filter:
-            entries=[model_to_dict(entry) for entry in core.TaskEntry.select().where((core.TaskEntry.state == pick_state) & (core.TaskEntry.modified >= date_N_days_ago) & (core.TaskEntry.entry.contains(json_filter))).order_by(core.TaskEntry.modified.desc()).execute(database=None)]
-        else:
-            entries=[model_to_dict(entry) for entry in core.TaskEntry.select().where((core.TaskEntry.state == pick_state) & (core.TaskEntry.modified >= date_N_days_ago)).order_by(core.TaskEntry.modified.desc()).execute(database=None)]
-    else:
-        if json_filter:
-            entries=[model_to_dict(entry) for entry in core.TaskEntry.select().where((core.TaskEntry.modified >= date_N_days_ago) & (core.TaskEntry.entry.contains(json_filter))).order_by(core.TaskEntry.modified.desc()).execute(database=None)]
-        else:
-            entries=[model_to_dict(entry) for entry in core.TaskEntry.select().where(core.TaskEntry.modified >= date_N_days_ago).order_by(core.TaskEntry.modified.desc()).execute(database=None)]
+    c = core.TaskEntry.modified >= date_N_days_ago
+
+    if state != "any":
+        c &= core.TaskEntry.state == state
+
+    if json_filter:
+        c &= core.TaskEntry.entry.contains(json_filter)
+
+    entries = [ model_to_dict(entry) for entry in core.TaskEntry.\
+                                                  select().\
+                                                  where(c).\
+                                                  order_by(core.TaskEntry.modified.desc()).\
+                                                  execute(database=None) ]
 
     logger.info("found entries %d",len(entries))
 
-    for entry in entries:
-        logger.info("decoding string of size %s",len(entry['entry']))
-        logger.info("full entry keys: %s", entry.keys())
-        if entry['entry'] not in decoded_entries:
-            decoded_entries[entry['entry']] = decode_entry_data(entry)
 
-        entry['entry'] = decoded_entries[entry['entry']]
+    if decode:
+        t0=time.time()
+
+        for entry in entries:
+            logger.info("decoding string of size %s",len(entry['entry']))
+            logger.info("full entry keys: %s", entry.keys())
+
+            if entry['key'] not in decoded_entries:
+                decoded_entries[entry['key']] = decode_entry_data(entry)
+
+            entry['decoded_entry'] = decoded_entries[entry['key']]
+
+
+        tspent = time.time()-t0
+
+        logger.info("spent %f s decoding %d entries", tspent, len(entries))
 
     db.close()
 
