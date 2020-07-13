@@ -97,6 +97,12 @@ class TaskListView(SwaggerView):
     operationId = "listTasks"
     parameters = [
         {
+            "name": "queue",
+            "in": "query",
+            "type": "string",
+            "required": False,
+        },
+        {
             "name": "state",
             "in": "query",
             "type": "string",
@@ -117,8 +123,16 @@ class TaskListView(SwaggerView):
         get list of tasks
         """
 
+        queue = dqueue.core.Queue(request.args.get('queue', 'default'))
+
+        tasks = [e for e in tools.list_tasks(include_task_data=True)]
+
+        #tasks = queue.list_tasks(decode=True) #state=state)
+
+        logger.debug("list tasks returns %s, tasks", tasks)
+
         return jsonify(
-                tasks=[e for e in tools.list_tasks(include_task_data=True)]
+                tasks=tasks
             )
 
 app.add_url_rule(
@@ -245,6 +259,56 @@ app.add_url_rule(
          '/worker/answer',
           view_func=WorkerAnswer.as_view('worker_answer_task'),
           methods=['POST']
+)
+
+
+class TryAllLocked(SwaggerView):
+    operationId = "try_all_locked"
+
+    # locally or remotely?
+
+    parameters = [
+                {
+                    'name': 'worker_id',
+                    'in': 'path',
+                    'required': True,
+                    'type': 'string',
+                },
+                {
+                    'name': 'queue',
+                    'in': 'query',
+                    'required': False,
+                    'type': 'string',
+                },
+                {
+                    'name': 'token',
+                    'in': 'query',
+                    'required': True,
+                    'type': 'string',
+                },
+            ]
+
+    responses = {
+            200: {
+                    'description': 'unlocked!',
+                },
+            204: {
+                    'description': 'problem: no tasks can be offered',
+                }
+        }
+
+    def get(self, worker_id):
+        queue = dqueue.core.Queue(request.args.get('queue', 'default'), worker_id=worker_id)
+
+        r = queue.try_all_locked()
+
+        return r
+
+
+app.add_url_rule(
+          '/tasks/try_all_locked',
+          view_func=TryAllLocked.as_view('tasks_try_all_locked'),
+          methods=['GET']
 )
 
 class TaskViewLog(SwaggerView):

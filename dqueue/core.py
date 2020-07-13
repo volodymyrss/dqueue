@@ -405,7 +405,7 @@ class Queue:
         if self.current_task is not None:
             raise CurrentTaskUnfinished(self.current_task)
 
-       # tasks=self.list("waiting")
+       # tasks=self.list_tasks("waiting")
        # task=tasks[-1]
        # self.current_task = Task.from_entry(task['task_entry'].entry)
 
@@ -493,14 +493,24 @@ class Queue:
         return nentries
 
     
-    def try_all_locked(self):
+    def try_all_locked(self, unlock_max = 10):
         ""
         r=[]
-        for task_key in self.list("locked"):
+
+        n_unlocked = 0
+
+        for task_key in self.list_tasks("locked"):
             task_entry=self.select_task_entry(task_key)
             log("trying to unlock", task_entry.key)
             #log("trying to unlock", task_key,task_entry,task_entry.key,task_entry.entry)
             r.append(self.try_to_unlock(Task.from_entry(task_entry.entry)))
+
+            if r[-1]['state'] != "locked":
+                n_unlocked += 1
+
+            if n_unlocked >= unlock_max:
+                break
+
         return r
     
     def remember(self,task_data,submission_data=None):
@@ -692,7 +702,7 @@ class Queue:
 
     def wipe(self,wipe_from=["waiting"]):
         for fromk in wipe_from:
-            for key in self.list(fromk):
+            for key in self.list_tasks(fromk):
                 log("removing",fromk + "/" + key)
                 TaskEntry.delete().where(TaskEntry.key==key).execute(database=None)
         
@@ -701,7 +711,7 @@ class Queue:
         ""
         r={}
         for kind in "waiting","running","done","failed","locked":
-            r[kind]=len(self.list(kind))
+            r[kind]=len(self.list_tasks(kind))
         return r
 
     def show(self):
@@ -779,8 +789,14 @@ class Queue:
                              message=message,
                         ).execute(database=None)
 
-    def list(self,kind=None,kinds=None,fullpath=False):
+
+    def list(self, *args, **kwargs): # compatibility
+        logger.warning("please use list_tasks instead")
+        return self.list_tasks(*args, **kwargs)
+
+    def list_tasks(self, kind=None, kinds=None, decode=False):
         ""
+
         if kinds is None:
             kinds=["waiting"]
         if kind is not None:
@@ -791,6 +807,8 @@ class Queue:
         for kind in kinds:
             for task_entry in TaskEntry.select().where(TaskEntry.state==kind, TaskEntry.queue==self.queue):
                 kind_jobs.append(task_entry.key)
+
+
         return kind_jobs
 
 

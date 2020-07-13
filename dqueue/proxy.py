@@ -140,7 +140,7 @@ class QueueProxy(Queue):
 
     def wipe(self,wipe_from=["waiting"]):
         #for fromk in wipe_from:
-        for key in self.list():
+        for key in self.list_tasks():
             self.logger.info("removing %s", key)
             TaskEntry.delete().where(TaskEntry.key==key).execute(database=None)
         
@@ -149,8 +149,7 @@ class QueueProxy(Queue):
         self.logger.info("deleted %s", nentries)
 
 
-    def list(self):
-        print(dir(self.client.tasks))
+    def list_tasks(self):
         l = [task for task in self.client.tasks.listTasks().response().result['tasks']]
         self.logger.info(f"found tasks: {len(l)}")
         return l
@@ -158,7 +157,7 @@ class QueueProxy(Queue):
     @property
     def info(self):
         r={}
-        tasks = self.list()
+        tasks = self.list_tasks()
         for kind in "waiting","running","done","failed","locked":
             r[kind]=[t for t in tasks if t['state'] == kind]
         return r
@@ -169,4 +168,7 @@ class QueueProxy(Queue):
 
     def resubmit(self, scope, selector):
         return self.client.tasks.resubmit(scope=scope, selector=selector)
+
+    def try_all_locked(self):
+        return self.client.tasks.try_all_locked()
 

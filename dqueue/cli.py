@@ -3,6 +3,7 @@ import logging
 import json
 import os
 import pprint
+import time
 from termcolor import colored
 
 logger = logging.getLogger()
@@ -105,15 +106,38 @@ def list(obj, debug, log):
 @click.option("--follow", "-f", is_flag=True, default=False)
 def viewlog(obj, follow):
     since = 0
+
+    waiting = False
+
     while True:
-        for l in obj['queue'].view_log(since=since)['event_log']:
+        new_messages = obj['queue'].view_log(since=since)['event_log']
+
+
+        for l in new_messages:
             logging.debug(l)
-            print(" {timestamp} {task_key} {message}".format(**l))
-        since = l['id']
+
+            if waiting:
+                print("")
+                waiting=False
+
+            print("{timestamp} {task_key} {message}".format(**l))
 
         if not follow:
             break
 
+        if len(new_messages)==0:
+            if not waiting:
+                print("waiting", end="")
+            else:
+                print(".", end="", flush=True)
+
+            waiting = True
+
+        since = l['id']+1
+
+        time.sleep(1) # nobody ever needs anything but this default
+
+    print("")
 
 @cli.command()
 @click.pass_obj
