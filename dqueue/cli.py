@@ -66,7 +66,7 @@ def console_size():
 def list(obj, debug, log):
     for task in obj['queue'].list():
 
-        td = task['entry']['task_data']
+        td = task['decoded_entry']['task_data']
 
         
 
@@ -90,7 +90,7 @@ def list(obj, debug, log):
 
         if debug:
             print(pprint.pformat(task))
-            t = Task.from_entry(task['entry'])
+            t = Task.from_entry(task['decoded_entry'])
             print("Task: ", t)
             print("Task key: ", t.key)
 

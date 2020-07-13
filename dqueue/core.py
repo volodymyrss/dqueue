@@ -41,7 +41,7 @@ n_failed_retries = int(os.environ.get('DQUEUE_FAILED_N_RETRY','20'))
 
 
 def get_logger(name):
-    level = getattr(logging, os.environ.get('DQUEUE_LOG_LEVEL', 'DEBUG'))
+    level = getattr(logging, os.environ.get('DQUEUE_LOG_LEVEL', 'INFO'))
 
     logging.basicConfig(level=level)
 
@@ -335,7 +335,7 @@ class Queue:
         return dict(state="locked",key=task.key)
     
     
-    def select_task_entry(self,key):
+    def task_entry_by_key(self,key):
         ""
 
         r=TaskEntry.select().where(
@@ -511,10 +511,14 @@ class Queue:
 
         n_unlocked = 0
 
-        for task_key in self.list_tasks("locked"):
-            task_entry=self.select_task_entry(task_key)
+        locked_tasks = self.list_tasks(state="locked")
+
+        logger.info("found %d locked tasks", len(locked_tasks))
+
+        for task_key in locked_tasks:
+            task_entry=self.task_entry_by_key(task_key)
             logger.info("trying to unlock %s", task_entry.key)
-            #log("trying to unlock", task_key,task_entry,task_entry.key,task_entry.entry)
+
             r.append(self.try_to_unlock(Task.from_entry(task_entry.entry)))
 
             if r[-1]['state'] != "locked":
@@ -806,21 +810,32 @@ class Queue:
         logger.warning("please use list_tasks instead")
         return self.list_tasks(*args, **kwargs)
 
-    def list_tasks(self, kind=None, kinds=None, decode=False):
+    def list_tasks(self, state=None, states=None, kind=None, kinds=None, decode=False):
         ""
 
-        if kinds is None:
-            kinds=["waiting"]
         if kind is not None:
-            kinds=[kind]
+            logger.warning("please use 'state' instead of 'kind' in list_tasks")
+            state = kind
 
-        kind_jobs = []
+        if state is not None:
+            states=[state]
 
-        for kind in kinds:
-            for task_entry in TaskEntry.select().where(TaskEntry.state==kind, TaskEntry.queue==self.queue):
-                kind_jobs.append(task_entry.key)
+        if kinds is not None:
+            logger.warning("please use 'states' instead of 'kinds' in list_tasks")
+            states = kinds
+
+        if states is None:
+            states=["waiting"]
 
 
-        return kind_jobs
+        jobs = []
+
+        logger.info("requested to list_tasks; queue: %s states: %s", self.queue, states)
+
+        for state in states:
+            for task_entry in TaskEntry.select().where(TaskEntry.state==state, TaskEntry.queue==self.queue):
+                jobs.append(task_entry.key)
+
+        return jobs
 
 
