@@ -109,10 +109,10 @@ def list_tasks(include_task_data=True, decode=True, state="any", json_filter=Non
         t0=time.time()
 
         for entry in entries:
-            logger.info("decoding string of size %s",len(entry['entry']))
-            logger.info("full entry keys: %s", entry.keys())
-
             if entry['key'] not in decoded_entries:
+                logger.info("decoding string of size %s",len(entry['entry']))
+                logger.info("full entry keys: %s", entry.keys())
+
                 decoded_entries[entry['key']] = decode_entry_data(entry)
 
             entry['decoded_entry'] = decoded_entries[entry['key']]

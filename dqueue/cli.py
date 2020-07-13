@@ -85,7 +85,14 @@ def list(obj, debug, log):
         s.append(repr(td))
 
 
-        print((" ".join(s))[:console_size()[1]])
+        cut_width = console_size()[1]
+        m = " ".join(s)
+
+        print(m[:cut_width], end="")
+        if len(m) > cut_width:
+            print(colored(f"...{len(m)-cut_width} more", "blue"))
+        else:
+            print("")
 
         if debug:
             print(pprint.pformat(task))
@@ -94,7 +101,7 @@ def list(obj, debug, log):
             print("Task key: ", t.key)
 
         if log:
-            for l in obj['queue'].view_log(task['key'])['task_log']:
+            for l in obj['queue'].view_log(task['key'])['event_log']:
                 print("  {timestamp} {message}".format(**l))
 
         #print('task_id', task['task_id'])
@@ -107,6 +114,9 @@ def viewlog(obj, follow):
     since = 0
 
     waiting = False
+
+    info_cadence = 10
+    till_next_info = info_cadence
 
     while True:
         new_messages = obj['queue'].view_log(since=since)['event_log']
@@ -121,6 +131,8 @@ def viewlog(obj, follow):
 
             print("{timestamp} {task_key} {message}".format(**l))
 
+            since = l['id']+1
+
         if not follow:
             break
 
@@ -132,7 +144,16 @@ def viewlog(obj, follow):
 
             waiting = True
 
-        since = l['id']+1
+            till_next_info -= 1
+
+            if till_next_info <=0:
+                print()
+                for k,v in obj['queue'].info.items():
+                    print(k, ":", len(v), end="; ")
+                print()
+
+                till_next_info = info_cadence
+
 
         time.sleep(1) # nobody ever needs anything but this default
 

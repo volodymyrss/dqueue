@@ -173,7 +173,7 @@ class Task:
 
 
     @classmethod
-    def from_entry(cls,entry):
+    def from_entry(cls, entry):
         if isinstance(entry, str):
             try:
                 task_dict = yaml.load(io.StringIO(entry) , Loader=yaml.Loader )
@@ -185,6 +185,13 @@ class Task:
                 raise
         else:
             task_dict = entry
+
+        if 'task_data' not in task_dict:
+            logger.error("failed to build Task from entry %s", entry)
+            logger.error("problematic task_dict %s", task_dict)
+            logger.error("problematic task_dict keys %s", list(task_dict.keys()))
+            raise RuntimeError(f"failed to build Task from entry {entry}")
+
 
         print(task_dict['task_data'].keys())
 
@@ -360,7 +367,7 @@ class Queue:
         if len(r) != 1:
             raise RuntimeError(f"found multiple entries for key {key}: suspecting database inconsistency!")
 
-        return r[0]
+        return model_to_dict(r[0])
 
 
     
@@ -539,10 +546,10 @@ class Queue:
         logger.info("found %d locked tasks", len(locked_tasks))
 
         for task_key in locked_tasks:
-            task_entry=self.task_by_key(task_key)
-            logger.info("trying to unlock %s", task_entry.key)
+            task_entry = self.task_by_key(task_key)
+            logger.info("trying to unlock %s", task_entry['key'])
 
-            r.append(self.try_to_unlock(Task.from_entry(task_entry.entry)))
+            r.append(self.try_to_unlock(Task.from_entry(task_entry['entry'])))
 
             if r[-1]['state'] != "locked":
                 n_unlocked += 1
@@ -603,7 +610,7 @@ class Queue:
         for i_dep, dependency in enumerate(task.depends_on):
             dependency_task=Task(dependency)
 
-            print(("task",task.key,"depends on task",dependency_task.key,i_dep,"/",len(task.depends_on)))
+            print(("task",task.key,"depends on task", dependency_task.key, i_dep, "/", len(task.depends_on)))
             dependency_instances=self.find_task_instances(dependency_task)
             print(("task instances for",dependency_task.key,len(dependency_instances)))
 
@@ -652,9 +659,7 @@ class Queue:
         for dependency in depends_on:
             dependency_key = dependency['task_ke']
 
-            dependency_task = self.task_by_key(dependency_key)
-
-
+            #dependency_task = self.task_by_key(dependency_key)
 
             dependency_reference = dict(
                         task_key=dependency_key,
