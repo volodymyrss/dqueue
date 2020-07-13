@@ -306,7 +306,7 @@ class TryAllLocked(SwaggerView):
 
 
 app.add_url_rule(
-          '/tasks/try_all_locked',
+          '/tasks/<string:worker_id>/try_all_locked',
           view_func=TryAllLocked.as_view('tasks_try_all_locked'),
           methods=['GET']
 )

@@ -141,6 +141,12 @@ def viewlog(obj, follow):
 
 @cli.command()
 @click.pass_obj
+def try_all_locked(obj):
+    task_data=obj['queue'].try_all_locked().response().result
+    print(colored("unlocked:", "green"), task_data)
+
+@cli.command()
+@click.pass_obj
 def get(obj):
     task_data=obj['queue'].get()
     print(colored("offered:", "green"), task_data)
