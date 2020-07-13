@@ -26,6 +26,7 @@ def cli(obj, debug=False, queue=None):
 
     if queue is None:
         queue = os.environ.get('DQUEUE_LEADER', None)
+
     obj['queue'] = from_uri(queue)
     logger.info("using queue: %s", obj['queue'])
 
