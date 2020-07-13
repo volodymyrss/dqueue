@@ -93,7 +93,7 @@ def list_tasks(include_task_data=True):
 
     decode = bool(request.args.get('raw'))
 
-    print("searching for entries")
+    logger.info("searching for entries")
     date_N_days_ago = datetime.datetime.now() - datetime.timedelta(days=float(request.args.get('since',1)))
 
     if pick_state != "any":
@@ -107,7 +107,7 @@ def list_tasks(include_task_data=True):
         else:
             entries=[model_to_dict(entry) for entry in core.TaskEntry.select().where(core.TaskEntry.modified >= date_N_days_ago).order_by(core.TaskEntry.modified.desc()).execute(database=None)]
 
-    print(("found entries",len(entries)))
+    logger.info("found entries %d",len(entries))
 
     for entry in entries:
         logger.info("decoding string of size %s",len(entry['entry']))

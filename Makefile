@@ -3,13 +3,14 @@ IMAGE=$(REPO):$(shell git describe --always)
 CONTAINER=dqueue
 
 listen: 
-	gunicorn dqueueapp:app
+	gunicorn --workers 8 dqueue.api:app -b 0.0.0.0:8000 --log-level DEBUG
 
 run: build
 	docker rm -f $(CONTAINER) || true
 	docker run \
-                -p 8100:8000 \
-                -it \
+          -p 8100:8000 \
+          -it \
+		      -e API_BASE=/ \
 	        --rm \
                 --name $(CONTAINER) $(IMAGE)
 	        #-e ODATESTS_BOT_PASSWORD=$(shell cat testbot-password.txt) \

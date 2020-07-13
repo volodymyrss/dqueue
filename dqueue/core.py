@@ -39,12 +39,24 @@ from playhouse.shortcuts import model_to_dict, dict_to_model # type: ignore
 sleep_multiplier = 1
 n_failed_retries = int(os.environ.get('DQUEUE_FAILED_N_RETRY','20'))
 
-logger=logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-handler=logging.StreamHandler()
-logger.addHandler(handler)
-formatter = logging.Formatter('%(asctime)s %(levelname)8s %(name)s | %(message)s')
-handler.setFormatter(formatter)
+
+def get_logger(name):
+    level = getattr(logging, os.environ.get('DQUEUE_LOG_LEVEL', 'DEBUG'))
+
+    logging.basicConfig(level=level)
+
+    logger=logging.getLogger(name)
+    logger.setLevel(level)
+
+    handler=logging.StreamHandler()
+    logger.addHandler(handler)
+
+    formatter = logging.Formatter('%(asctime)s %(levelname)8s %(name)s | %(message)s')
+    handler.setFormatter(formatter)
+
+    return logger
+
+logger = get_logger(__name__)
 
 def log(*args,**kwargs):
     severity=kwargs.get('severity','warning').upper()
@@ -501,7 +513,7 @@ class Queue:
 
         for task_key in self.list_tasks("locked"):
             task_entry=self.select_task_entry(task_key)
-            log("trying to unlock", task_entry.key)
+            logger.info("trying to unlock %s", task_entry.key)
             #log("trying to unlock", task_key,task_entry,task_entry.key,task_entry.entry)
             r.append(self.try_to_unlock(Task.from_entry(task_entry.entry)))
 

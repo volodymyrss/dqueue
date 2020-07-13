@@ -58,6 +58,7 @@ swagger = Swagger(app, template=template)
 
 print("setting up app", app, id(app))
 
+logging.basicConfig(level=logging.DEBUG)
 logger=logging.getLogger(__name__)
 
 
@@ -302,9 +303,9 @@ class TryAllLocked(SwaggerView):
 
         r = queue.try_all_locked()
 
-        logger.info("unlocked:", len(r))
+        logger.info("unlocked: %d", len(r))
 
-        return dict(tasks=r)
+        return jsonify(tasks=r)
 
 
 app.add_url_rule(
