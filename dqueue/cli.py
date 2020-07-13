@@ -138,10 +138,25 @@ def viewlog(obj, follow):
     print("")
 
 @cli.command()
+@click.option('-w', '--watch', default=None, type=int)
 @click.pass_obj
-def try_all_locked(obj):
-    task_data=obj['queue'].try_all_locked()
-    print(colored("unlocked:", "green"), task_data)
+def try_all_locked(obj, watch):
+    while True:
+        print("trying to unlock something")
+        task_data=obj['queue'].try_all_locked()
+        print(colored("unlocked:", "green"), task_data)
+    
+        if not watch:
+            break
+
+        
+        print("getting queue statistics...")
+        for k,v in obj['queue'].info.items():
+            print(k, ":", len(v), end="; ")
+        print("\n")
+
+        print("sleeping", watch)
+        time.sleep(watch)
 
 @cli.command()
 @click.pass_obj
