@@ -302,6 +302,8 @@ class TryAllLocked(SwaggerView):
 
         r = queue.try_all_locked()
 
+        logger.info("unlocked:", len(r))
+
         return dict(tasks=r)
 
 

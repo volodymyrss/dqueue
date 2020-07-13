@@ -170,5 +170,5 @@ class QueueProxy(Queue):
         return self.client.tasks.resubmit(scope=scope, selector=selector)
 
     def try_all_locked(self):
-        return self.client.tasks.try_all_locked(worker_id=self.worker_id, token=self.token)
+        return self.client.tasks.try_all_locked(worker_id=self.worker_id, token=self.token).response().result
 
