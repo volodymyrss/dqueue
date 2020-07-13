@@ -302,7 +302,7 @@ class TryAllLocked(SwaggerView):
 
         r = queue.try_all_locked()
 
-        return r
+        return dict(tasks=r)
 
 
 app.add_url_rule(
