@@ -75,7 +75,7 @@ class Task(Schema):
 class TaskList(Schema):
     tasks = fields.Nested(Task, many=True)
 
-class TaskLogEntry(Schema):
+class LogEntry(Schema):
     message = fields.Str()
 
 class QueueLogEntry(Schema):
@@ -83,7 +83,7 @@ class QueueLogEntry(Schema):
     task_key = fields.Str()
 
 class ViewLog(Schema):
-    event_log = fields.Nested(TaskLogEntry, many=True)
+    event_log = fields.Nested(LogEntry, many=True)
 
 class QueueList(Schema):
     queues = fields.Nested(fields.Str(), many=True)
@@ -258,6 +258,12 @@ class TaskViewLog(SwaggerView):
                     'type': 'string',
                 },
                 {
+                    'name': 'since',
+                    'in': 'query',
+                    'required': False,
+                    'type': 'number',
+                },
+                {
                     'name': 'token',
                     'in': 'query',
                     'required': True,
@@ -274,12 +280,18 @@ class TaskViewLog(SwaggerView):
 
     def get(self):
         task_key = request.args.get('task_key', None)
+        if task_key == "":
+            task_key = None
+
+        since = request.args.get('since', 0, type=int)
 
         queue = dqueue.core.Queue()
 
-        r = queue.view_log(task_key=task_key)
+        r = queue.view_log(task_key=task_key, since=since)
 
         logger.info("view_log api returns %s", r)
+        for e in r:
+            logger.info("view_log api returns entry: %s", e)
 
         return jsonify(
                     event_log=r,
@@ -340,7 +352,7 @@ class TaskLogView(SwaggerView):
         }
 
     def post(self):
-        message = request.args.get('message')
+        message = request.args.get('message', 'no message')
         queue = request.args.get('queue', 'default')
         task_key = request.args.get('task_key')
         worker_id = request.args.get('worker_id')
@@ -348,9 +360,9 @@ class TaskLogView(SwaggerView):
 
         queue = dqueue.core.Queue(worker_id=worker_id, queue=queue)
 
-        logger.info("log_task worker_id %s task_key %s", worker_id, task_key)
+        logger.info("log_task worker_id %s task_key %s message %s", worker_id, task_key, message)
 
-        queue.log_task(message, task_key=task_key, state=state)
+        queue.log_task(message=message, task_key=task_key, state=state)
 
         logger.debug("task log: %s", queue.view_log())
         assert len(queue.view_log()) > 0

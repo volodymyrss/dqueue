@@ -732,11 +732,17 @@ class Queue:
         return "{fqdn}.{pid}".format(**d)
     
 
-    def view_log(self, task_key=None):
-        if task_key is None:
-            history=[model_to_dict(en) for en in EventLog.select().order_by(EventLog.id.asc()).execute(database=None)]
-        else:
-            history=[model_to_dict(en) for en in EventLog.select().where(EventLog.task_key==task_key).order_by(EventLog.id.asc()).execute(database=None)]
+    def view_log(self, task_key=None, since=0):
+        c = EventLog.id >= since
+
+        if task_key is not None:
+            c &= EventLog.task_key==task_key
+
+        history=[ model_to_dict(en) for en in EventLog.select()\
+                                                      .where(c)\
+                                                      .order_by(EventLog.id.asc())\
+                                                      .execute(database=None) ]
+
         return history
     
     def log_queue(self, message, spent_s, worker_id):

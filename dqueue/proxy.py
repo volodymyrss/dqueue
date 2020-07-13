@@ -53,8 +53,13 @@ class QueueProxy(Queue):
     def select_task_entry(self,key):
         raise NotImplementedError
     
-    def view_log(self, task_key=None):
-        return self.client.task.view_log(task_key=task_key, token=self.token).response().result
+    def view_log(self, task_key=None, since=0):
+        if task_key is None:
+            task_key = ""
+
+        return self.client.task.view_log(task_key=task_key,
+                                         since=since,
+                                         token=self.token).response().result
     
     def log_queue(self, message, spent_s=0):
         self.logger.info("log queue %s", message)

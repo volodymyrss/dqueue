@@ -102,10 +102,17 @@ def list(obj, debug, log):
 
 @cli.command()
 @click.pass_obj
-def viewlog(obj):
-    for l in obj['queue'].view_log()['task_log']:
-        logging.debug(l)
-        print(" {timestamp} {key} {message}".format(**l))
+@click.option("--follow", "-f", is_flag=True, default=False)
+def viewlog(obj, follow):
+    since = 0
+    while True:
+        for l in obj['queue'].view_log(since=since)['event_log']:
+            logging.debug(l)
+            print(" {timestamp} {task_key} {message}".format(**l))
+        since = l['id']
+
+        if not follow:
+            break
 
 
 @cli.command()
