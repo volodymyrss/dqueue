@@ -234,6 +234,23 @@ def test_direct_locking():
     time.sleep(0.1)
     queue.put(t2)
 
+    assert queue.get().task_data == t2
+
+    queue.task_done()
+    
+    assert len(queue.list("done")) == 1
+    
+    r=queue.try_all_locked()
+    
+    assert queue.get().task_data == t1
+
+    queue.task_done()
+    
+    assert len(queue.list("done")) == 1
+    
+
     print((queue.info))
 
+    task_log =  queue.view_log(task_key)
+    print("task_log:", task_log)
 
