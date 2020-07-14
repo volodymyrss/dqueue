@@ -19,8 +19,8 @@ def decode_entry_data(entry: TaskEntry) -> TaskDict:
                          'session_id':['??']}}
                         } # type: ignore
 
-    if 'entry' not in entry:
-        logger.error('entry does not contain entry field!')
+    if 'task_dict_string' not in entry:
+        logger.error('entry does not contain task_dict_string field!')
     else:
         try:
             task_dict = json.loads(entry['task_dict_string'])   # type: ignore

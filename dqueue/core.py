@@ -658,7 +658,7 @@ class Queue:
         self.current_task.depends_on = [] 
         
         for dependency in depends_on:
-            dependency_key = dependency['task_ke']
+            dependency_key = dependency['task_key']
 
             #dependency_task = self.task_by_key(dependency_key)
 

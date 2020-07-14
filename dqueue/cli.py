@@ -155,7 +155,7 @@ def viewlog(obj, follow):
 
             ti = task_info_cache[l['task_key']]
 
-            #print(ti)
+            logger.debug(ti)
 
             if ti is not None:
                 try:
