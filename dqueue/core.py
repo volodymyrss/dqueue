@@ -648,17 +648,17 @@ class Queue:
 
 
 
-    def task_locked(self, depends_on):
+    def task_locked(self, depends_on: List[types.TaskDict]):
         ""
         log("locking task",self.current_task)
-        self.log_task("task to lock...",state="locked")
+        self.log_task(f"task to lock by {len(depends_on)} dependencies",state="locked")
         if self.current_task is None:
             raise Exception("task must be available to lock")
 
         self.current_task.depends_on = [] 
         
         for dependency in depends_on:
-            dependency_key = dependency['task_key']
+            dependency_key = Task(dependency).key
 
             #dependency_task = self.task_by_key(dependency_key)
 
@@ -679,13 +679,6 @@ class Queue:
 
                 self.move_task('running', 'locked', self.current_task, update_entry=True)
 
-               # r=TaskEntry.update({
-               #             TaskEntry.state:"locked",
-               #             TaskEntry.entry:serialized,
-               #         }).where(
-               #             TaskEntry.key==self.current_task.key,
-               #             TaskEntry.state=="running",
-               #          ).execute(database=None)
             except Exception as e:
                 log('failed to lock:',repr(e))
                 self.log_task("task to failed lock: %s; serialized to %i"%(repr(e),len(serialized)),state="failed_to_lock")

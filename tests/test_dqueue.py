@@ -129,6 +129,7 @@ def test_locked_jobs():
 
     t1 = dict(test=1, data=2)
     t2 = dict(test=1, data=3)
+    t3 = dict(test=1, data=4)
 
     assert queue.put(t1, depends_on=[t2])['state']=="submitted"
 
@@ -203,3 +204,36 @@ def test_locked_jobs():
         print('task_log', tle['timestamp'], tle['message'])
     
     assert len(task_log) == 2
+
+def test_direct_locking():
+    import dqueue
+
+    queue=dqueue.Queue("test-queue")
+    queue.wipe(["waiting","done","running","locked","failed"])
+    queue.clear_task_history()
+
+    print("status:\n",queue.show())
+
+    assert queue.info['waiting']==0
+
+    t1 = dict(test=1, data=2)
+    t2 = dict(test=1, data=3)
+
+    assert queue.put(t1)['state']=="submitted"
+    
+    assert len(queue.list("waiting")) == 1
+
+    assert queue.get().task_data == t1
+    
+    assert len(queue.list("running")) == 1
+
+    queue.task_locked(t2)
+    
+    assert len(queue.list("locked")) == 1
+
+    time.sleep(0.1)
+    queue.put(t2)
+
+    print((queue.info))
+
+
