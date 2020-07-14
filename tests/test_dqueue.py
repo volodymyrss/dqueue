@@ -2,6 +2,8 @@ import logging
 
 logging.basicConfig(level=logging.DEBUG)
 
+logger = logging.getLogger(__name__)
+
 import pytest
 import glob
 import os
@@ -227,7 +229,7 @@ def test_direct_locking():
     
     assert len(queue.list("running")) == 1
 
-    queue.task_locked(t2)
+    queue.task_locked([t2])
     
     assert len(queue.list("locked")) == 1
 
@@ -239,6 +241,12 @@ def test_direct_locking():
     queue.task_done()
     
     assert len(queue.list("done")) == 1
+
+    logger.info(queue.info)
+    
+    logger.info("task log...")
+    for tle in queue.view_log():
+        logger.info('current task_log', tle['timestamp'], tle['message'])
     
     r=queue.try_all_locked()
     
@@ -246,11 +254,12 @@ def test_direct_locking():
 
     queue.task_done()
     
-    assert len(queue.list("done")) == 1
+    assert len(queue.list("done")) == 2
     
 
-    print((queue.info))
+    logger.info(queue.info)
 
-    task_log =  queue.view_log(task_key)
-    print("task_log:", task_log)
-
+    
+    logger.info("task log...")
+    for tle in queue.view_log():
+        logger.info('current task_log', tle['timestamp'], tle['message'])

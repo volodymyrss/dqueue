@@ -650,6 +650,9 @@ class Queue:
 
     def task_locked(self, depends_on: List[types.TaskDict]):
         ""
+        if not isinstance(depends_on, list):
+            raise Exception(f"depends_on has unknown type {depends_on.__class__}, expected list")
+
         log("locking task",self.current_task)
         self.log_task(f"task to lock by {len(depends_on)} dependencies",state="locked")
         if self.current_task is None:
