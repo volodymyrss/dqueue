@@ -1,4 +1,4 @@
-from dqueue.typing import TaskEntryType, TaskDictType
+from dqueue.typing import TaskEntry, TaskDict, NestedDict
 
 import logging
 import io
@@ -8,7 +8,7 @@ import traceback
 
 logger=logging.getLogger(__name__)
 
-def decode_entry_data(entry: TaskEntryType) -> TaskDictType:
+def decode_entry_data(entry: TaskEntry) -> TaskDict:
     task_dict = {
                 'task_data':
                     {'object_identity':
@@ -23,7 +23,7 @@ def decode_entry_data(entry: TaskEntryType) -> TaskDictType:
         logger.error('entry does not contain entry field!')
     else:
         try:
-            task_dict = json.loads(entry['entry']) 
+            task_dict = json.loads(entry['task_dict_string'])   # type: ignore
             task_dict['submission_info']['callback_parameters']={} # type: ignore
             for callback in task_dict['submission_info'].get('callbacks', []): # type: ignore
                 if callback is not None:
@@ -33,7 +33,7 @@ def decode_entry_data(entry: TaskEntryType) -> TaskDictType:
         except Exception as e:
             traceback.print_exc()
             logger.error("problem decoding %s", repr(e))
-            print("raw entry (undecodable)", entry['entry'])
+            print("raw entry (undecodable)", entry['task_dict_string'])
 
-    return TaskDictType(task_dict)
+    return TaskDict(NestedDict(task_dict))
 

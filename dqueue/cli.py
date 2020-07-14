@@ -105,7 +105,7 @@ def list(obj, debug, log, info):
 
         if debug:
             print(pprint.pformat(task))
-            t = Task.from_entry(task['task_dict'])
+            t = Task.from_task_dict(task['task_dict'])
             print("Task: ", t)
             print("Task key: ", t.key)
 

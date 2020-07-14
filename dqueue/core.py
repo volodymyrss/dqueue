@@ -25,9 +25,9 @@ try:
 except ImportError:
     import urllib.parse as urlparse# type: ignore
 
-from typing import NewType, Dict, Union
+from typing import NewType, Dict, Union, List
 
-from dqueue.typing import *
+import dqueue.typing as types
 from dqueue.entry import decode_entry_data
 
 import pymysql
@@ -91,7 +91,8 @@ class TaskEntry(peewee.Model):
     key = peewee.CharField(primary_key=True)
     state = peewee.CharField()
     worker_id = peewee.CharField()
-    entry = peewee.TextField()
+
+    task_dict_string = peewee.TextField()
 
     created = peewee.DateTimeField()
     modified = peewee.DateTimeField()
@@ -165,21 +166,21 @@ class Task:
     def reference_dict(self):
         return dict(task_key=self.key)
 
-    def serialize(self):
+    def serialize(self) -> str:
         return json.dumps(normalize_nested_dict(self.as_dict),
             sort_keys=True,
         )
 
 
     @classmethod
-    def from_entry(cls, entry):
+    def from_task_dict(cls, entry: Union[str, Dict]):
         if isinstance(entry, str):
             try:
                 task_dict = json.loads(entry)
             except Exception as e:
                 logger.error("problem decoding json from task entry: %s", e)
-                for i, e in enumerate(entry.splitlines()):
-                    print(f"problematic json: {i:5d}", e)
+                for i, e_l in enumerate(entry.splitlines()):
+                    print(f"problematic json: {i:5d}", e_l)
                 open("/tmp/problematic_entry.json", "wt").write(entry)
                 raise
         else:
@@ -298,20 +299,20 @@ class Queue:
         self.current_task=None
         self.current_task_status=None
 
-    def find_task_instances(self,task,klist=None):
+    def find_task_instances(self, task: Task, klist: Union[list, None]=None) -> List[types.TaskEntry]:
         ""
         log("find_task_instances for",task.key,"in",self.queue)
+
         if klist is None:
             klist=["waiting", "running", "done", "failed", "locked"]
 
         instances_for_key=[
-                dict(task_entry=task_entry) for task_entry in TaskEntry.select().where(TaskEntry.state << klist, TaskEntry.key==task.key, TaskEntry.queue==self.queue)
+                model_to_dict(task_entry) for task_entry in TaskEntry.select().where(TaskEntry.state << klist, TaskEntry.key==task.key, TaskEntry.queue==self.queue)
             ]
 
         log("found task instances for",task.key,"N == ",len(instances_for_key))
         for i in instances_for_key:
-            i['state'] = i['task_entry'].state
-            log(i['state'], i['task_entry'])
+            log(i['state'], i['task_dict_string'])
 
         return instances_for_key
     
@@ -348,7 +349,7 @@ class Queue:
         log("task still locked", task.key)
         return dict(state="locked",key=task.key)
     
-    def task_by_key(self, key: str, decode: bool=False) -> Union[TaskDictType, None]:
+    def task_by_key(self, key: str, decode: bool=False) -> Union[types.TaskDict, None]:
         ""
 
         r=TaskEntry.select().where(
@@ -370,7 +371,7 @@ class Queue:
 
 
     
-    def put(self, task_data: TaskDataType, submission_data=None, depends_on=None) -> TaskDictType:
+    def put(self, task_data: types.TaskData, submission_data=None, depends_on=None) -> Union[types.TaskEntry, None]:
         logger.info("putting in queue task_data %s", task_data)
 
         assert depends_on is None or type(depends_on) in [list, tuple] # runtime typing!
@@ -380,31 +381,37 @@ class Queue:
 
         task=Task(task_data, submission_data=submission_data, depends_on=depends_on)
 
+        instances_for_key = None # type: Union[List[types.TaskEntry], None]
+
         ntry_race=10
         retry_sleep_race=2
         while ntry_race>0:
-            instances_for_key=self.find_task_instances(task)
-            if len(instances_for_key)<=1:
-                break
+            instances_for_key = self.find_task_instances(task) 
             log("found instances for key:",instances_for_key)
-            log("found unexpected number of instances for key:",len(instances_for_key))
+
+            if instances_for_key is not None:
+                if len(instances_for_key)<=1:
+                    break
+
+                logger.error("found unexpected number of instances for key: %d", len(instances_for_key))
+            else:
+                logger.error("instances_for_key is None!")
+
             log("sleeping for",retry_sleep_race,"attempt",ntry_race)
             time.sleep(retry_sleep_race)
             ntry_race-=1
 
-        if len(instances_for_key)>1:
+        if instances_for_key is None or len(instances_for_key)>1:
             raise Exception("probably race condition, multiple task instances:",instances_for_key)
 
-
+        instance_for_key = None # type: Union[types.TaskEntry, None]
         if len(instances_for_key) == 1:
-            instance_for_key=instances_for_key[0]
-        else:
-            instance_for_key=None
+            instance_for_key = instances_for_key[0]
 
         if instance_for_key is not None:
-            log("found existing instance(s) for this key, no need to put:",instances_for_key)
-            self.log_task("task already found",task,instance_for_key['state'])
-            d = model_to_dict(instance_for_key['task_entry'])
+            log("found existing instance(s) for this key, no need to put:", instances_for_key)
+            self.log_task("task already found", task,instance_for_key['state'])
+            d = instance_for_key
             logger.debug("task entry: %s", d)
             return d
 
@@ -415,8 +422,8 @@ class Queue:
             self.insert_task_entry(task, "locked")
             log("task inserted as locked")
 
-        instance_for_key=self.find_task_instances(task)[0]
-        recovered_task=Task.from_entry(instance_for_key['task_entry'].entry)
+        instance_for_key = self.find_task_instances(task)[0]
+        recovered_task = Task.from_task_dict(instance_for_key['task_dict_string']) # type: ignore
 
         if recovered_task.key != task.key:
             log("inconsitent storage:")
@@ -434,21 +441,16 @@ class Queue:
 
             raise Exception("Inconsistent storage")
 
-        log("successfully put in queue:",instance_for_key['task_entry'].entry)
+        logger.debug("successfully put in queue: %s",instance_for_key['task_dict_string'])
 
-        #return dict(state="submitted", task_entry=instance_for_key['task_entry'].entry)
-        d = model_to_dict(instance_for_key['task_entry'])
-        d['state'] = 'submitted'
-        return d
+        
+        instance_for_key['state'] = 'submitted'
+        return instance_for_key
 
     def get(self):
         ""
         if self.current_task is not None:
             raise CurrentTaskUnfinished(self.current_task)
-
-       # tasks=self.list_tasks("waiting")
-       # task=tasks[-1]
-       # self.current_task = Task.from_entry(task['task_entry'].entry)
 
     
         r=TaskEntry.update({
@@ -468,7 +470,7 @@ class Queue:
             raise Exception(f"several tasks ({len(entries)}) are running for this worker: impossible!")
 
         entry=entries[0]
-        self.current_task=Task.from_entry(entry.entry)
+        self.current_task=Task.from_task_dict(entry.task_dict_string)
         self.current_task_stored_key=self.current_task.key
 
         if self.current_task.key != entry.key:
@@ -516,7 +518,7 @@ class Queue:
 
         extra = {}
         if update_entry:
-            extra = {TaskEntry.entry: self.current_task.serialize()}
+            extra = {TaskEntry.task_dict_string: self.current_task.serialize()}
 
         r=TaskEntry.update({
                         TaskEntry.state:tok,
@@ -548,7 +550,7 @@ class Queue:
             task_entry = self.task_by_key(task_key)
             logger.info("trying to unlock %s", task_entry['key'])
 
-            r.append(self.try_to_unlock(Task.from_entry(task_entry['entry'])))
+            r.append(self.try_to_unlock(Task.from_task_dict(task_entry['task_dict_string'])))
 
             if r[-1]['state'] != "locked":
                 n_unlocked += 1
@@ -568,12 +570,12 @@ class Queue:
     def insert_task_entry(self,task,state):
         self.log_task("task created",task,state)
 
-        log("to insert_task_entry: ", dict(
+        log("to insert_task entry: ", dict(
              queue=self.queue,
              key=task.key,
              state=state,
              worker_id=self.worker_id,
-             entry=task.serialize(),
+             task_dict_string=task.serialize(),
              created=datetime.datetime.now(),
              modified=datetime.datetime.now(),
         ))
@@ -584,7 +586,7 @@ class Queue:
                              key=task.key,
                              state=state,
                              worker_id=self.worker_id,
-                             entry=task.serialize(),
+                             task_dict_string=task.serialize(),
                              created=datetime.datetime.now(),
                              modified=datetime.datetime.now(),
                             ).execute(database=None)
@@ -708,14 +710,14 @@ class Queue:
 
         r=TaskEntry.update({
                     TaskEntry.state:"done",
-                    TaskEntry.entry:self.current_task.serialize(),
+                    TaskEntry.task_dict_string:self.current_task.serialize(), # TODO this modifies serialization!
                     TaskEntry.modified:datetime.datetime.now(),
                 }).where(TaskEntry.key==self.current_task.key).execute(database=None)
 
         if self.current_task_stored_key != self.current_task.key:
             r=TaskEntry.update({
                         TaskEntry.state:"done",
-                        TaskEntry.entry:self.current_task.serialize(),
+                        TaskEntry.task_dict_string:self.current_task.serialize(),
                         TaskEntry.modified:datetime.datetime.now(),
                     }).where(TaskEntry.key==self.current_task_stored_key).execute(database=None)
 
@@ -749,7 +751,7 @@ class Queue:
 
         r=TaskEntry.update({
                     TaskEntry.state:next_state,
-                    TaskEntry.entry:self.current_task.serialize(),
+                    TaskEntry.task_dict_string:self.current_task.serialize(),
                     TaskEntry.modified:datetime.datetime.now(),
                 }).where(TaskEntry.key==self.current_task.key).execute(database=None)
 

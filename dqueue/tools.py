@@ -11,8 +11,10 @@ import io
 import urllib.parse
 
 import dqueue.core as core
-from dqueue.core import model_to_dict, TaskDataType, TaskDictType, TaskEntryType
+from dqueue.core import model_to_dict, TaskEntry
 from dqueue.entry import decode_entry_data
+
+import dqueue.typing as types
 
 import peewee # type: ignore
 
@@ -69,7 +71,7 @@ def list_tasks(include_task_data=True, decode=True, state="any", json_filter=Non
         c &= core.TaskEntry.state == state
 
     if json_filter:
-        c &= core.TaskEntry.entry.contains(json_filter)
+        c &= core.TaskEntry.task_dict_string.contains(json_filter)
 
     entries = [ model_to_dict(entry) for entry in core.TaskEntry.\
                                                   select().\
@@ -85,7 +87,7 @@ def list_tasks(include_task_data=True, decode=True, state="any", json_filter=Non
 
         for entry in entries:
             if entry['key'] not in decoded_entries:
-                logger.info("decoding string of size %s",len(entry['entry']))
+                logger.info("decoding string of size %s",len(entry['task_dict_string']))
                 logger.info("full entry keys: %s", entry.keys())
 
                 decoded_entries[entry['key']] = decode_entry_data(entry)

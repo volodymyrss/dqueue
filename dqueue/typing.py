@@ -1,5 +1,7 @@
-from typing import Dict, NewType
+from typing import Dict, NewType, Union
 
-TaskDataType = NewType('TaskDataType', Dict) # pure task definition, portable
-TaskDictType = NewType('TaskDictType', Dict[str, object]) # + submission info and other history, portable
-TaskEntryType = NewType('TaskEntryType', Dict) # + state and queue info, not portable
+NestedDict = NewType('NestedDict', Dict[str, Union[str, object, dict]]) # pure task definition, portable
+
+TaskData = NewType('TaskData', NestedDict) # pure task definition, portable
+TaskDict = NewType('TaskDict', NestedDict) # + submission info, portable
+TaskEntry = NewType('TaskEntry', NestedDict) # + state and queue info, not portable

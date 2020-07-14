@@ -11,7 +11,9 @@ import re
 import click
 import urllib.parse as urlparse# type: ignore
 
-from .core import Queue, Empty, Task, CurrentTaskUnfinished, TaskEntry, TaskDictType
+from dqueue.core import Queue, Empty, Task, CurrentTaskUnfinished
+import dqueue.core as core
+import dqueue.typing as types
 from dqueue import tools
 
 from bravado.client import SwaggerClient
@@ -56,7 +58,7 @@ class QueueProxy(Queue):
     def task_info(self, key):
         return self.client.task.task_info(task_key=key).response().result
 
-    def task_by_key(self, key: str, decode: bool=False) -> TaskDictType:
+    def task_by_key(self, key: str, decode: bool=False) -> types.TaskDict:
         r = self.client.task.task_info(task_key=key).response().result
 
         if decode:
@@ -121,7 +123,7 @@ class QueueProxy(Queue):
         if r.result is None:
             raise Empty()
 
-        self.current_task = Task.from_entry(r.result)
+        self.current_task = Task.from_task_dict(r.result)
         self.current_task_stored_key = self.current_task.key
 
         return self.current_task
@@ -153,7 +155,7 @@ class QueueProxy(Queue):
         #for fromk in wipe_from:
         for key in self.list_tasks():
             self.logger.info("removing %s", key)
-            TaskEntry.delete().where(TaskEntry.key==key).execute(database=None)
+            core.TaskEntry.delete().where(core.TaskEntry.key==key).execute(database=None)
         
     def purge(self):
         nentries = self.client.tasks.purge().response().result

@@ -244,7 +244,7 @@ class WorkerAnswer(SwaggerView):
         logger.debug("setting current task in %s to %s", queue, task_dict)
 
         queue.state = "done"
-        queue.current_task = dqueue.core.Task.from_entry(task_dict)
+        queue.current_task = dqueue.core.Task.from_task_dict(task_dict)
         queue.current_task_stored_key = queue.current_task.key
         task = queue.current_task
 
