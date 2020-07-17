@@ -46,8 +46,9 @@ class QueueProxy(Queue):
     def client(self):
         if getattr(self, '_client', None) is None:
             http_client = RequestsClient()
+
             http_client.set_api_key(
-                           'dqueue.staging-1-3.odahub.io', "Bearer "+open("token", "rt").read().strip(),
+                           'dqueue.staging-1-3.odahub.io', "Bearer "+ self.token,
                              param_name='Authorization', param_in='header'
                             )
 

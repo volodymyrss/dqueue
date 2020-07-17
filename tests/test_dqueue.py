@@ -15,6 +15,7 @@ def test_one():
     queue=dqueue.Queue("test-queue")
     queue.wipe(["waiting","done","running","failed","locked"])
     queue.clear_task_history()
+    queue.clear_worker_states()
 
     assert queue.info['waiting']==0
     assert queue.info['done']==0
@@ -55,6 +56,10 @@ def test_one():
     print((queue.info))
 
     task=queue.get()
+
+    l = queue.get_worker_states()
+    print("worker states:", l)
+    assert len(l) == 1
 
     t=task.task_data
 
@@ -109,13 +114,16 @@ def test_one():
     assert queue.info['failed']==1
     assert queue.info['locked']==0
     
-    return
 
     with pytest.raises(dqueue.Empty):
         queue.get()
 
 
     print((queue.info))
+
+    l = queue.get_worker_states()
+    print("worker states:", l)
+    assert len(l) == 5
 
 
 def test_locked_jobs():
@@ -246,7 +254,7 @@ def test_direct_locking():
     
     logger.info("task log...")
     for tle in queue.view_log():
-        logger.info('current task_log', tle['timestamp'], tle['message'])
+        logger.info('current task_log %s %s', tle['timestamp'], tle['message'])
     
     r=queue.try_all_locked()
     
@@ -262,4 +270,4 @@ def test_direct_locking():
     
     logger.info("task log...")
     for tle in queue.view_log():
-        logger.info('current task_log', tle['timestamp'], tle['message'])
+        logger.info('current task_log %s %s', tle['timestamp'], tle['message'])

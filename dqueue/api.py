@@ -355,7 +355,7 @@ class TaskViewLog(SwaggerView):
 
         r = queue.view_log(task_key=task_key, since=since)
 
-        logger.info("view_log api returns %d entris", len(r))
+        logger.info("view_log api returns %d entries", len(r))
         #for e in r:
         #    logger.info("view_log api returns entry: %s", e)
 

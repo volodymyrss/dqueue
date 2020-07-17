@@ -101,6 +101,20 @@ class TaskEntry(peewee.Model):
         database = db
 
 
+class WorkerState(peewee.Model):
+    worker_id = peewee.CharField()
+
+    worker_state = peewee.CharField(default="unset")
+
+    created = peewee.DateTimeField(default=datetime.datetime.now)
+    modified = peewee.DateTimeField(default=datetime.datetime.now)
+
+    message = peewee.CharField(default="")
+    
+    class Meta:
+        database = db
+
+
 class EventLog(peewee.Model):
     queue = peewee.CharField(default="default")
 
@@ -118,7 +132,7 @@ class EventLog(peewee.Model):
         database = db
 
 try:
-    db.create_tables([TaskEntry, EventLog])
+    db.create_tables([TaskEntry, EventLog, WorkerState])
     has_mysql = True
 except peewee.OperationalError:
     has_mysql = False
@@ -447,11 +461,38 @@ class Queue:
         instance_for_key['state'] = 'submitted'
         return instance_for_key
 
+    def set_worker_state(self, worker_state):
+        logger.info("creating new worker state record, worker %s state: %s", self.worker_id, worker_state)
+        r = WorkerState.insert(
+                        worker_state = worker_state,
+                        worker_id = self.worker_id,
+                        created = datetime.datetime.now(),
+                        modified = datetime.datetime.now(),
+                    )\
+                    .execute(database=None)
+        logger.info("create db operation result %s", r)
+        
+        l = self.get_worker_states()
+        assert len(l) > 0
+
+        return r
+    
+    def clear_worker_states(self, worker_id=None):
+        if worker_id is None:
+            return WorkerState.delete().execute(database=None)
+        else:
+            return WorkerState.delete().where(WorkerState.worker_id==worker_id).execute(database=None)
+
+    def get_worker_states(self):
+        return [ model_to_dict(r) for r in WorkerState.select().execute(database=None) ]
+
     def get(self):
         ""
         if self.current_task is not None:
+            self.set_worker_state("ready")
             raise CurrentTaskUnfinished(self.current_task)
 
+        self.set_worker_state("running")
     
         r=TaskEntry.update({
                         TaskEntry.state:"running",
