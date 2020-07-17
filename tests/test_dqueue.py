@@ -15,7 +15,6 @@ def test_one():
     queue=dqueue.Queue("test-queue")
     queue.wipe(["waiting","done","running","failed","locked"])
     queue.clear_task_history()
-    queue.clear_worker_states()
 
     assert queue.info['waiting']==0
     assert queue.info['done']==0
@@ -123,7 +122,7 @@ def test_one():
 
     l = queue.get_worker_states()
     print("worker states:", l)
-    assert len(l) == 5
+    assert len(l) == 1
 
 
 def test_locked_jobs():

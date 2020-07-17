@@ -101,29 +101,16 @@ class TaskEntry(peewee.Model):
         database = db
 
 
-class WorkerState(peewee.Model):
-    worker_id = peewee.CharField()
-
-    worker_state = peewee.CharField(default="unset")
-
-    created = peewee.DateTimeField(default=datetime.datetime.now)
-    modified = peewee.DateTimeField(default=datetime.datetime.now)
-
-    message = peewee.CharField(default="")
-    
-    class Meta:
-        database = db
-
-
 class EventLog(peewee.Model):
     queue = peewee.CharField(default="default")
 
     task_key = peewee.CharField(default="unset")
-    state = peewee.CharField(default="unset")
+    task_state = peewee.CharField(default="unset")
 
     worker_id = peewee.CharField()
+    worker_state = peewee.CharField(default="unset")
 
-    timestamp = peewee.DateTimeField()
+    timestamp = peewee.DateTimeField(default=datetime.datetime.now())
     message = peewee.CharField()
     
     spent_s = peewee.FloatField(default=0)
@@ -132,7 +119,7 @@ class EventLog(peewee.Model):
         database = db
 
 try:
-    db.create_tables([TaskEntry, EventLog, WorkerState])
+    db.create_tables([TaskEntry, EventLog])
     has_mysql = True
 except peewee.OperationalError:
     has_mysql = False
@@ -461,38 +448,26 @@ class Queue:
         instance_for_key['state'] = 'submitted'
         return instance_for_key
 
-    def set_worker_state(self, worker_state):
-        logger.info("creating new worker state record, worker %s state: %s", self.worker_id, worker_state)
-        r = WorkerState.insert(
-                        worker_state = worker_state,
+    def note_worker_state(self, worker_state):
+        logger.debug("creating new worker state record, worker %s state: %s", self.worker_id, worker_state)
+        r = EventLog.insert(
                         worker_id = self.worker_id,
-                        created = datetime.datetime.now(),
-                        modified = datetime.datetime.now(),
+                        worker_state = worker_state,
                     )\
                     .execute(database=None)
-        logger.info("create db operation result %s", r)
+        logger.debug("create db operation result %s", r)
         
-        l = self.get_worker_states()
-        assert len(l) > 0
-
         return r
     
-    def clear_worker_states(self, worker_id=None):
-        if worker_id is None:
-            return WorkerState.delete().execute(database=None)
-        else:
-            return WorkerState.delete().where(WorkerState.worker_id==worker_id).execute(database=None)
-
     def get_worker_states(self):
-        return [ model_to_dict(r) for r in WorkerState.select().execute(database=None) ]
+        return [ model_to_dict(r) for r in EventLog.select().where(EventLog.worker_state!="unset").order_by(EventLog.timestamp.desc()).limit(1).execute(database=None) ]
 
     def get(self):
         ""
         if self.current_task is not None:
-            self.set_worker_state("ready")
             raise CurrentTaskUnfinished(self.current_task)
 
-        self.set_worker_state("running")
+        self.note_worker_state("ready")
     
         r=TaskEntry.update({
                         TaskEntry.state:"running",
@@ -775,7 +750,7 @@ class Queue:
         self.log_task("task failed",self.current_task,"failed")
         
         history=[model_to_dict(en) for en in EventLog.select().where(EventLog.task_key==task.key).order_by(EventLog.id.desc()).execute(database=None)]
-        n_failed = len([he for he in history if he['state'] == "failed"])
+        n_failed = len([he for he in history if he['task_state'] == "failed"])
 
         self.log_task("task failed %i times already"%n_failed,task,"failed")
         if n_failed < n_failed_retries:
@@ -879,7 +854,7 @@ class Queue:
         return EventLog.insert(
                              queue=self.queue,
                              task_key=task_key,
-                             state=state,
+                             task_state=state,
                              worker_id=self.worker_id,
                              timestamp=datetime.datetime.now(),
                              message=message,
