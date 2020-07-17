@@ -14,6 +14,7 @@ import urllib.parse as urlparse# type: ignore
 from dqueue.core import Queue, Empty, Task, CurrentTaskUnfinished
 import dqueue.core as core
 import dqueue.typing as types
+from typing import Union
 from dqueue import tools
 
 from bravado.client import SwaggerClient, RequestsClient
@@ -76,12 +77,16 @@ class QueueProxy(Queue):
             r['task_dict'] = tools.decode_entry_data(r)
 
         return r
+
+    def clear_event_log(self, only_older_than_days: Union[float,None]=None, only_kind: Union[str,None]=None):
+        return self.client.log.clear(only_older_than_days=only_older_than_days,
+                                     only_kind=only_kind).response().result['N']
     
     def view_log(self, task_key=None, since=0):
         if task_key is None:
             task_key = ""
 
-        return self.client.task.view_log(task_key=task_key,
+        return self.client.log.view(task_key=task_key,
                                          since=since,
                                          token=self.token).response().result
     

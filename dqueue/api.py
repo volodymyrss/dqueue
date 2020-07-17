@@ -313,8 +313,8 @@ app.add_url_rule(
           methods=['GET']
 )
 
-class TaskViewLog(SwaggerView):
-    operationId = "view_log"
+class ViewLogView(SwaggerView):
+    operationId = "view"
 
     parameters = [
                 {
@@ -364,8 +364,51 @@ class TaskViewLog(SwaggerView):
                 )
 
 app.add_url_rule(
-     '/task/view_log',
-      view_func=TaskViewLog.as_view('task_view_log'),
+     '/log/view',
+      view_func=ViewLogView.as_view('task_view_log'),
+      methods=['GET']
+)
+
+class ClearLog(SwaggerView):
+    operationId = "clear"
+
+    parameters = [
+                {
+                    'name': 'only_older_than_days',
+                    'in': 'query',
+                    'required': False,
+                    'type': 'number',
+                },
+                {
+                    'name': 'only_kind',
+                    'in': 'query',
+                    'required': False,
+                    'type': 'string',
+                    'enum': ['worker', 'task'],
+                },
+            ]
+
+    responses = {
+            200: {
+                    'description': 'task log dict',
+                }
+        }
+
+    def get(self):
+        queue = dqueue.core.Queue()
+
+        r = queue.clear_event_log(request.args.get('only_older_than_days', None),
+                                  request.args.get('only_kind', None))
+
+        logger.info("clear_log api clears %d entries", r)
+
+        return jsonify({
+                        'N': r,
+                    })
+
+app.add_url_rule(
+     '/log/clear',
+      view_func=ClearLog.as_view('log_clear'),
       methods=['GET']
 )
 

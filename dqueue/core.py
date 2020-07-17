@@ -12,6 +12,7 @@ import re
 import click
 import urllib.parse
 
+from functools import reduce
 
 from bravado.client import SwaggerClient
 
@@ -524,9 +525,40 @@ class Queue:
         # compatibility
         return self.clear_event_log()
 
-    def clear_event_log(self):
+    def clear_event_log(self, only_older_than_days: Union[float,None]=None, only_kind: Union[str,None]=None):
         ""
-        print('this is very descructive')
+        if only_older_than_days is None and only_kind is None:
+            logger.warning('this is very desctructive: clearing all event log')
+            return EventLog.delete().execute(database=None)
+
+        f = []
+
+        if only_older_than_days:
+            t0 = datetime.datetime.now() - datetime.timedelta(days=only_older_than_days)
+
+            f.append(EventLog.timestamp < t0)
+            logger.warning('clearing older events: %s', f)
+
+        if only_kind == "task":
+            f.append(EventLog.worker_state == "unset")
+            logger.warning('clearing task events: %s', f)
+        elif only_kind == "worker":
+            f.append(EventLog.worker_state != "unset")
+            logger.warning('clearing worker events: %s', f)
+        else:
+            raise RuntimeError(f"unknown kind {only_kind}; expecting 'task' or 'worker'")
+
+        F = reduce(lambda x,y: x&y, f)
+
+        N = EventLog.delete().where(F).execute(database=None)
+
+        logger.info("clearing: %s", N)
+
+        return N
+    
+    def clear_old_worker_events(self):
+        ""
+        logger.warning('this is very desctructive: clearing event log')
         EventLog.delete().execute(database=None)
 
     def move_task(self, fromk, tok, task, update_entry=False):

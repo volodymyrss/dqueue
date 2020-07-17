@@ -124,10 +124,14 @@ def viewtask(obj, key, follow):
 
     print(json.dumps(ti))
 
-@cli.command()
+@cli.group("log")
+def logcli():
+    pass
+
+@logcli.command()
 @click.pass_obj
 @click.option("--follow", "-f", is_flag=True, default=False)
-def viewlog(obj, follow):
+def view(obj, follow):
     since = 0
 
     waiting = False
@@ -166,9 +170,11 @@ def viewlog(obj, follow):
             else:
                 name = "unnamed"
 
-            print("{timestamp} {task_key} {message} {name}".format(
+            print(("{timestamp} "+colored("{task_key:10s}", "red") + " {message:40s} "+colored("{name:20s}", "yellow") + colored(" {worker_id:40s}", "blue") ).format(
                     name=name,
                     **l))
+
+            logger.debug(l)
             
 
             since = l['id']+1
@@ -198,6 +204,16 @@ def viewlog(obj, follow):
         time.sleep(1) # nobody ever needs anything but this default
 
     print("")
+
+@logcli.command()
+@click.pass_obj
+@click.option("--before", "-b", default=None)
+@click.option("--kind", "-k", default=None)
+def clear(obj, before, kind):
+     N = obj['queue'].clear_event_log(before, kind)
+     print("cleared", N)
+
+
 
 @cli.command()
 @click.option('-w', '--watch', default=None, type=int)

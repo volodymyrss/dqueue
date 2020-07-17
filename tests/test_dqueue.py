@@ -123,7 +123,22 @@ def test_one():
     l = queue.get_worker_states()
     print("worker states:", l)
     assert len(l) == 1
+    
+    task_log =  queue.view_log()
+    
+    print("complete log", len(task_log))
 
+    n = queue.clear_event_log(only_older_than_days=-1, only_kind="task")
+    print("clear of task", n)
+
+    m = queue.clear_event_log(only_kind="worker")
+    print("clear of worker", m)
+
+    x = queue.clear_event_log()
+    print("final clear", x)
+
+    assert x == 0
+    assert n + m == len(task_log)
 
 def test_locked_jobs():
     import dqueue
