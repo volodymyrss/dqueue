@@ -16,7 +16,7 @@ import dqueue.core as core
 import dqueue.typing as types
 from dqueue import tools
 
-from bravado.client import SwaggerClient
+from bravado.client import SwaggerClient, RequestsClient
 
 
 
@@ -45,7 +45,17 @@ class QueueProxy(Queue):
     @property
     def client(self):
         if getattr(self, '_client', None) is None:
-            self._client = SwaggerClient.from_url(self.leader.strip("/")+"/apispec_1.json", config={'use_models': False})
+            http_client = RequestsClient()
+            http_client.set_api_key(
+                           'dqueue.staging-1-3.odahub.io', "Bearer "+open("token", "rt").read().strip(),
+                             param_name='Authorization', param_in='header'
+                            )
+
+            self._client = SwaggerClient.from_url(
+                        self.leader.strip("/")+"/apispec_1.json",
+                        config={'use_models': False},
+                        http_client=http_client,
+                    )
         return self._client
 
     def find_task_instances(self,task,klist=None):
