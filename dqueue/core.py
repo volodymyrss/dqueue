@@ -112,7 +112,7 @@ class EventLog(peewee.Model):
     worker_state = peewee.CharField(default="unset")
 
     timestamp = peewee.DateTimeField(default=datetime.datetime.now)
-    message = peewee.CharField()
+    message = peewee.CharField(default="unset")
     
     spent_s = peewee.FloatField(default=0)
 
