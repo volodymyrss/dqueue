@@ -9,7 +9,7 @@ import logging
 from io import StringIO
 import re
 import click
-import urllib.parse as urlparse# type: ignore
+from urllib.parse import urlparse# type: ignore
 
 from dqueue.core import Queue, Empty, Task, CurrentTaskUnfinished
 import dqueue.core as core
@@ -28,16 +28,17 @@ class QueueProxy(Queue):
     _token = None
 
     @property
-    def token(self):
+    def token(self) -> str:
         if self._token is None:
             for n, m in [
-                    ("env", lambda: os.environ.get('DDA_TOKEN').strip()),
-                    ("home-dotfile", lambda: open(os.environ.get('HOME')+"/.dda-token").read()),
-                    ("cwd-dotfile", lambda: open(".dda-token").read()),
+                    ("env", lambda: os.environ.get('DDA_TOKEN').strip()), # type: ignore
+                    ("home-dotfile", lambda: open(os.environ.get('HOME')+"/.dda-token").read()), # type: ignore
+                    ("cwd-dotfile", lambda: open(".dda-token").read()), # type: ignore
                     ]:
                 try:
                     print("trying", n)
                     self._token = m()
+                    print("method succeeded!")
                     break
                 except Exception as e:
                     print(f"method {n} failed: {e}")
@@ -61,6 +62,7 @@ class QueueProxy(Queue):
         self.leader = r.groups()[0]
         self.queue = r.groups()[1]
 
+
     def list_queues(self, pattern):
         print(self.client.queues.list().response().result)
         return [QueueProxy(self.leader+"@"+q) for q in self.client.queues.list().response().result]
@@ -71,7 +73,7 @@ class QueueProxy(Queue):
             http_client = RequestsClient()
 
             http_client.set_api_key(
-                           'dqueue.staging-1-3.odahub.io', "Bearer "+ self.token,
+                             urlparse(self.leader).netloc, "Bearer "+ self.token,
                              param_name='Authorization', param_in='header'
                             )
 
