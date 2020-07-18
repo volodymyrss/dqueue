@@ -32,8 +32,8 @@ class QueueProxy(Queue):
         if self._token is None:
             for n, m in [
                     ("env", lambda: os.environ.get('DDA_TOKEN').strip()), # type: ignore
-                    ("home-dotfile", lambda: open(os.environ.get('HOME')+"/.dda-token").read()), # type: ignore
-                    ("cwd-dotfile", lambda: open(".dda-token").read()), # type: ignore
+                    ("home-dotfile", lambda: open(os.environ.get('HOME')+"/.dda-token").read().decode().strip()), # type: ignore
+                    ("cwd-dotfile", lambda: open(".dda-token").read().decode().strip()), # type: ignore
                     ]:
                 try:
                     print("trying", n)
