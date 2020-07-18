@@ -2,6 +2,11 @@ REPO=odahub/dqueue
 IMAGE=$(REPO):$(shell git describe --always)
 CONTAINER=dqueue
 
+prep:
+	pylint -E dqueue tests/*py && echo "linted" && \
+	mypy dqueue && echo "mypyed" && \
+	python -m pytest tests
+
 listen: 
 	gunicorn --workers 8 dqueue.api:app -b 0.0.0.0:8000 --log-level DEBUG
 

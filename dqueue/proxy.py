@@ -24,7 +24,29 @@ from bravado.client import SwaggerClient, RequestsClient
 class QueueProxy(Queue):
     leader = None
     queue = None
-    token = ""
+
+    _token = None
+
+    @property
+    def token(self):
+        if self._token is None:
+            for n, m in [
+                    ("env", lambda: os.environ.get('DDA_TOKEN').strip()),
+                    ("home-dotfile", lambda: open(os.environ.get('HOME')+"/.dda-token").read()),
+                    ("cwd-dotfile", lambda: open(".dda-token").read()),
+                    ]:
+                try:
+                    print("trying", n)
+                    self._token = m()
+                    break
+                except Exception as e:
+                    print(f"method {n} failed: {e}")
+
+            if self._token is None:
+                print(f"all methods to get token failed using default empty")
+                self._token = ""
+
+        return self._token
 
     def __repr__(self):
         return f"[ {self.__class__.__name__}: {self.leader}@{self.queue} ]"
