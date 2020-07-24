@@ -561,20 +561,41 @@ class Queue:
         logger.warning('this is very desctructive: clearing event log')
         EventLog.delete().execute(database=None)
 
-    def move_task(self, fromk, tok, task, update_entry=False):
-        ""
+    def move_task(self, fromk, tok, task, update_entry=False, n_tries_left=1):
+        "moves task"
 
+        retry_delay=2
+
+        if n_tries_left<=0:
+            return
+            
         extra = {}
         if update_entry:
             extra = {TaskEntry.task_dict_string: self.current_task.serialize()}
 
-        r=TaskEntry.update({
-                        TaskEntry.state:tok,
-                        TaskEntry.worker_id:self.worker_id,
-                        TaskEntry.modified:datetime.datetime.now(),
-                        **extra
-                    })\
-                    .where(TaskEntry.state==fromk, TaskEntry.key==task.key).execute(database=None)
+        try:
+
+            r=TaskEntry.update({
+                            TaskEntry.state:tok,
+                            TaskEntry.worker_id:self.worker_id,
+                            TaskEntry.modified:datetime.datetime.now(),
+                            **extra
+                        })\
+                        .where(TaskEntry.state==fromk, TaskEntry.key==task.key).execute(database=None)
+
+        except Exception as e:
+            log('failed to move task:',repr(e))
+            #self.log_task("failed to move task from %s to %s; serialized to %i"%(repr(e),len(serialized)),state="failed_to_lock")
+            self.log_task(f"failed to move task from {fromk} to {tok}: {e}; db: {db } - will try connecting", state="failed_to_lock")
+
+            time.sleep(retry_delay)
+
+            try:
+                db.connect()
+            except peewee.OperationalError as e:
+                pass
+
+            return self.move_task(fromk, tok, task, update_entry, n_tries_left-1)
 
     def purge(self):
         ""
@@ -723,22 +744,7 @@ class Queue:
 
         self.log_task("task to lock: serialized to %i"%len(serialized), state="locked")
 
-        n_tries_left=10
-        retry_delay=2
-        while n_tries_left>0:
-            try:
-
-                self.move_task('running', 'locked', self.current_task, update_entry=True)
-
-            except Exception as e:
-                log('failed to lock:',repr(e))
-                self.log_task("task to failed lock: %s; serialized to %i"%(repr(e),len(serialized)),state="failed_to_lock")
-                time.sleep(retry_delay)
-                if n_tries_left==1:
-                    raise
-                n_tries_left-=1
-            else:
-                break
+        self.move_task('running', 'locked', self.current_task, update_entry=True, n_tries_left=10)
         
         self.log_task("task locked from "+str(self.current_task_status),state="locked")
 

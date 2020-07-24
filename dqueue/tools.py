@@ -9,6 +9,7 @@ import glob
 import logging
 import io
 import urllib.parse
+import json
 
 import dqueue.core as core
 from dqueue.core import model_to_dict, TaskEntry
@@ -119,11 +120,12 @@ def task_info(key):
         entry_data=json.loads(entry['entry'])
         entry['entry']=entry_data
 
-        from ansi2html import ansi2html# type: ignore
+        #from ansi2html import ansi2html# type: ignore
 
         if entry['entry']['execution_info'] is not None:
             entry['exception']=entry['entry']['execution_info']['exception']['exception_message']
-            formatted_exception=ansi2html(entry['entry']['execution_info']['exception']['formatted_exception']).split("\n")
+        #    formatted_exception=ansi2html(entry['entry']['execution_info']['exception']['formatted_exception']).split("\n")
+            formatted_exception=entry['exception']
         else:
             entry['exception']="no exception"
             formatted_exception=["no exception"]

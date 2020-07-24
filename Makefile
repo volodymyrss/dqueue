@@ -3,8 +3,8 @@ IMAGE=$(REPO):$(shell git describe --always)
 CONTAINER=dqueue
 
 prep:
-	pylint -E dqueue tests/*py && echo "linted" && \
-	mypy dqueue && echo "mypyed" && \
+	pylint -E dqueue tests/*py || echo "linted" && \
+	mypy dqueue || echo "mypyed" && \
 	python -m pytest tests
 
 listen: 

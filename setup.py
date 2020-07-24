@@ -18,6 +18,8 @@ setup(name='dda-queue',
           'flasgger',
           'bravado',
           'termcolor',
+          'pymysql',
+          'peewee',
           ],
       zip_safe=False,
      )
