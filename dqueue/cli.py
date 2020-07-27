@@ -131,9 +131,8 @@ def logcli():
 @logcli.command()
 @click.pass_obj
 @click.option("--follow", "-f", is_flag=True, default=False)
-def view(obj, follow):
-    since = 0
-
+@click.option("--since", "-s", default=0)
+def view(obj, follow, since=0):
     waiting = False
 
     info_cadence = 10
@@ -170,7 +169,8 @@ def view(obj, follow):
             else:
                 name = "unnamed"
 
-            print(("{timestamp} "+colored("{task_key:10s}", "red") + " {message:40s} "+colored("{name:20s}", "yellow") + colored(" {worker_id:40s}", "blue") ).format(
+            print(("{since} {timestamp} "+colored("{task_key:10s}", "red") + " {message:40s} "+colored("{name:20s}", "yellow") + colored(" {worker_id:40s}", "blue") ).format(
+                    since=since,
                     name=name,
                     **l))
 
