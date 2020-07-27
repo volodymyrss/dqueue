@@ -285,6 +285,11 @@ def order_nested_dict(d):
 
 
 class Queue:
+    current_task=None
+
+    def __repr__(self):
+        return f"[{self.__class__.__name__}: {self.queue} @ {self.current_task} ]"
+
     def list_queues(self, pattern=None):
         return list_queues(pattern)
 
