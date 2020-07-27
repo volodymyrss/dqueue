@@ -586,14 +586,15 @@ class Queue:
         except Exception as e:
             log('failed to move task:',repr(e))
             #self.log_task("failed to move task from %s to %s; serialized to %i"%(repr(e),len(serialized)),state="failed_to_lock")
-            self.log_task(f"failed to move task from {fromk} to {tok}: {e}; db: {db } - will try connecting", state="failed_to_lock")
+            self.log_task(f"failed to move task from {fromk} to {tok}: {repr(e)}; db: {db } - will try connecting", state="failed_to_lock")
 
             time.sleep(retry_delay)
 
             try:
                 db.connect()
+                self.log_task(f"managed to reconnect! {repr(e)}", state="db_reconnected")
             except peewee.OperationalError as e:
-                pass
+                self.log_task(f"failed to reconnect! {repr(e)}", state="failed_to_reconnect")
 
             return self.move_task(fromk, tok, task, update_entry, n_tries_left-1)
 
