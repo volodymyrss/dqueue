@@ -588,7 +588,7 @@ class Queue:
             #self.log_task("failed to move task from %s to %s; serialized to %i"%(repr(e),len(serialized)),state="failed_to_lock")
             self.log_task(f"failed to move task from {fromk} to {tok}: {repr(e)}; db: {db } - will try connecting after {retry_delay} s", state="failed_to_lock")
 
-            time.sleep(retry_delay)
+            time.sleep(retry_delay + (30 - n_tries_left))
 
             try:
                 db.connect()
@@ -745,7 +745,7 @@ class Queue:
 
         self.log_task("task to lock: serialized to %i"%len(serialized), state="locked")
 
-        self.move_task('running', 'locked', self.current_task, update_entry=True, n_tries_left=10)
+        self.move_task('running', 'locked', self.current_task, update_entry=True, n_tries_left=30)
         
         self.log_task("task locked from "+str(self.current_task_status),state="locked")
 
