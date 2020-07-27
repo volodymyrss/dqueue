@@ -584,9 +584,9 @@ class Queue:
                         .where(TaskEntry.state==fromk, TaskEntry.key==task.key).execute(database=None)
 
         except Exception as e:
-            log('failed to move task:',repr(e))
+            logger.error('failed to move task: %s', repr(e))
             #self.log_task("failed to move task from %s to %s; serialized to %i"%(repr(e),len(serialized)),state="failed_to_lock")
-            self.log_task(f"failed to move task from {fromk} to {tok}: {repr(e)}; db: {db } - will try connecting", state="failed_to_lock")
+            self.log_task(f"failed to move task from {fromk} to {tok}: {repr(e)}; db: {db } - will try connecting after {retry_delay} s", state="failed_to_lock")
 
             time.sleep(retry_delay)
 
