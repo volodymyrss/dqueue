@@ -241,7 +241,7 @@ class Task:
         return key
 
     def __repr__(self):
-        return "[{}: {}: {}]".format(self.__class__.__name__, self.key, self.task_data)
+        return "[{}: {}: {}]".format(self.__class__.__name__, self.key, repr(self.task_data)[:300])
 
     def filename_instance(self):
         return "unset"
@@ -737,8 +737,15 @@ class Queue:
         self.current_task.depends_on = [] 
         
         for dependency in depends_on:
-            dependency_key = Task(dependency).key
-            self.log_task(f"constructing dependency key for {Task}: {dependency_key}")
+            self.log_task(f"constructing dependency key for: {repr(dependency)[:100]}...")
+            try:
+                dependency_key = Task(dependency).key
+            except Exception as e:
+                logger.error(f"problem constructing dependency key {e}")
+                self.log_task(f"problem constructing dependency key {e}")
+                raise
+
+            self.log_task(f"constructed dependency key: {dependency_key}")
 
             #dependency_task = self.task_by_key(dependency_key)
 

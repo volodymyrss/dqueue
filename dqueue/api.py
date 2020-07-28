@@ -632,7 +632,7 @@ class TaskInfoView(SwaggerView):
         queue = dqueue.core.Queue()
 
         task_dict = queue.task_by_key(task_key)
-        logger.warning("requested task_key %s %s", task_key, task_dict)
+        logger.info("requested task_key %s %s", task_key, repr(task_dict)[:300])
 
         if task_dict is None:
             return jsonify()
