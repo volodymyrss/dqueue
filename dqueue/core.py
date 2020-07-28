@@ -738,6 +738,7 @@ class Queue:
         
         for dependency in depends_on:
             dependency_key = Task(dependency).key
+            self.log_task(f"constructing dependency key for {Task}: {dependency_key}")
 
             #dependency_task = self.task_by_key(dependency_key)
 
@@ -747,7 +748,12 @@ class Queue:
 
             self.current_task.depends_on.append(dependency_reference)
 
-        serialized=self.current_task.serialize()
+        try:
+            serialized=self.current_task.serialize()
+        except Exception as e:
+            logger.error("problem serializing task: %s", e)
+            self.log_task(f"problem serializing task: {e}")
+            raise
 
         self.log_task("task to lock: serialized to %i"%len(serialized), state="locked")
 
@@ -895,6 +901,8 @@ class Queue:
 
         if state is None:
             state="undefined"
+
+        logger.info("log_task: %s:%s for %s at %s", task, task_key, message, state)
 
         return EventLog.insert(
                              queue=self.queue,
