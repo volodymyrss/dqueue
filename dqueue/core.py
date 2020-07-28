@@ -737,15 +737,15 @@ class Queue:
         _depends_on = [] 
         
         for dependency in depends_on:
-            self.log_task(f"constructing dependency key for: {repr(dependency)[:100]}...")
+            self.log_task(f"constructing dependency key for: {repr(dependency)[:100]}...", state="locking")
             try:
                 dependency_key = Task(dependency).key
             except Exception as e:
                 logger.error(f"problem constructing dependency key {e}")
-                self.log_task(f"problem constructing dependency key {e}")
+                self.log_task(f"problem constructing dependency key {e}", state="locking")
                 raise
 
-            self.log_task(f"constructed dependency key: {dependency_key}")
+            self.log_task(f"constructed dependency key: {dependency_key}", state="locking")
 
             #dependency_task = self.task_by_key(dependency_key)
 
@@ -761,7 +761,7 @@ class Queue:
             serialized=self.current_task.serialize()
         except Exception as e:
             logger.error("problem serializing task: %s", e)
-            self.log_task(f"problem serializing task: {e}")
+            self.log_task(f"problem serializing task: {e}", state="locking")
             raise
 
         self.log_task("task to lock: serialized to %i"%len(serialized), state="locked")

@@ -122,7 +122,7 @@ class QueueProxy(Queue):
                                    worker_id=self.worker_id,
                                    token=self.token).response().result
     
-    def log_task(self, message, task=None, state=None, task_key=None):
+    def log_task(self, message, task=None, state="unset", task_key=None):
         self.logger.info("log_task %s", message)
 
         if task_key is None:
