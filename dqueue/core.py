@@ -734,7 +734,7 @@ class Queue:
         if self.current_task is None:
             raise Exception("task must be available to lock")
 
-        self.current_task.depends_on = [] 
+        _depends_on = [] 
         
         for dependency in depends_on:
             self.log_task(f"constructing dependency key for: {repr(dependency)[:100]}...")
@@ -753,7 +753,9 @@ class Queue:
                         task_key=dependency_key,
                     )
 
-            self.current_task.depends_on.append(dependency_reference)
+            _depends_on.append(dependency_reference)
+        
+        self.current_task.depends_on = _depends_on
 
         try:
             serialized=self.current_task.serialize()
