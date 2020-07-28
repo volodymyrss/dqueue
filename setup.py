@@ -20,6 +20,7 @@ setup(name='dda-queue',
           'termcolor',
           'pymysql',
           'peewee',
+          'retrying',
           ],
       zip_safe=False,
      )
