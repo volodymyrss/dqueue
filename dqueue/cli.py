@@ -251,9 +251,12 @@ def question(obj, task_data):
     print(colored("questioned:", "green"), task_data, ":", r)
 
 @cli.command()
+@click.option('-s', '--scope-selector', default="state:all")
 @click.pass_obj
-def resubmit(obj):
-    r = obj['queue'].resubmit('state', 'all').response().result
+def resubmit(obj, scope_selector):
+    scope, selector = scope_selector.split(":")
+
+    r = obj['queue'].resubmit(scope, selector).response().result
     print(colored("resubmitted:", "green"), ":", r)
 
 def main():

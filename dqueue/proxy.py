@@ -17,6 +17,8 @@ import dqueue.typing as types
 from typing import Union
 from dqueue import tools
 
+from retrying import retry
+
 from bravado.client import SwaggerClient, RequestsClient
 
 
@@ -131,12 +133,15 @@ class QueueProxy(Queue):
 
             task_key = task.key
 
-        return self.client.worker.logTask(message=message, 
-                                   task_key=task_key, 
-                                   state=state, 
-                                   queue=self.queue, 
-                                   worker_id=self.worker_id,
-                                   token=self.token).response().result
+        def _log_task():
+            return self.client.worker.logTask(message=message, 
+                               task_key=task_key, 
+                               state=state, 
+                               queue=self.queue, 
+                               worker_id=self.worker_id,
+                               token=self.token).response().result
+
+        return retry(wait_fixed=2000, stop_max_attempt_number=10)(_log_task)()
 
     def insert_task_entry(self,task,state):
         raise NotImplementedError
