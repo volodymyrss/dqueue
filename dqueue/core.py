@@ -730,7 +730,7 @@ class Queue:
             raise Exception(f"depends_on has unknown type {depends_on.__class__}, expected list")
 
         log("locking task",self.current_task)
-        self.log_task(f"task to lock by {len(depends_on)} dependencies",state="locked")
+        self.log_task(f"task to lock by {len(depends_on)} dependencies", state="locking")
         if self.current_task is None:
             raise Exception("task must be available to lock")
 
