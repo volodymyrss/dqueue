@@ -745,5 +745,3 @@ def handle(error):
 
     traceback.print_exc()
 
-
-print("app added rules", id(app))
