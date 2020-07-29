@@ -143,7 +143,14 @@ class QueueProxy(Queue):
                                token=self.token).response().result
 
         def retry_on_exception(exception):
-            self.logger.error("%s: error in client log_task: %s", self, exception)
+            self.logger.error("%s: error in client log_task: %s; trying to send %s %s %s %s %s %s", self, exception,
+                        message,
+                        task_key,
+                        state,
+                        self.queue,
+                        self.worker_id,
+                        self.token,
+                    )
             return True
 
         return retry(
