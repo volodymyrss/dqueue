@@ -296,7 +296,6 @@ class Queue:
 
     def __init__(self,queue="default", worker_id=None):
         ""
-        self.logger = logging.getLogger(repr(self))
 
         if worker_id is None:
             self.worker_id=self.get_worker_id()
@@ -306,6 +305,7 @@ class Queue:
         self.queue=queue
         self.current_task=None
         self.current_task_status=None
+        self.logger = logging.getLogger(repr(self))
 
     def find_task_instances(self, task: Task, klist: Union[list, None]=None) -> List[types.TaskEntry]:
         ""

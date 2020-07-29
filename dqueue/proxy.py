@@ -64,6 +64,7 @@ class QueueProxy(Queue):
         self.leader = r.groups()[0]
         self.queue = r.groups()[1]
 
+        self.logger = logging.getLogger(repr(self))
 
     def list_queues(self, pattern):
         print(self.client.queues.list().response().result)
@@ -142,7 +143,7 @@ class QueueProxy(Queue):
                                token=self.token).response().result
 
         def retry_on_exception(exception):
-            self.logger.error("error in client log_task: %s", exception)
+            self.logger.error("%s: error in client log_task: %s", self, exception)
             return True
 
         return retry(
