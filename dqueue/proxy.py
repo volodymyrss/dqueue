@@ -52,7 +52,7 @@ class QueueProxy(Queue):
         return self._token
 
     def __repr__(self):
-        return f"[ {self.__class__.__name__}: {self.leader}@{self.queue} @ {self.current_task} ]"
+        return f"[ {self.__class__.__name__}: {self.leader}@{self.queue} : {self.current_task} ]"
 
     def __init__(self, queue_uri="http://localhost:5000@default"):
         super().__init__()
