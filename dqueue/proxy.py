@@ -141,7 +141,15 @@ class QueueProxy(Queue):
                                worker_id=self.worker_id,
                                token=self.token).response().result
 
-        return retry(wait_exponential_multiplier=1000, wait_exponential_max=300000)(_log_task)()
+        def retry_on_exception(exception):
+            logger.error("error in client log_task: %s", exception)
+            return True
+
+        return retry(
+                    wait_exponential_multiplier=1000, 
+                    wait_exponential_max=300000,
+                    retry_on_exception=retry_on_exception,
+                )(_log_task)()
 
     def insert_task_entry(self,task,state):
         raise NotImplementedError
