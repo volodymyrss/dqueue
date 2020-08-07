@@ -597,6 +597,11 @@ class Queue:
             time.sleep(retry_delay + (30 - n_tries_left))
 
             try:
+                try:
+                    db.close()
+                except Exception as e:
+                    self.log_task(f"db close before reconnect failed", state="db_reconnected")
+
                 db.connect()
                 self.log_task(f"managed to reconnect! {repr(e)}", state="db_reconnected")
             except peewee.OperationalError as e:
