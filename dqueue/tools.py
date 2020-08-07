@@ -12,7 +12,7 @@ import urllib.parse
 import json
 
 import dqueue.core as core
-from dqueue.core import model_to_dict, TaskEntry
+from dqueue.database import model_to_dict, TaskEntry, EventLog
 from dqueue.entry import decode_entry_data
 
 import dqueue.typing as types

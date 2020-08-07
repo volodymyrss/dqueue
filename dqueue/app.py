@@ -11,6 +11,7 @@ import urllib.parse
 
 import peewee # type: ignore
 
+
 from flask import Flask
 from flask import render_template,make_response,request,jsonify
 
@@ -19,6 +20,7 @@ import dqueue.tools as tools
 from dqueue.core import model_to_dict
 
 import dqueue.api
+import dqueue.database
 
 logger=logging.getLogger(__name__)
 
@@ -45,6 +47,21 @@ class ReverseProxied(object):
         return self.app(environ, start_response)
 
 app.wsgi_app = ReverseProxied(app.wsgi_app)# type: ignore
+
+@app.before_request
+def before_request():
+    try:
+        dqueue.database.db.connect()
+        logger.info("connecting to db before request %s", dqueue.database.db)
+    except Exception as e:
+        logger.error("db access error: %s", e)
+
+
+@app.after_request
+def after_request(response):
+    dqueue.database.db.close()
+    logger.info("disconnecting from the db after request %s", dqueue.database.db)
+    return response
 
 
 @app.errorhandler(peewee.OperationalError)

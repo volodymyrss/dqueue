@@ -17,7 +17,7 @@ import dqueue.typing as types
 from typing import Union
 from dqueue import tools
 
-from retrying import retry
+from retrying import retry # type: ignore
 
 from bravado.client import SwaggerClient, RequestsClient
 
