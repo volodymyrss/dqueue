@@ -73,6 +73,7 @@ class TaskStolen(Exception):
     pass
 
 
+# use http://docs.peewee-orm.com/projects/flask-peewee/en/latest/index.html
 def connect_db():
     return connect(os.environ.get("DQUEUE_DATABASE_URL","mysql+pool://root@localhost/dqueue?max_connections=42&stale_timeout=8001.2"))
 
