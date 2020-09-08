@@ -227,7 +227,7 @@ def guardian(obj, watch):
         
         #clear event log 
         N = obj['queue'].clear_event_log(only_older_than_days=2./24.)
-        print(f"cleared event log of {N}", entries)
+        print(f"cleared event log of {N} entries")
 
         # stats
 
