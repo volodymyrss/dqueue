@@ -52,7 +52,7 @@ app.wsgi_app = ReverseProxied(app.wsgi_app)# type: ignore
 def before_request():
     try:
         dqueue.database.db.connect()
-        logger.info("connecting to db before request %s", dqueue.database.db)
+        logger.debug("connecting to db before request %s", dqueue.database.db)
     except Exception as e:
         logger.error("db access error: %s", e)
 
@@ -60,7 +60,7 @@ def before_request():
 @app.after_request
 def after_request(response):
     dqueue.database.db.close()
-    logger.info("disconnecting from the db after request %s", dqueue.database.db)
+    logger.debug("disconnecting from the db after request %s", dqueue.database.db)
     return response
 
 
