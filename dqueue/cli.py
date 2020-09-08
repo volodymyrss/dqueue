@@ -207,8 +207,8 @@ def view(obj, follow, since=0):
 
 @logcli.command()
 @click.pass_obj
-@click.option("--before", "-b", default=None)
-@click.option("--kind", "-k", default=None)
+@click.option("--before", "-b", default=None, type=float)
+@click.option("--kind", "-k", default=None, type=str)
 def clear(obj, before, kind):
      N = obj['queue'].clear_event_log(before, kind)
      print("cleared", N)

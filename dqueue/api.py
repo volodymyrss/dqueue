@@ -397,8 +397,8 @@ class ClearLog(SwaggerView):
     def get(self):
         queue = dqueue.core.Queue()
 
-        r = queue.clear_event_log(request.args.get('only_older_than_days', None),
-                                  request.args.get('only_kind', None))
+        r = queue.clear_event_log(request.args.get('only_older_than_days', None, type=float),
+                                  request.args.get('only_kind', None, type=str))
 
         logger.info("clear_log api clears %d entries", r)
 
