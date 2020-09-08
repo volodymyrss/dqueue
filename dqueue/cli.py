@@ -218,22 +218,28 @@ def clear(obj, before, kind):
 @cli.command()
 @click.option('-w', '--watch', default=None, type=int)
 @click.pass_obj
-def try_all_locked(obj, watch):
+def guardian(obj, watch):
     while True:
+        #try_all_locked
         print("trying to unlock something")
         task_data=obj['queue'].try_all_locked()
         print(colored("unlocked:", "green"), task_data)
-    
-        if not watch:
-            break
-
         
+        #clear event log 
+        N = obj['queue'].clear_event_log(2./24.)
+        print(f"cleared event log of {N}", entries)
+
+        # stats
+
         print("getting queue statistics...")
         for k,v in obj['queue'].info.items():
             print(k, ":", len(v), end="; ")
         print("\n")
 
         print("sleeping", watch)
+
+        if not watch:
+            break
         time.sleep(watch)
 
 @cli.command()

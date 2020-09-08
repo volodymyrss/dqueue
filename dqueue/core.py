@@ -490,14 +490,15 @@ class Queue:
             f.append(EventLog.timestamp < t0)
             logger.warning('clearing older events: %s', f)
 
-        if only_kind == "task":
-            f.append(EventLog.worker_state == "unset")
-            logger.warning('clearing task events: %s', f)
-        elif only_kind == "worker":
-            f.append(EventLog.worker_state != "unset")
-            logger.warning('clearing worker events: %s', f)
-        else:
-            raise RuntimeError(f"unknown kind {only_kind}; expecting 'task' or 'worker'")
+        if only_kind is not None:
+            if only_kind == "task":
+                f.append(EventLog.worker_state == "unset")
+                logger.warning('clearing task events: %s', f)
+            elif only_kind == "worker":
+                f.append(EventLog.worker_state != "unset")
+                logger.warning('clearing worker events: %s', f)
+            else:
+                raise RuntimeError(f"unknown kind {only_kind}; expecting 'task' or 'worker'")
 
         F = reduce(lambda x,y: x&y, f)
 
