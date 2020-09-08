@@ -226,7 +226,7 @@ def guardian(obj, watch):
         print(colored("unlocked:", "green"), task_data)
         
         #clear event log 
-        N = obj['queue'].clear_event_log(2./24.)
+        N = obj['queue'].clear_event_log(only_older_than_days=2./24.)
         print(f"cleared event log of {N}", entries)
 
         # stats

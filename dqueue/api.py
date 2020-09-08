@@ -78,6 +78,10 @@ class TaskList(Schema):
 class LogEntry(Schema):
     message = fields.Str()
 
+class LogSummaryReport(Schema):
+    N = fields.Int()
+
+
 class QueueLogEntry(Schema):
     state = fields.Str()
     task_key = fields.Str()
@@ -391,6 +395,7 @@ class ClearLog(SwaggerView):
     responses = {
             200: {
                     'description': 'task log dict',
+                    'schema': LogSummaryReport,
                 }
         }
 

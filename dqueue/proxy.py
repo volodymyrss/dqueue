@@ -107,7 +107,7 @@ class QueueProxy(Queue):
 
     def clear_event_log(self, only_older_than_days: Union[float,None]=None, only_kind: Union[str,None]=None):
         return self.client.log.clear(only_older_than_days=only_older_than_days,
-                                     only_kind=only_kind).response().result['N']
+                                     only_kind=only_kind).response().result
     
     def view_log(self, task_key=None, since=0):
         if task_key is None:
