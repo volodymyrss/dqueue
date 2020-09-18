@@ -213,7 +213,28 @@ def clear(obj, before, kind):
      N = obj['queue'].clear_event_log(before, kind)
      print("cleared", N)
 
+###
 
+@cli.group("data")
+def datacli():
+    pass
+
+@datacli.command()
+@click.pass_obj
+def deposit(obj):
+    pass
+
+@datacli.command()
+@click.pass_obj
+def retrieve(obj):
+    pass
+
+@datacli.command()
+@click.pass_obj
+def list(obj):
+    pass
+
+###
 
 @cli.command()
 @click.option('-w', '--watch', default=None, type=int)

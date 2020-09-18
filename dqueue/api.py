@@ -10,6 +10,7 @@ import logging
 import io
 import urllib.parse
 import traceback
+import base64
 
 import dqueue.core 
 import dqueue.app
@@ -31,25 +32,11 @@ app = dqueue.app.app
 
 template = {
   "swagger": "2.0",
-#  "info": {
- #   "title": "My API",
-#    "description": "API for my data",
-    #"contact": {
-    #  "responsibleOrganization": "ME",
-    #  "responsibleDeveloper": "Me",
-    #  "email": "me@me.com",
-    #  "url": "www.me.com",
-    #},
-    #"termsOfService": "http://me.com/terms",
-    #"version": "0.0.1"
- # },
-  #"host": "mysite.com",  # overrides localhost:500
   "basePath": os.environ.get("API_BASE", "/"),  # base bash for blueprint registration
   "schemes": [
     "http",
     "https"
   ],
- # "operationId": "getmyData"
 }
 
 
@@ -94,6 +81,10 @@ class QueueList(Schema):
 
 class Status(Schema):
     status = fields.Str()
+
+class DataFact(Schema):
+    dag_json_b64 = fields.Str()
+    data_json_b64 = fields.Str()
 
 ## === views
 
@@ -254,6 +245,8 @@ class WorkerAnswer(SwaggerView):
 
         queue.task_done()
 
+        # here also upload data
+
         return jsonify(
                     { 'task_key': task.key, **task.as_dict}
                )
@@ -265,6 +258,59 @@ app.add_url_rule(
           methods=['POST']
 )
 
+class WorkerDataAssertFact(SwaggerView):
+    operationId = "assert"
+
+    parameters = [
+                {
+                    'name': 'worker_id',
+                    'in': 'query',
+                    'required': True,
+                    'type': 'string',
+                },
+                {
+                    'name': 'token',
+                    'in': 'query',
+                    'required': True,
+                    'type': 'string',
+                },
+                {
+                    'name': 'data',
+                    'in': 'body',
+                    'required': True,
+                    'schema': DataFact,
+                },
+            ]
+
+    responses = {
+            200: {
+                    'description': 'its ok',
+                 }
+            }
+
+    def post(self):
+        worker_id = dqueue.core.Queue(request.args.get('worker_id'))
+        token = dqueue.core.Queue(request.args.get('token'))
+
+        data_dict = request.json
+
+        dag = json.loads(base64.b64decode(data_dict['dag_json_b64']))
+        data = json.loads(base64.b64decode(data_dict['data_json_b64']))
+
+        logger.debug("worker %s reporting fact of dag %s == %s", len(dag), len(data))
+
+        # here also upload data
+
+        return jsonify(
+                    { }
+               )
+
+
+app.add_url_rule(
+         '/data/assert',
+          view_func=WorkerDataAssertFact.as_view('data_assert_fact'),
+          methods=['POST']
+)
 
 class TryAllLocked(SwaggerView):
     operationId = "try_all_locked"
