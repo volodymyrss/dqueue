@@ -28,8 +28,8 @@ import odakb
 decoded_entries={} # type: ignore
 
 db = dqueue.core.db
-
 app = dqueue.app.app
+auth = dqueue.app.auth
 
 
 template = {
@@ -323,6 +323,7 @@ class WorkerDataAssertFact(SwaggerView):
 app.add_url_rule(
          '/data/assert',
           view_func=WorkerDataAssertFact.as_view('data_assert_fact'),
+          #view_func=auth.login_required(WorkerDataAssertFact.as_view('data_assert_fact')),
           methods=['POST']
 )
 

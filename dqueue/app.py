@@ -11,6 +11,8 @@ import urllib.parse
 
 import peewee # type: ignore
 
+#from flask_httpauth import HTTPTokenAuth
+
 
 from flask import Flask
 from flask import render_template,make_response,request,jsonify
@@ -25,6 +27,17 @@ import dqueue.database
 logger=logging.getLogger(__name__)
 
 app = Flask(__name__)
+
+auth = None
+
+#auth = HTTPTokenAuth(scheme='Bearer')
+
+#@auth.verify_token
+#def verify_token(token):
+#    pass # jwt here
+#    if token in tokens:
+#        return tokens[token]
+
 
 print("created app", id(app))
 
