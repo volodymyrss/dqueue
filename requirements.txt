@@ -7,3 +7,4 @@ gunicorn
 flask-rest-api
 bravado
 retrying
+Flask-HTTPAuth
