@@ -7,4 +7,3 @@ gunicorn
 flask-rest-api
 bravado
 retrying
-oda-knowledge-base==0.6.17

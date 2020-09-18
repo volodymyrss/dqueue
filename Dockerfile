@@ -15,3 +15,4 @@ ENV API_BASE=/staging-1-3/dqueue
 ADD entrypoint.sh /entrypoint.sh
 
 ENTRYPOINT bash /entrypoint.sh
+
