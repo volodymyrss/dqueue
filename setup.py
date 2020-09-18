@@ -21,6 +21,7 @@ setup(name='dda-queue',
           'pymysql',
           'peewee',
           'retrying',
+          'oda-knowledge-base>=0.6.17', # should be an option
           ],
       zip_safe=False,
      )
