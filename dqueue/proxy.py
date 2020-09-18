@@ -21,14 +21,10 @@ from retrying import retry # type: ignore
 
 from bravado.client import SwaggerClient, RequestsClient
 
+from dqueue.client import APIClient
+from dqueue.data import DataFacts
 
-
-class QueueProxy(Queue):
-    leader = None
-    queue = None
-
-    _token = None
-
+class QueueProxy(Queue, DataFacts, APIClient):
     @property
     def token(self) -> str:
         if self._token is None:
@@ -69,23 +65,6 @@ class QueueProxy(Queue):
     def list_queues(self, pattern):
         print(self.client.queues.list().response().result)
         return [QueueProxy(self.leader+"@"+q) for q in self.client.queues.list().response().result]
-
-    @property
-    def client(self):
-        if getattr(self, '_client', None) is None:
-            http_client = RequestsClient()
-
-            http_client.set_api_key(
-                             urlparse(self.leader).netloc, "Bearer "+ self.token,
-                             param_name='Authorization', param_in='header'
-                            )
-
-            self._client = SwaggerClient.from_url(
-                        self.leader.strip("/")+"/apispec_1.json",
-                        config={'use_models': False},
-                        http_client=http_client,
-                    )
-        return self._client
 
     def find_task_instances(self,task,klist=None):
         raise NotImplementedError
@@ -245,4 +224,5 @@ class QueueProxy(Queue):
 
     def try_all_locked(self):
         return self.client.tasks.try_all_locked(worker_id=self.worker_id, token=self.token, queue=self.queue).response().result
+
 

@@ -23,6 +23,8 @@ from flask import Flask
 from flask import render_template,make_response,request,jsonify
 from flasgger import Swagger, SwaggerView, Schema, fields # type: ignore
 
+import odakb
+
 decoded_entries={} # type: ignore
 
 db = dqueue.core.db
@@ -83,8 +85,8 @@ class Status(Schema):
     status = fields.Str()
 
 class DataFact(Schema):
-    dag_json_b64 = fields.Str()
-    data_json_b64 = fields.Str()
+    dag_json = fields.Str()
+    data_json = fields.Str()
 
 ## === views
 
@@ -245,7 +247,7 @@ class WorkerAnswer(SwaggerView):
 
         queue.task_done()
 
-        # here also upload data
+        # here also upload data nad store 
 
         return jsonify(
                     { 'task_key': task.key, **task.as_dict}
@@ -258,8 +260,10 @@ app.add_url_rule(
           methods=['POST']
 )
 
+## data
+
 class WorkerDataAssertFact(SwaggerView):
-    operationId = "assert"
+    operationId = "assert_fact"
 
     parameters = [
                 {
@@ -275,7 +279,7 @@ class WorkerDataAssertFact(SwaggerView):
                     'type': 'string',
                 },
                 {
-                    'name': 'data',
+                    'name': 'payload',
                     'in': 'body',
                     'required': True,
                     'schema': DataFact,
@@ -292,23 +296,94 @@ class WorkerDataAssertFact(SwaggerView):
         worker_id = dqueue.core.Queue(request.args.get('worker_id'))
         token = dqueue.core.Queue(request.args.get('token'))
 
-        data_dict = request.json
+        payload_dict = request.json
 
-        dag = json.loads(base64.b64decode(data_dict['dag_json_b64']))
-        data = json.loads(base64.b64decode(data_dict['data_json_b64']))
+        dag = json.loads(payload_dict['dag_json'])
+        data = json.loads(payload_dict['data_json'])
 
-        logger.debug("worker %s reporting fact of dag %s == %s", len(dag), len(data))
+        logger.debug("worker %s reporting fact of dag %s == %s", worker_id, len(dag), len(data))
 
-        # here also upload data
+        # here also upload data and create rdf record
+
+        dag_bucket = odakb.datalake.form_bucket_name(dag)
+
+        bucket = odakb.datalake.store(
+                    dict(dag=dag, data=data),
+                    bucket_name=dag_bucket,
+                )
+
+        assert bucket == dag_bucket
+        
 
         return jsonify(
-                    { }
+                { 'bucket': bucket }
                )
 
 
 app.add_url_rule(
          '/data/assert',
           view_func=WorkerDataAssertFact.as_view('data_assert_fact'),
+          methods=['POST']
+)
+
+class WorkerDataConsultFact(SwaggerView):
+    operationId = "consult_fact"
+
+    parameters = [
+                {
+                    'name': 'worker_id',
+                    'in': 'query',
+                    'required': True,
+                    'type': 'string',
+                },
+                {
+                    'name': 'token',
+                    'in': 'query',
+                    'required': True,
+                    'type': 'string',
+                },
+                {
+                    'name': 'payload',
+                    'in': 'body',
+                    'required': True,
+                    'schema': DataFact,
+                },
+            ]
+
+    responses = {
+            200: {
+                    'description': 'its ok',
+                    'schema': DataFact,
+                 }
+            }
+
+    def post(self):
+        worker_id = dqueue.core.Queue(request.args.get('worker_id'))
+        token = dqueue.core.Queue(request.args.get('token'))
+
+        data_dict = request.json
+
+        dag = json.loads(data_dict['dag_json'])
+
+
+        logger.info("worker %s consulting fact of dag %s", worker_id, len(dag))
+
+        dag_bucket = odakb.datalake.form_bucket_name(dag)
+        logger.info("dag bucket %s", dag_bucket)
+
+        meta, payload  = odakb.datalake.restore(dag_bucket, return_metadata=True)
+
+        assert payload['dag'] == dag
+        
+        return jsonify(
+                   dag_json=json.dumps(payload['dag'], sort_keys=True),
+                   data_json=json.dumps(payload['data'], sort_keys=True),
+               )
+
+
+app.add_url_rule(
+         '/data/consult',
+          view_func=WorkerDataConsultFact.as_view('data_consult_fact'),
           methods=['POST']
 )
 
