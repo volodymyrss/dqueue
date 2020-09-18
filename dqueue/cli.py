@@ -222,7 +222,7 @@ def datacli():
 @datacli.command("assert")
 @click.pass_obj
 def assert_fact(obj):
-    logger.warning("no implemented")
+    obj['queue'].assert_fact(dag=[2,3], data=[1,2,3])
 
 @datacli.command()
 @click.pass_obj
