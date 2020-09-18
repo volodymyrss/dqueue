@@ -354,6 +354,9 @@ class WorkerDataConsultFact(SwaggerView):
             200: {
                     'description': 'its ok',
                     'schema': DataFact,
+                 },
+            400: {
+                    'description': 'no such bucket found',
                  }
             }
 
