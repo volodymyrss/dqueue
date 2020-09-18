@@ -11,6 +11,7 @@ import io
 import urllib.parse
 import traceback
 import base64
+import minio
 
 import dqueue.core 
 import dqueue.app
@@ -373,7 +374,7 @@ class WorkerDataConsultFact(SwaggerView):
 
         try:
             meta, payload  = odakb.datalake.restore(dag_bucket, return_metadata=True)
-        except odakb.datalake.NoSuchBucket:
+        except minio.error.NoSuchBucket:
             return Response(
                       f"no such dag! bucket: {dag_bucket}",
                       status=400,
