@@ -219,15 +219,18 @@ def clear(obj, before, kind):
 def datacli():
     pass
 
-@datacli.command()
+@datacli.command("assert")
 @click.pass_obj
-def deposit(obj):
-    pass
+def assert_fact(obj):
+    logger.warning("no implemented")
 
 @datacli.command()
 @click.pass_obj
-def retrieve(obj):
-    pass
+@click.argument("dag", type=str)
+def consult(obj, dag):
+    logger.debug("consulting for %s", dag)
+    obj['queue'].consult_fact(dag=dag)
+    
 
 @datacli.command()
 @click.pass_obj
@@ -285,6 +288,7 @@ def resubmit(obj, scope_selector):
 
     r = obj['queue'].resubmit(scope, selector).response().result
     print(colored("resubmitted:", "green"), ":", r)
+
 
 def main():
     cli(obj={})
