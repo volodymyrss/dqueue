@@ -371,7 +371,13 @@ class WorkerDataConsultFact(SwaggerView):
         dag_bucket = odakb.datalake.form_bucket_name(dag)
         logger.info("dag bucket %s", dag_bucket)
 
-        meta, payload  = odakb.datalake.restore(dag_bucket, return_metadata=True)
+        try:
+            meta, payload  = odakb.datalake.restore(dag_bucket, return_metadata=True)
+        except odakb.datalake.NoSuchBucket:
+            return Response(
+                      f"no such dag! bucket: {dag_bucket}",
+                      status=400,
+                   )
 
         assert payload['dag'] == dag
         
