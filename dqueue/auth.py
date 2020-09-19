@@ -14,12 +14,17 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
 
 def find_hexified_secret(): # hexified in in nginx module too
-    return open(
-            os.path.join(
-                    os.environ.get("HOME"), 
-                    "gateway-secret-hexified"
-                ),"r"
-            ).read().strip()
+    for n, m in [
+                ("home file", lambda: open(os.path.join(os.environ.get("HOME"), "gateway-secret-hexified"),"r").read().strip()),
+                ("env", lambda: os.environ.get("GATEWAY_SECRET_HEXIFIED"))
+             ]:
+        try:
+            r = m()
+            logger.warning("managed to discover secret with %s", n)
+            return r
+        except Exception as e:
+            logger.warning("failed to discover secret with %s: %s", n, e)
+    logger.warning("all secret discovery methods failed: auth will not work")
 
 def decode(token, secret=None):
     if secret is None:
