@@ -28,7 +28,6 @@ import dqueue.database
 logger=logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.debug = True # !!!!!
 
 auth = HTTPTokenAuth(scheme='Bearer')
 
