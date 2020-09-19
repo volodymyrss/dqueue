@@ -4,7 +4,6 @@ import json
 import os
 import sys
 import time
-import pytest
 import requests
 import os
 import click

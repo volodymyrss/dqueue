@@ -86,7 +86,9 @@ class QueueProxy(DataFacts, Queue):
                                ).response().result
 
         def retry_on_exception(exception):
-            self.logger.error("%s: error in client log_task: %s; trying to send %s %s %s %s %s %s", self, exception,
+            self.logger.error("%s: error in client log_task: %s; trying to send %s %s %s %s %s",
+                        self, 
+                        exception,
                         message,
                         task_key,
                         state,
