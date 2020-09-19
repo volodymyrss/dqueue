@@ -10,7 +10,7 @@ ADD static /static
 ADD dist/* /dist/
 RUN pip install /dist/*
 
-ENV API_BASE=/staging-1-3/dqueue
+#ENV API_BASE=/staging-1-3/dqueue
 
 ADD entrypoint.sh /entrypoint.sh
 
