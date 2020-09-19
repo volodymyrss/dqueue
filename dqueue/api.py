@@ -154,12 +154,6 @@ class WorkerOffer(SwaggerView):
                     'required': False,
                     'type': 'string',
                 },
-                {
-                    'name': 'token',
-                    'in': 'query',
-                    'required': True,
-                    'type': 'string',
-                },
             ]
 
     responses = {
@@ -210,12 +204,6 @@ class WorkerAnswer(SwaggerView):
                     'name': 'queue',
                     'in': 'query',
                     'required': False,
-                    'type': 'string',
-                },
-                {
-                    'name': 'token',
-                    'in': 'query',
-                    'required': True,
                     'type': 'string',
                 },
                 {
@@ -273,12 +261,6 @@ class WorkerDataAssertFact(SwaggerView):
                     'type': 'string',
                 },
                 {
-                    'name': 'token',
-                    'in': 'query',
-                    'required': True,
-                    'type': 'string',
-                },
-                {
                     'name': 'payload',
                     'in': 'body',
                     'required': True,
@@ -289,17 +271,25 @@ class WorkerDataAssertFact(SwaggerView):
     responses = {
             200: {
                     'description': 'its ok',
+                 },
+            400: {
+                    'description': 'provided data insufficient',
                  }
             }
 
     def post(self):
         worker_id = dqueue.core.Queue(request.args.get('worker_id'))
-        token = dqueue.core.Queue(request.args.get('token'))
 
         payload_dict = request.json
 
-        dag = json.loads(payload_dict['dag_json'])
-        data = json.loads(payload_dict['data_json'])
+        try:
+            dag = json.loads(payload_dict['dag_json'])
+            data = json.loads(payload_dict['data_json'])
+        except (KeyError, TypeError) as e:
+            return Response(
+                        f"insufficient data: {e}",
+                        status=400,
+                    )
 
         logger.debug("worker %s reporting fact of dag %s == %s", worker_id, len(dag), len(data))
 
@@ -337,12 +327,6 @@ class WorkerDataConsultFact(SwaggerView):
                     'type': 'string',
                 },
                 {
-                    'name': 'token',
-                    'in': 'query',
-                    'required': True,
-                    'type': 'string',
-                },
-                {
                     'name': 'payload',
                     'in': 'body',
                     'required': True,
@@ -362,7 +346,6 @@ class WorkerDataConsultFact(SwaggerView):
 
     def post(self):
         worker_id = dqueue.core.Queue(request.args.get('worker_id'))
-        token = dqueue.core.Queue(request.args.get('token'))
 
         data_dict = request.json
 
@@ -414,12 +397,6 @@ class TryAllLocked(SwaggerView):
                     'required': False,
                     'type': 'string',
                 },
-                {
-                    'name': 'token',
-                    'in': 'query',
-                    'required': True,
-                    'type': 'string',
-                },
             ]
 
     responses = {
@@ -462,12 +439,6 @@ class ViewLogView(SwaggerView):
                     'in': 'query',
                     'required': False,
                     'type': 'number',
-                },
-                {
-                    'name': 'token',
-                    'in': 'query',
-                    'required': True,
-                    'type': 'string',
                 },
             ]
 
@@ -581,12 +552,6 @@ class TaskLogView(SwaggerView):
                     'required': True,
                     'type': 'string',
                 },
-                {
-                    'name': 'token',
-                    'in': 'query',
-                    'required': True,
-                    'type': 'string',
-                },
             ]
 
     responses = {
@@ -649,12 +614,6 @@ class QueueLogView(SwaggerView):
                     'required': True,
                     'type': 'string',
                 },
-                {
-                    'name': 'token',
-                    'in': 'query',
-                    'required': False,
-                    'type': 'string',
-                },
             ]
 
     responses = {
@@ -700,12 +659,6 @@ class WorkerQuestion(SwaggerView):
                     'in': 'body',
                     'required': True,
                     'schema': TaskData,
-                },
-                {
-                    'name': 'token',
-                    'in': 'query',
-                    'required': True,
-                    'type': 'string',
                 },
                 {
                     'name': 'queue',

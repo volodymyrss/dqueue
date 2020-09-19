@@ -1,19 +1,15 @@
 from .core import *
 
 from .proxy import QueueProxy
+from .data import DataFacts
 
 import logging
 
-def from_uri(queue_uri: str, kind: str="queue"):
+def from_uri(queue_uri: str):
     """"""
     logger = logging.getLogger("from_uri")
 
-    if kind == "queue":
-        local, remote = Queue, QueueProxy
-    elif kind == "data":
-        local, remote = None, DataFacts
-    else:
-        raise RuntimeError(f"undefined kind: {kind}")
+    local, remote = Queue, QueueProxy
 
     if queue_uri.startswith("http://") or queue_uri.startswith("https://"):
         r = remote(queue_uri)

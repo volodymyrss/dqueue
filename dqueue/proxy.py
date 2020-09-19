@@ -13,7 +13,7 @@ from urllib.parse import urlparse# type: ignore
 
 from dqueue.core import Queue, Empty, Task, CurrentTaskUnfinished
 import dqueue.core as core
-import dqueue.typing as types
+from dqueue import dqtyping
 from typing import Union
 from dqueue import tools
 
@@ -24,47 +24,11 @@ from bravado.client import SwaggerClient, RequestsClient
 from dqueue.client import APIClient
 from dqueue.data import DataFacts
 
-class QueueProxy(Queue, DataFacts, APIClient):
-    @property
-    def token(self) -> str:
-        if self._token is None:
-            for n, m in [
-                    ("env", lambda: os.environ.get('DDA_TOKEN').strip()), # type: ignore
-                    ("home-dotfile", lambda: open(os.environ.get('HOME')+"/.dda-token").read().decode().strip()), # type: ignore
-                    ("cwd-dotfile", lambda: open(".dda-token").read().decode().strip()), # type: ignore
-                    ]:
-                try:
-                    print("trying", n)
-                    self._token = m()
-                    print("method succeeded!")
-                    break
-                except Exception as e:
-                    print(f"method {n} failed: {e}")
-
-            if self._token is None:
-                print(f"all methods to get token failed using default empty")
-                self._token = ""
-
-        return self._token
-
-    def __repr__(self):
-        return f"[ {self.__class__.__name__}: {self.leader}@{self.queue} : {self.current_task} ]"
-
-    def __init__(self, queue_uri="http://localhost:5000@default"):
-        super().__init__()
-
-        r = re.search("(https?://.*?)@(.*)", queue_uri)
-        if not r:
-            raise Exception("uri does not match queue")
-
-        self.leader = r.groups()[0]
-        self.queue = r.groups()[1]
-
-        self.logger = logging.getLogger(repr(self))
+class QueueProxy(DataFacts, Queue):
 
     def list_queues(self, pattern):
         print(self.client.queues.list().response().result)
-        return [QueueProxy(self.leader+"@"+q) for q in self.client.queues.list().response().result]
+        return [ QueueProxy(self.leader+"@"+q) for q in self.client.queues.list().response().result ]
 
     def find_task_instances(self,task,klist=None):
         raise NotImplementedError
@@ -76,7 +40,7 @@ class QueueProxy(Queue, DataFacts, APIClient):
     def task_info(self, key):
         return self.client.task.task_info(task_key=key).response().result
 
-    def task_by_key(self, key: str, decode: bool=False) -> types.TaskDict:
+    def task_by_key(self, key: str, decode: bool=False) -> dqtyping.TaskDict:
         r = self.client.task.task_info(task_key=key).response().result
 
         if decode:
@@ -94,7 +58,7 @@ class QueueProxy(Queue, DataFacts, APIClient):
 
         return self.client.log.view(task_key=task_key,
                                          since=since,
-                                         token=self.token).response().result
+                                         ).response().result
     
     def log_queue(self, message, spent_s=0):
         self.logger.info("log queue %s", message)
@@ -102,7 +66,7 @@ class QueueProxy(Queue, DataFacts, APIClient):
         return self.client.worker.logQueue(message=message,
                                    spent_s=spent_s,
                                    worker_id=self.worker_id,
-                                   token=self.token).response().result
+                                   ).response().result
     
     def log_task(self, message, task=None, state="unset", task_key=None):
         self.logger.info("log_task %s", message)
@@ -119,7 +83,7 @@ class QueueProxy(Queue, DataFacts, APIClient):
                                state=state, 
                                queue=self.queue, 
                                worker_id=self.worker_id,
-                               token=self.token).response().result
+                               ).response().result
 
         def retry_on_exception(exception):
             self.logger.error("%s: error in client log_task: %s; trying to send %s %s %s %s %s %s", self, exception,
@@ -128,7 +92,6 @@ class QueueProxy(Queue, DataFacts, APIClient):
                         state,
                         self.queue,
                         self.worker_id,
-                        self.token,
                     )
             return True
 
@@ -147,7 +110,6 @@ class QueueProxy(Queue, DataFacts, APIClient):
         return self.client.worker.questionTask(
                     worker_id=self.worker_id,
                     task_data=task_data,
-                    token=self.token,
                     queue=self.queue,
                 ).response().result
 
@@ -158,7 +120,7 @@ class QueueProxy(Queue, DataFacts, APIClient):
 
         print(dir(self.client.worker))
 
-        r = self.client.worker.getOffer(worker_id=self.worker_id, queue=self.queue, token=self.token).response()
+        r = self.client.worker.getOffer(worker_id=self.worker_id, queue=self.queue).response()
 
         if r.result is None:
             raise Empty()
@@ -176,7 +138,6 @@ class QueueProxy(Queue, DataFacts, APIClient):
 
         r = self.client.worker.answer(worker_id=self.worker_id, 
                                       queue=self.queue, 
-                                      token=self.token,
                                       task_dict=self.current_task.as_dict,
                                       ).response().result
 
@@ -223,6 +184,6 @@ class QueueProxy(Queue, DataFacts, APIClient):
         return self.client.tasks.resubmit(scope=scope, selector=selector)
 
     def try_all_locked(self):
-        return self.client.tasks.try_all_locked(worker_id=self.worker_id, token=self.token, queue=self.queue).response().result
+        return self.client.tasks.try_all_locked(worker_id=self.worker_id, queue=self.queue).response().result
 
 

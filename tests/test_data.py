@@ -13,14 +13,6 @@ from dqueue import from_uri
 
 @pytest.mark.usefixtures('live_server')
 class TestLiveServer:
-    @property
-    def local_queue(self):
-        if not hasattr(self, '_local_queue'):
-            u = url_for("healthcheck", _external=True)
-            print("u:", u)
-            self._local_queue = Queue("default")
-
-        return self._local_queue
     
     @property
     def queue(self):
@@ -36,7 +28,7 @@ class TestLiveServer:
 
         # schema here
         dag = [ "F", ["a1", "a2", [ "G", "b1", "b2"] ] ]
-        data = base64.b64encode(os.urandom(1024*1024*10)).decode()
+        data = base64.b64encode(os.urandom(1024)).decode()
 
 
         r = self.queue.assert_fact(dag, data)

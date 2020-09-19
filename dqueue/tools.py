@@ -15,8 +15,6 @@ import dqueue.core as core
 from dqueue.database import model_to_dict, TaskEntry, EventLog
 from dqueue.entry import decode_entry_data
 
-import dqueue.typing as types
-
 import peewee # type: ignore
 
 from flask import Flask

@@ -1,4 +1,4 @@
-from dqueue.typing import TaskEntry, TaskDict, NestedDict
+from dqueue.dqtyping import TaskEntry, TaskDict, NestedDict
 
 import logging
 import io

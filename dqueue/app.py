@@ -19,6 +19,7 @@ from flask import render_template,make_response,request,jsonify
 
 import dqueue.core as core
 import dqueue.tools as tools
+import dqueue.auth as dqauth
 from dqueue.core import model_to_dict
 
 import dqueue.api
@@ -27,13 +28,16 @@ import dqueue.database
 logger=logging.getLogger(__name__)
 
 app = Flask(__name__)
+app.debug = True # !!!!!
 
 auth = HTTPTokenAuth(scheme='Bearer')
 
 @auth.verify_token
 def verify_token(token):
-    raise Exception("no token!")
-
+    try:
+        return dqauth.decode(token)
+    except Exception as e:
+        logger.error("problem: %s decoding token: %s", e, token)
 
 print("created app", id(app))
 
@@ -59,6 +63,9 @@ app.wsgi_app = ReverseProxied(app.wsgi_app)# type: ignore
 
 @app.before_request
 def before_request():
+    if app.debug:
+        print(request.method, request.endpoint, request.headers)
+
     try:
         dqueue.database.db.connect()
         logger.debug("connecting to db before request %s", dqueue.database.db)

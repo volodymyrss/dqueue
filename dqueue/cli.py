@@ -221,20 +221,29 @@ def datacli():
 
 @datacli.command("assert")
 @click.pass_obj
-def assert_fact(obj):
-    obj['queue'].assert_fact(dag=[2,3], data=[1,2,3])
+@click.option("-g", "--dag", type=click.File('rt'))
+@click.option("-d", "--data", type=click.File('rt'))
+def assert_fact(obj, dag, data):
+    dag = json.load(dag)
+    data = json.load(data)
+
+    obj['queue'].assert_fact(
+                dag=dag,
+                data=data,
+            )
 
 @datacli.command()
 @click.pass_obj
-@click.argument("dag", type=str)
+@click.option("-g", "--dag", type=click.File('rt'))
 def consult(obj, dag):
-    logger.debug("consulting for %s", dag)
+    dag = json.load(dag)
+
     obj['queue'].consult_fact(dag=dag)
     
 
 @datacli.command()
 @click.pass_obj
-def list(obj):
+def list_facts(obj):
     pass
 
 ###

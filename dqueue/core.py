@@ -28,7 +28,7 @@ except ImportError:
 
 from typing import NewType, Dict, Union, List
 
-import dqueue.typing as types
+import dqueue.dqtyping as dqtyping
 from dqueue.entry import decode_entry_data
 
 import pymysql
@@ -252,7 +252,7 @@ class Queue:
         self.current_task_status=None
         self.logger = logging.getLogger(repr(self))
 
-    def find_task_instances(self, task: Task, klist: Union[list, None]=None) -> List[types.TaskEntry]:
+    def find_task_instances(self, task: Task, klist: Union[list, None]=None) -> List[dqtyping.TaskEntry]:
         ""
         log("find_task_instances for",task.key,"in",self.queue)
 
@@ -302,7 +302,7 @@ class Queue:
         log("task still locked", task.key)
         return dict(state="locked",key=task.key)
     
-    def task_by_key(self, key: str, decode: bool=False) -> Union[types.TaskDict, None]:
+    def task_by_key(self, key: str, decode: bool=False) -> Union[dqtyping.TaskDict, None]:
         ""
 
         r=TaskEntry.select().where(
@@ -324,7 +324,7 @@ class Queue:
 
 
     
-    def put(self, task_data: types.TaskData, submission_data=None, depends_on=None) -> Union[types.TaskEntry, None]:
+    def put(self, task_data: dqtyping.TaskData, submission_data=None, depends_on=None) -> Union[dqtyping.TaskEntry, None]:
         logger.info("putting in queue task_data %s", task_data)
 
         assert depends_on is None or type(depends_on) in [list, tuple] # runtime typing!
@@ -334,7 +334,7 @@ class Queue:
 
         task=Task(task_data, submission_data=submission_data, depends_on=depends_on)
 
-        instances_for_key = None # type: Union[List[types.TaskEntry], None]
+        instances_for_key = None # type: Union[List[dqtyping.TaskEntry], None]
 
         ntry_race=10
         retry_sleep_race=2
@@ -357,7 +357,7 @@ class Queue:
         if instances_for_key is None or len(instances_for_key)>1:
             raise Exception("probably race condition, multiple task instances:",instances_for_key)
 
-        instance_for_key = None # type: Union[types.TaskEntry, None]
+        instance_for_key = None # type: Union[dqtyping.TaskEntry, None]
         if len(instances_for_key) == 1:
             instance_for_key = instances_for_key[0]
 
@@ -675,7 +675,7 @@ class Queue:
 
 
 
-    def task_locked(self, depends_on: List[types.TaskDict]):
+    def task_locked(self, depends_on: List[dqtyping.TaskDict]):
         ""
         if not isinstance(depends_on, list):
             raise Exception(f"depends_on has unknown type {depends_on.__class__}, expected list")

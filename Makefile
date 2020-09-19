@@ -5,7 +5,7 @@ CONTAINER=dqueue
 prep:
 	pylint -E dqueue tests/*py || echo "linted" && \
 	mypy dqueue || echo "mypyed" && \
-	python -m pytest tests
+	python -m pytest tests --maxfail=1
 
 listen: 
 	gunicorn --workers 8 dqueue.api:app -b 0.0.0.0:8000 --log-level DEBUG
