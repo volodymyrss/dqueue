@@ -295,7 +295,9 @@ class WorkerDataAssertFact(SwaggerView):
 
         # here also upload data and create rdf record
 
-        dag_bucket = odakb.datalake.form_bucket_name(dag)
+        dag_bucket = "odahub-" + odakb.datalake.form_bucket_name(dag)
+        
+        logger.info("storing in dag-motivated bucket: %s", dag_bucket)
 
         bucket = odakb.datalake.store(
                     dict(dag=dag, data=data),
@@ -303,10 +305,11 @@ class WorkerDataAssertFact(SwaggerView):
                 )
 
         assert bucket == dag_bucket
-        
+
+        logger.info("succesfully returning!")
 
         return jsonify(
-                { 'bucket': bucket }
+                    { 'bucket': bucket }
                )
 
 

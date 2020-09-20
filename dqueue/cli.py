@@ -227,10 +227,12 @@ def assert_fact(obj, dag, data):
     dag = json.load(dag)
     data = json.load(data)
 
-    obj['queue'].assert_fact(
+    r = obj['queue'].assert_fact(
                 dag=dag,
                 data=data,
             )
+
+    print("assert_fact returns", r)
 
 @datacli.command()
 @click.pass_obj

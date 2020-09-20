@@ -69,9 +69,9 @@ class APIClient:
     def token(self) -> str:
         if self._token is None:
             for n, m in [
-                    ("env", lambda: os.environ.get('DDA_TOKEN').strip()), # type: ignore
-                    ("home-dotfile", lambda: open(os.environ.get('HOME')+"/.dda-token").read().decode().strip()), # type: ignore
-                    ("cwd-dotfile", lambda: open(".dda-token", "rb").read().decode().strip()), # type: ignore
+                    ("env DDA_TOKEN", lambda: os.environ.get('DDA_TOKEN').strip()), # type: ignore
+                    ("~/.dda-token", lambda: open(os.environ.get('HOME')+"/.dda-token", "rt").read().strip()), # type: ignore
+                    ("./.dda-token", lambda: open(".dda-token", "rt").read().strip()), # type: ignore
                     ]:
                 try:
                     print("trying", n)
