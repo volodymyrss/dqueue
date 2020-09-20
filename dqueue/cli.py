@@ -235,10 +235,14 @@ def assert_fact(obj, dag, data):
 @datacli.command()
 @click.pass_obj
 @click.option("-g", "--dag", type=click.File('rt'))
-def consult(obj, dag):
+@click.option("-o", "--output", type=click.File('wt'))
+def consult(obj, dag, output):
     dag = json.load(dag)
 
-    obj['queue'].consult_fact(dag=dag)
+    d = obj['queue'].consult_fact(dag=dag)
+
+    json.dump(d, output)
+
     
 
 @datacli.command()
