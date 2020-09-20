@@ -16,7 +16,7 @@ logger = logging.getLogger()
 def find_hexified_secret(): # hexified in in nginx module too
     for n, m in [
                 ("home file", lambda: open(os.path.join(os.environ.get("HOME"), "gateway-secret-hexified"),"r").read().strip()),
-                ("env", lambda: os.environ.get("GATEWAY_SECRET_HEXIFIED"))
+                ("env", lambda: os.environ.get("GATEWAY_SECRET_HEXIFIED").strip())
              ]:
         try:
             r = m()
