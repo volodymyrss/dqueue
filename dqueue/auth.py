@@ -45,7 +45,7 @@ def generate(output=None, secret=None):
     data['subject']="odaapi"
     data['emailAddress']="v@odahub.io"
 
-    data['exp']=int(time.time()+100000)
+    data['exp']=int(time.time()+300000)
 
     cjwt=jwt.encode(data, key=secret)
 

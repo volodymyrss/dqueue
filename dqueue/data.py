@@ -38,7 +38,7 @@ def serialize(d, b64=False):
 class DataFacts(APIClient):
     def assert_fact(self, dag, data):
         return self.client.data.assert_fact(
-                    worker_id="test_worker",
+                    worker_id=self.worker_id,
                     payload=dict(
                         dag_json=serialize(dag),
                         data_json=serialize(data),
@@ -48,7 +48,7 @@ class DataFacts(APIClient):
     def consult_fact(self, dag):
         try:
             return self.client.data.consult_fact(
-                        worker_id="test_worker",
+                        worker_id=self.worker_id,
                         payload=dict(
                             dag_json=serialize(dag),
                         )

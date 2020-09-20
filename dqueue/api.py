@@ -358,11 +358,12 @@ class WorkerDataConsultFact(SwaggerView):
         logger.info("worker %s consulting fact of dag %s", worker_id, len(dag))
 
         dag_bucket = "odahub-" + odakb.datalake.form_bucket_name(dag)
-        logger.info("dag %s bucket %s", dag[-1], dag_bucket)
+        logger.info("dag head %s bucket %s", dag[-1], dag_bucket)
 
         try:
             meta, payload  = odakb.datalake.restore(dag_bucket, return_metadata=True)
         except minio.error.NoSuchBucket:
+            logger.info("dag head %s bucket %s not found", dag[-1], dag_bucket)
             return Response(
                       f"no such dag! bucket: {dag_bucket}",
                       status=400,
