@@ -297,7 +297,7 @@ class WorkerDataAssertFact(SwaggerView):
 
         dag_bucket = "odahub-" + odakb.datalake.form_bucket_name(dag)
         
-        logger.info("storing object %s in dag-motivated bucket: %s", str(dag)[:20], dag_bucket)
+        logger.info("storing object %s in dag-motivated bucket: %s", dag[-1], dag_bucket)
 
         bucket = odakb.datalake.store(
                     dict(dag=dag, data=data),
@@ -358,7 +358,7 @@ class WorkerDataConsultFact(SwaggerView):
         logger.info("worker %s consulting fact of dag %s", worker_id, len(dag))
 
         dag_bucket = "odahub-" + odakb.datalake.form_bucket_name(dag)
-        logger.info("dag %s bucket %s", repr(dag)[:30], dag_bucket)
+        logger.info("dag %s bucket %s", dag[-1], dag_bucket)
 
         try:
             meta, payload  = odakb.datalake.restore(dag_bucket, return_metadata=True)
