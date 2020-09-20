@@ -357,7 +357,7 @@ class WorkerDataConsultFact(SwaggerView):
 
         logger.info("worker %s consulting fact of dag %s", worker_id, len(dag))
 
-        dag_bucket = odakb.datalake.form_bucket_name(dag)
+        dag_bucket = "odahub-" + odakb.datalake.form_bucket_name(dag)
         logger.info("dag bucket %s", dag_bucket)
 
         try:
