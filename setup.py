@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='dda-queue',
-      version='1.1.24-dev0',
+      version='1.1.24',
       description='a queue manager (yet another)',
       author='Volodymyr Savchenko',
       author_email='vladimir.savchenko@gmail.com',
