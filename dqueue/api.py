@@ -297,7 +297,7 @@ class WorkerDataAssertFact(SwaggerView):
 
         dag_bucket = "odahub-" + odakb.datalake.form_bucket_name(dag)
         
-        logger.info("storing in dag-motivated bucket: %s", dag_bucket)
+        logger.info("storing object %s in dag-motivated bucket: %s", str(dag)[:20], dag_bucket)
 
         bucket = odakb.datalake.store(
                     dict(dag=dag, data=data),

@@ -11,6 +11,7 @@ import logging
 import re
 import click
 from urllib.parse import urlparse# type: ignore
+import bravado
 
 from dqueue.core import Queue, Empty, Task, CurrentTaskUnfinished
 from dqueue.client import APIClient
@@ -23,6 +24,8 @@ from retrying import retry # type: ignore
 
 import base64
 
+class NotFound(Exception):
+    pass
 
 def serialize(d, b64=False):
     if b64:
@@ -43,10 +46,14 @@ class DataFacts(APIClient):
                 ).response().result
     
     def consult_fact(self, dag):
-        return self.client.data.consult_fact(
-                    worker_id="test_worker",
-                    payload=dict(
-                        dag_json=serialize(dag),
-                    )
-               ).response().result
+        try:
+            return self.client.data.consult_fact(
+                        worker_id="test_worker",
+                        payload=dict(
+                            dag_json=serialize(dag),
+                        )
+                   ).response().result
+        except bravado.exception.HTTPBadRequest as e:
+            logging.warning("unable to restore")
+            raise NotFound(e)
 
