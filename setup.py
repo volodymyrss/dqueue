@@ -22,7 +22,7 @@ setup(name='dda-queue',
           'peewee',
           'retrying',
           'oda-knowledge-base[cwl]>=0.6.18', # should be an option
-          'jwt',
+          'pyjwt',
           ],
       zip_safe=False,
      )
