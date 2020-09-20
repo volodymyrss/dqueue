@@ -8,4 +8,4 @@ flask-rest-api
 bravado
 retrying
 Flask-HTTPAuth
-jwt
+pyjwt==1.7.1
