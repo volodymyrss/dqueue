@@ -235,7 +235,7 @@ class WorkerAnswer(SwaggerView):
 
         queue.task_done()
 
-        # here also upload data nad store 
+        # here also upload data nad store?
 
         return jsonify(
                     { 'task_key': task.key, **task.as_dict}
@@ -736,6 +736,61 @@ class TaskInfoView(SwaggerView):
 app.add_url_rule(
          '/task/view/<task_key>',
           view_func=TaskInfoView.as_view('view_task_info'),
+          methods=['GET']
+)
+
+class TaskMoveView(SwaggerView):
+    operationId = "move_task"
+
+    parameters = [
+                {
+                    'name': 'task_key',
+                    'in': 'path',
+                    'required': True,
+                    'type': 'string',
+                },
+                {
+                    'name': 'fromk',
+                    'in': 'path',
+                    'required': True,
+                    'type': 'string',
+                },
+                {
+                    'name': 'tok',
+                    'in': 'path',
+                    'required': True,
+                    'type': 'string',
+                },
+            ]
+
+    responses = {
+            200: {
+                    'description': 'task data',
+                }
+        }
+
+    def get(self, task_key, fromk, tok):
+        queue = dqueue.core.Queue()
+
+        logger.info("requested to move from %s to %s task_key %s", fromk, tok, task_key)
+
+        queue.log_task(message="moving task from {fromk} to {tok}", task_key=task_key, state=tok)
+        
+        logger.warning("queue before move %s", queue.list_tasks(states=["done", "waiting"]))
+
+        queue.move_task(fromk=fromk,
+                        tok=tok,
+                        task=task_key)
+        
+        logger.warning("queue after move %s", queue.list_tasks(states=["done", "waiting"]))
+
+        return jsonify(
+                {}
+            )
+
+app.add_url_rule(
+         '/tasks/move/<task_key>/<fromk>/<tok>',
+          view_func=TaskMoveView.as_view('move_task'),
           methods=['GET']
 )
 

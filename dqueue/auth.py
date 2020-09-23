@@ -35,7 +35,7 @@ def decode(token, secret=None):
 
     return data
 
-def generate(output=None, secret=None):
+def generate(output=None, secret=None, lifetime=3*24*3600):
     if secret is None:
         secret = binascii.unhexlify(find_hexified_secret())
 
@@ -45,7 +45,7 @@ def generate(output=None, secret=None):
     data['subject']="odaapi"
     data['emailAddress']="v@odahub.io"
 
-    data['exp']=int(time.time()+300000)
+    data['exp']=int(time.time()+lifetime)
 
     cjwt=jwt.encode(data, key=secret)
 
@@ -87,8 +87,9 @@ def _decode(token, secret=None):
 @auth.command("generate")
 @click.option("-o","--output", default=None)
 @click.option("-s","--secret", default=None, type=str)
-def _generate(output=None, secret=None):
-    return generate(output, secret)
+@click.option("-l","--lifetime", default=3*24*3600, type=float)
+def _generate(output=None, secret=None, lifetime=None):
+    return generate(output, secret, lifetime)
 
 if __name__ == "__main__":
     auth()

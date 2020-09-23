@@ -120,3 +120,19 @@ class TestLiveServer:
 
         lg = self.queue.view_log(task_key=None, since=s)
         assert len(lg['event_log']) == 1
+
+
+        # move
+    
+        l = self.queue.list()
+        len(l) == 1
+        k = l[-1]['key']
+
+        lg = self.queue.move_task(task=k, fromk="done", tok="waiting")
+
+        l = self.queue.list()
+
+        print("queue list after move", l)
+
+        assert l[0]['key'] == k
+        assert l[0]['state'] == "waiting"

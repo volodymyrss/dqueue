@@ -513,8 +513,14 @@ class Queue:
         logger.warning('this is very desctructive: clearing event log')
         EventLog.delete().execute(database=None)
 
-    def move_task(self, fromk, tok, task, update_entry=False, n_tries_left=1):
+    def move_task(self, fromk: str, tok: str, task, update_entry=False, n_tries_left=1):
         "moves task"
+
+        if isinstance(task, Task):
+            task_key = task.key
+        else:
+            task_key = task
+
 
         retry_delay=2
 
@@ -526,14 +532,13 @@ class Queue:
             extra = {TaskEntry.task_dict_string: self.current_task.serialize()}
 
         try:
-
-            r=TaskEntry.update({
+            r = TaskEntry.update({
                             TaskEntry.state:tok,
                             TaskEntry.worker_id:self.worker_id,
                             TaskEntry.modified:datetime.datetime.now(),
                             **extra
                         })\
-                        .where(TaskEntry.state==fromk, TaskEntry.key==task.key).execute(database=None)
+                        .where(TaskEntry.state==fromk, TaskEntry.key==task_key).execute(database=None)
 
         except Exception as e:
             logger.error('failed to move task: %s', repr(e))

@@ -147,6 +147,28 @@ class QueueProxy(DataFacts, Queue):
 
         return r
 
+    def move_task(self, fromk, tok, task):
+        if isinstance(task, str):
+            task_key = task
+        else:
+            task_key = task.key
+
+        self.logger.info("moving task %s from %s to %s", task_key, fromk, tok)
+
+        self.logger.info(dir(self.client.tasks))
+
+        r = self.client.tasks.move_task(
+                                      #worker_id=self.worker_id, 
+                                      #queue=self.queue, 
+                                      task_key=task_key,
+                                      fromk=fromk,
+                                      tok=tok,
+                                      ).response().result
+
+        self.current_task = None
+
+        return r
+
     def clear_task_history(self):
         raise NotImplementedError
 
