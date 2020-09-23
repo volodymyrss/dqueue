@@ -1,6 +1,7 @@
 import datetime
 import os
 import time
+import json
 import socket
 from hashlib import sha224
 from collections import defaultdict
@@ -163,7 +164,7 @@ class QueueProxy(DataFacts, Queue):
                                       task_key=task_key,
                                       fromk=fromk,
                                       tok=tok,
-                                      update_entry=update_entry or {},
+                                      update_entry=json.loads(update_entry or '{}'), # todo
                                       ).response().result
 
         self.current_task = None
