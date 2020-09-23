@@ -792,7 +792,7 @@ class TaskMoveView(SwaggerView):
         queue.move_task(fromk=fromk,
                         tok=tok,
                         task=task_key,
-                        update_entry=update_entry
+                        update_entry=json.dumps(update_entry)
                         )
         
         logger.warning("queue after move %s", queue.list_tasks(states=["done", "waiting"]))
