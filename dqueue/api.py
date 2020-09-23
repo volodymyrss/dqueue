@@ -775,7 +775,7 @@ class TaskMoveView(SwaggerView):
                 }
         }
 
-    def post(self, task_key, fromk, tok):
+    def get(self, task_key, fromk, tok):
         queue = dqueue.core.Queue()
 
         update_entry = request.json
@@ -804,7 +804,7 @@ class TaskMoveView(SwaggerView):
 app.add_url_rule(
          '/tasks/move/<task_key>/<fromk>/<tok>',
           view_func=TaskMoveView.as_view('move_task'),
-          methods=['POST']
+          methods=['GET']
 )
 
 @app.route("/tasks/resubmit/<string:scope>/<string:selector>")
