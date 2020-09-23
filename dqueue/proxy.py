@@ -76,7 +76,10 @@ class QueueProxy(DataFacts, Queue):
             if task is None:
                 task = self.current_task
 
-            task_key = task.key
+            if task is None:
+                task_key = "None"
+            else:
+                task_key = task.key
 
         def _log_task():
             return self.client.worker.logTask(message=message, 
