@@ -761,6 +761,12 @@ class TaskMoveView(SwaggerView):
                     'required': True,
                     'type': 'string',
                 },
+                {
+                    'name': 'update_entry',
+                    'in': 'body',
+                    'required': True,
+                    'schema': Task,
+                },
             ]
 
     responses = {
@@ -769,18 +775,25 @@ class TaskMoveView(SwaggerView):
                 }
         }
 
-    def get(self, task_key, fromk, tok):
+    def post(self, task_key, fromk, tok):
         queue = dqueue.core.Queue()
+
+        update_entry = request.json
+
+        if len(update_entry) == 0:
+            update_entry = None
 
         logger.info("requested to move from %s to %s task_key %s", fromk, tok, task_key)
 
-        queue.log_task(message="moving task from {fromk} to {tok}", task_key=task_key, state=tok)
+        queue.log_task(message="moving task from {fromk} to {tok}, update_entry {len(update_entry)}", task_key=task_key, state=tok)
         
         logger.warning("queue before move %s", queue.list_tasks(states=["done", "waiting"]))
 
         queue.move_task(fromk=fromk,
                         tok=tok,
-                        task=task_key)
+                        task=task_key,
+                        update_entry=update_entry
+                        )
         
         logger.warning("queue after move %s", queue.list_tasks(states=["done", "waiting"]))
 
@@ -791,7 +804,7 @@ class TaskMoveView(SwaggerView):
 app.add_url_rule(
          '/tasks/move/<task_key>/<fromk>/<tok>',
           view_func=TaskMoveView.as_view('move_task'),
-          methods=['GET']
+          methods=['POST']
 )
 
 @app.route("/tasks/resubmit/<string:scope>/<string:selector>")

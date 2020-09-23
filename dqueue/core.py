@@ -513,7 +513,8 @@ class Queue:
         logger.warning('this is very desctructive: clearing event log')
         EventLog.delete().execute(database=None)
 
-    def move_task(self, fromk: str, tok: str, task, update_entry=False, n_tries_left=1):
+    #def move_task(self, fromk: str, tok: str, task, update_entry=False, n_tries_left=1):
+    def move_task(self, fromk: str, tok: str, task, update_entry=None, n_tries_left=1):
         "moves task"
 
         logger.info("%s moving task %s from %s to %s", self, task, fromk, tok)
@@ -530,8 +531,11 @@ class Queue:
             return
             
         extra = {}
+
+        #if update_entry:
+        #    extra = {TaskEntry.task_dict_string: self.current_task.serialize()}
         if update_entry:
-            extra = {TaskEntry.task_dict_string: self.current_task.serialize()}
+            extra = {TaskEntry.task_dict_string: update_entry}
 
         try:
             r = TaskEntry.update({
@@ -726,7 +730,11 @@ class Queue:
 
         self.log_task("task to lock: serialized to %i"%len(serialized), state="locked")
 
-        self.move_task('running', 'locked', self.current_task, update_entry=True, n_tries_left=30)
+        self.move_task('running', 'locked', 
+                       self.current_task, 
+                       update_entry=self.current_task.serialize(),
+                       #update_entry=True, 
+                       n_tries_left=30)
         
         self.log_task("task locked from "+str(self.current_task_status),state="locked")
 

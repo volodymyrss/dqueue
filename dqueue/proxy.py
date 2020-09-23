@@ -147,7 +147,7 @@ class QueueProxy(DataFacts, Queue):
 
         return r
 
-    def move_task(self, fromk, tok, task):
+    def move_task(self, fromk, tok, task, update_entry=None, n_tries_left=0):
         if isinstance(task, str):
             task_key = task
         else:
@@ -163,6 +163,7 @@ class QueueProxy(DataFacts, Queue):
                                       task_key=task_key,
                                       fromk=fromk,
                                       tok=tok,
+                                      update_entry=update_entry or {},
                                       ).response().result
 
         self.current_task = None
