@@ -516,6 +516,8 @@ class Queue:
     def move_task(self, fromk: str, tok: str, task, update_entry=False, n_tries_left=1):
         "moves task"
 
+        logger.info("%s moving task %s from %s to %s", self, task, fromk, tok)
+
         if isinstance(task, Task):
             task_key = task.key
         else:
@@ -682,10 +684,12 @@ class Queue:
 
     def task_locked(self, depends_on: List[dqtyping.TaskDict]):
         ""
+
+
         if not isinstance(depends_on, list):
             raise Exception(f"depends_on has unknown type {depends_on.__class__}, expected list")
 
-        log("locking task",self.current_task)
+        logger.info("%s locking task %s", self, self.current_task)
         self.log_task(f"task to lock by {len(depends_on)} dependencies", state="locking")
         if self.current_task is None:
             raise Exception("task must be available to lock")
