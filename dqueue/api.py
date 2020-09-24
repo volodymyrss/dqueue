@@ -785,7 +785,7 @@ class TaskMoveView(SwaggerView):
 
         logger.info("requested to move from %s to %s task_key %s", fromk, tok, task_key)
 
-        queue.log_task(message="moving task from {fromk} to {tok}, update_entry {len(update_entry)}", task_key=task_key, state=tok)
+        queue.log_task(message=f"moving task from {fromk} to {tok}, update_entry {len(update_entry or [])}", task_key=task_key, state=tok)
         
         logger.warning("queue before move %s", queue.list_tasks(states=["done", "waiting"]))
 
