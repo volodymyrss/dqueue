@@ -136,3 +136,12 @@ class TestLiveServer:
 
         assert l[0]['key'] == k
         assert l[0]['state'] == "waiting"
+
+
+    def test_callback(self):
+        r = self.queue.callback(
+                    url=url_for("healthcheck", _external=True),
+                    params={},
+                )
+
+

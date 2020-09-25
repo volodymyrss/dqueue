@@ -8,6 +8,7 @@ from collections import defaultdict
 import glob
 import logging
 import io
+import requests
 import urllib.parse
 import traceback
 import base64
@@ -20,7 +21,7 @@ import dqueue.tools as tools
 import peewee # type: ignore
 import json
 
-from flask import render_template,make_response,request,jsonify,Flask,Response
+from flask import render_template, make_response, request, jsonify, Flask, Response, url_for
 from flasgger import Swagger, SwaggerView, Schema, fields # type: ignore
 
 import odakb
@@ -60,6 +61,9 @@ class Task(Schema):
     queue = fields.Str()
     task_key = fields.Str()
     task_data = TaskData
+
+class CallbackPayload(Schema):
+    url = fields.Str()
 
 class TaskList(Schema):
     tasks = fields.Nested(Task, many=True)
@@ -805,6 +809,55 @@ app.add_url_rule(
          '/tasks/move/<task_key>/<fromk>/<tok>',
           view_func=TaskMoveView.as_view('move_task'),
           methods=['GET']
+)
+
+class TaskCallbackView(SwaggerView):
+    operationId = "callback"
+
+    parameters = [
+                {
+                    'name': 'payload',
+                    'in': 'body',
+                    'required': True,
+                    'schema': CallbackPayload,
+                },
+            ]
+
+    responses = {
+            200: {
+                    'description': 'success',
+                }
+        }
+
+    def post(self):
+        payload = request.json
+
+        url = payload['url']
+        params = payload['params']
+
+        logger.info("callback %s, params %s", url, params)
+
+        allowed_dispatcher = [
+                    "http://oda-dispatcher:8000",
+                    url_for('healthcheck', _external=True),
+                ]
+
+        if any([url.startswith(p) for p in allowed_dispatcher]):
+            r = requests.get(url, params=params)
+        else:
+            raise RuntimeError(f"unable to deal with non-standard dispatcher, allowed {allowed_dispatcher}")
+
+        return jsonify(
+                dict(
+                    status = r.status_code,
+                    text = r.text ,
+                )
+            )
+
+app.add_url_rule(
+         '/worker/callback',
+          view_func=TaskCallbackView.as_view('callback'),
+          methods=['POST']
 )
 
 @app.route("/tasks/resubmit/<string:scope>/<string:selector>")

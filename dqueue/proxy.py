@@ -215,4 +215,14 @@ class QueueProxy(DataFacts, Queue):
     def try_all_locked(self):
         return self.client.tasks.try_all_locked(worker_id=self.worker_id, queue=self.queue).response().result
 
+    def callback(self, url, params):
+        """
+        """
+        return self.client.worker.callback(
+                    payload=dict(
+                            url = url,
+                            params = params,
+                        )
+                ).response().result
+
 
