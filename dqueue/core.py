@@ -181,7 +181,13 @@ class Task:
 
         key = "_".join(components)
 
-        logger.warning("generating key %s", key)
+
+        short_name = "unknown"
+
+        if 'object_identity' in self.task_data:
+            short_name = self.task_data['object_identity']['full_name']
+
+        logger.warning("generating key %s short name %s", key, short_name)
 
         return key
 
