@@ -226,7 +226,13 @@ class WorkerAnswer(SwaggerView):
             }
 
     def post(self):
-        queue = dqueue.core.Queue(request.args.get('queue', 'default'))
+        queue_name = request.args.get('queue', 'default')
+        worker_id = request.args.get('worker_id')
+
+        queue = dqueue.core.Queue(
+                        worker_id=worker_id, 
+                        queue=queue_name,
+                    )
 
         task_dict = request.json
 
@@ -282,8 +288,7 @@ class WorkerDataAssertFact(SwaggerView):
             }
 
     def post(self):
-        worker_id = dqueue.core.Queue(request.args.get('worker_id'))
-
+        worker_id = request.args.get('worker_id')
         payload_dict = request.json
 
         try:
@@ -352,8 +357,7 @@ class WorkerDataConsultFact(SwaggerView):
             }
 
     def post(self):
-        worker_id = dqueue.core.Queue(request.args.get('worker_id'))
-
+        worker_id = request.args.get('worker_id')
         data_dict = request.json
 
         dag = json.loads(data_dict['dag_json'])
