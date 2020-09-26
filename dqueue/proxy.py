@@ -210,7 +210,7 @@ class QueueProxy(DataFacts, Queue):
         return r
 
     def resubmit(self, scope, selector):
-        return self.client.tasks.resubmit(scope=scope, selector=selector)
+        return self.client.tasks.resubmit(scope=scope, selector=selector).response().result
 
     def try_all_locked(self):
         return self.client.tasks.try_all_locked(worker_id=self.worker_id, queue=self.queue).response().result

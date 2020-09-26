@@ -59,7 +59,7 @@ class TaskData(Schema):
 class Task(Schema):
     state = fields.Str()
     queue = fields.Str()
-    task_key = fields.Str()
+    key = fields.Str()
     task_data = TaskData
 
 class CallbackPayload(Schema):

@@ -301,7 +301,7 @@ def question(obj, task_data):
 def resubmit(obj, scope_selector):
     scope, selector = scope_selector.split(":")
 
-    r = obj['queue'].resubmit(scope, selector).response().result
+    r = obj['queue'].resubmit(scope, selector)
     print(colored("resubmitted:", "green"), ":", r)
 
 
