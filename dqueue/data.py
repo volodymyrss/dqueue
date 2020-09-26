@@ -45,9 +45,10 @@ class DataFacts(APIClient):
                     )
                 ).response().result
     
-    def consult_fact(self, dag):
+    def consult_fact(self, dag, return_data=True):
         try:
             return self.client.data.consult_fact(
+                        return_data=return_data,
                         worker_id=self.worker_id,
                         payload=dict(
                             dag_json=serialize(dag),

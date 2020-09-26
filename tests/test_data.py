@@ -42,3 +42,9 @@ class TestLiveServer:
 
         assert data == redata
         assert dag == redag
+        
+        light_payload = self.queue.consult_fact(dag, return_data=False)
+
+        assert light_payload
+
+        print("light payload:", light_payload)

@@ -339,6 +339,13 @@ class WorkerDataConsultFact(SwaggerView):
                     'type': 'string',
                 },
                 {
+                    'name': 'return_data',
+                    'in': 'query',
+                    'required': False,
+                    'type': 'boolean',
+                    'default': True,
+                },
+                {
                     'name': 'payload',
                     'in': 'body',
                     'required': True,
@@ -358,31 +365,46 @@ class WorkerDataConsultFact(SwaggerView):
 
     def post(self):
         worker_id = request.args.get('worker_id')
+        return_data = {'true': True, 'false': False}[request.args.get('return_data', type=str)]
         data_dict = request.json
 
         dag = json.loads(data_dict['dag_json'])
-
 
         logger.info("worker %s consulting fact of dag %s", worker_id, len(dag))
 
         dag_bucket = "odahub-" + odakb.datalake.form_bucket_name(dag)
         logger.info("dag head %s bucket %s", dag[-1], dag_bucket)
+        
+        #TODO: logtask?
 
-        try:
-            meta, payload  = odakb.datalake.restore(dag_bucket, return_metadata=True)
-        except minio.error.NoSuchBucket:
+        logger.error("return_data %s %s", return_data,type( return_data))
+
+        if odakb.datalake.exists(dag_bucket):
+            if return_data:
+                logger.info("data requested!")
+                try:
+                    meta, payload  = odakb.datalake.restore(dag_bucket, return_metadata=True)
+                except minio.error.NoSuchBucket:
+                    raise Exception("bucket was just suppose to exists!")
+
+                assert payload['dag'] == dag
+                
+                return jsonify(
+                           dag_json=json.dumps(payload['dag'], sort_keys=True),
+                           data_json=json.dumps(payload['data'], sort_keys=True),
+                       )
+            else:
+                return Response(
+                          f"bucket found: {dag_bucket}",
+                          status=200,
+                       )
+        else:
             logger.info("dag head %s bucket %s not found", dag[-1], dag_bucket)
             return Response(
                       f"no such dag! bucket: {dag_bucket}",
                       status=400,
                    )
 
-        assert payload['dag'] == dag
-        
-        return jsonify(
-                   dag_json=json.dumps(payload['dag'], sort_keys=True),
-                   data_json=json.dumps(payload['data'], sort_keys=True),
-               )
 
 
 app.add_url_rule(
