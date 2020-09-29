@@ -1,7 +1,7 @@
 from setuptools import setup
 
-setup(name='dda-queue',
-      version='1.1.30',
+setup(name='oda-node',
+      version='0.1.0',
       description='a queue manager (yet another)',
       author='Volodymyr Savchenko',
       author_email='vladimir.savchenko@gmail.com',
@@ -10,6 +10,7 @@ setup(name='dda-queue',
       entry_points={
           'console_scripts':  [
               'dqueue=dqueue.cli:main',
+              'oda-node=dqueue.cli:main',
                 ]
           },
       install_requires=[
