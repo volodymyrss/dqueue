@@ -304,6 +304,28 @@ def resubmit(obj, scope_selector):
     r = obj['queue'].resubmit(scope, selector)
     print(colored("resubmitted:", "green"), ":", r)
 
+#####
+@cli.group("runner")
+def runnercli():
+    pass
+
+@runnercli.command()
+@click.argument("deploy-runner-command")
+@click.option("-t", "--timeout", default=10)
+@click.pass_obj
+def start_executor(obj, deploy_runner_command, timeout):
+    while True:
+        r = obj['queue'].list_queues(None)
+        for q in r:
+            info = dict(q.info.items())
+            print(f"queue: \033[33m{q}\033[0m", "; ".join([ f"{k}: {len(v)}" for k, v in info.items() ]))
+            if len(info['waiting']) > 0:
+                print(f"\033[31mfound {len(info['waiting'])} waiting jobs, need to start some runners\033[0m")
+                print(f"\033[31mexecuting: {deploy_runner_command}\033[0m")
+                os.system(deploy_runner_command)
+
+
+        time.sleep(timeout)
 
 def main():
     cli(obj={})
