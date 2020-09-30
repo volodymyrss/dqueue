@@ -170,7 +170,7 @@ def view(obj, follow, since=0):
             else:
                 name = "unnamed"
 
-            print(("{since} {timestamp} "+colored("{task_key:10s}", "red") + " {message:40s} "+colored("{name:20s}", "yellow") + colored(" {worker_id:40s}", "blue") ).format(
+            print(("{since} {timestamp} "+colored("{task_key:10s}", "red") + " {message:40s} "+colored("{name:20s}", "yellow") + colored(" {worker_id:40s}", "cyan") ).format(
                     since=since,
                     name=name,
                     **l))
