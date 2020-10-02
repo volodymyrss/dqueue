@@ -56,6 +56,9 @@ logger=logging.getLogger(__name__)
 class TaskData(Schema):
     pass
 
+class SubmissionData(Schema):
+    pass
+
 class Task(Schema):
     state = fields.Str()
     queue = fields.Str()
@@ -805,6 +808,12 @@ class WorkerQuestion(SwaggerView):
                     'schema': TaskData,
                 },
                 {
+                    'name': 'submission_data',
+                    'in': 'body',
+                    'required': True,
+                    'schema': SubmissionData,
+                },
+                {
                     'name': 'queue',
                     'in': 'query',
                     'required': False,
@@ -822,13 +831,14 @@ class WorkerQuestion(SwaggerView):
     def post(self):
         queue = request.args.get('queue', 'default')
         worker_id = request.args.get('worker_id')
-        task_data = request.json
+        task_data = request.json['task_data']
+        submission_data = request.json['submission_data']
 
         queue = dqueue.core.Queue(worker_id=worker_id, queue=queue)
 
         print("got:", worker_id, task_data)
 
-        task_entry = queue.put(task_data)
+        task_entry = queue.put(task_data, submission_data=submission_data)
 
         logger.warning("questioned task: %s", task_entry)
         return jsonify(
