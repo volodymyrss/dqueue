@@ -40,7 +40,7 @@ def cli(obj, quiet=False, debug=False, queue=None):
 @cli.command()
 @click.pass_obj
 def version(obj):
-    print
+    print(__version__)
 
 
 @cli.command()
