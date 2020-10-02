@@ -7,7 +7,7 @@ import time
 import subprocess
 from termcolor import colored
 
-__version__ == "0.1.5"
+__version__ = "0.1.5"
 
 logger = logging.getLogger()
 
