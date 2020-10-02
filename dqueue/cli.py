@@ -338,11 +338,12 @@ def start_executor(obj, deploy_runner_command, list_runners_command, timeout, ma
         time.sleep(timeout)
 
 @runnercli.command()
-@click.option("-t", "--timeout", default=10)
-@click.option("-m", "--max-runners", default=100)
 @click.pass_obj
 def execute(obj):
-    import dataanalysis.caches.dqueue
+    print("""
+    the executor is specific to a workflow. in general, executor will use oda-node package to fetch tasks
+    an example runner for INTEGRAL pipeline is available with data-analysis  module and \033[32moda-runner-execute\033[0m command
+    """)
 
 def main():
     cli(obj={})
