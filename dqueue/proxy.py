@@ -116,6 +116,7 @@ class QueueProxy(DataFacts, Queue):
         return self.client.worker.questionTask(
                     worker_id=self.worker_id,
                     task_data=task_data,
+                    submission_data=submission_data,
                     queue=self.queue,
                 ).response().result
 
