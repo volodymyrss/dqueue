@@ -7,6 +7,8 @@ import time
 import subprocess
 from termcolor import colored
 
+__version__ == "0.1.3"
+
 logger = logging.getLogger()
 
 log = lambda *x,**xx:logger.info(*x, **xx)
@@ -37,14 +39,18 @@ def cli(obj, quiet=False, debug=False, queue=None):
 
 @cli.command()
 @click.pass_obj
+def version(obj):
+    print
+
+
+@cli.command()
+@click.pass_obj
 def info(obj):
     for q in obj['queue'].list_queues(None):
         log(colored(q, 'green'))
         for k,v in q.info.items():
             print(k, ":", len(v), end="; ")
         print("\n")
-        #log(q.list(kinds=["waiting","done","failed","running"]))
-        #print(q.show())
 
 @cli.command()
 @click.pass_obj
