@@ -991,7 +991,7 @@ class TaskCallbackView(SwaggerView):
             raise RuntimeError(f"unable to deal with non-standard dispatcher, allowed {allowed_dispatcher}")
         
         queue = dqueue.core.Queue()
-        queue.log_task(message="passing callback: {url} {params}", task_key="", state="")
+        queue.log_task(message="passing callback: {url} {params}", task_key="unset", state="unset")
 
         return jsonify(
                 dict(
