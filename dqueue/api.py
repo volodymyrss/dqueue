@@ -13,6 +13,7 @@ import urllib.parse
 import traceback
 import base64
 import minio
+from urllib.parse import urlparse, parse_qs
 
 import dqueue.core 
 import dqueue.app
@@ -962,7 +963,7 @@ class TaskCallbackView(SwaggerView):
     parameters = [
                 {
                     'name': 'worker_id',
-                    'in': 'path',
+                    'in': 'query',
                     'required': True,
                     'type': 'string',
                 },
@@ -980,7 +981,9 @@ class TaskCallbackView(SwaggerView):
                 }
         }
 
-    def post(self, worker_id):
+    def post(self):
+        worker_id = request.args.get('worker_id')
+
         payload = request.json
 
         url = payload['url']
@@ -997,9 +1000,12 @@ class TaskCallbackView(SwaggerView):
             r = requests.get(url, params=params)
         else:
             raise RuntimeError(f"unable to deal with non-standard dispatcher, allowed {allowed_dispatcher}")
+
+        url_parsed = urlparse(url)
+        qs = parse_qs(url_parsed.query)
         
         queue = dqueue.core.Queue(worker_id=worker_id)
-        queue.log_task(message=f"passing callback: {url} {params}", task_key="unset", state="unset")
+        queue.log_task(message=f"passing callback: {url} {qs.get('node', 'unknown')}", task_key="unset", state="unset")
 
         return jsonify(
                 dict(
