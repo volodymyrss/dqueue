@@ -980,7 +980,7 @@ class TaskCallbackView(SwaggerView):
                 }
         }
 
-    def post(self):
+    def post(self, worker_id):
         payload = request.json
 
         url = payload['url']
@@ -998,7 +998,7 @@ class TaskCallbackView(SwaggerView):
         else:
             raise RuntimeError(f"unable to deal with non-standard dispatcher, allowed {allowed_dispatcher}")
         
-        queue = dqueue.core.Queue()
+        queue = dqueue.core.Queue(worker_id=worker_id)
         queue.log_task(message=f"passing callback: {url} {params}", task_key="unset", state="unset")
 
         return jsonify(
