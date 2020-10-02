@@ -97,6 +97,7 @@ def test_one():
 
     while n_tries>0:
         print("tries left",n_tries)
+        t = queue.forgive_task_failures()
         t = queue.get().task_data
         assert t==t2
         print((queue.info))

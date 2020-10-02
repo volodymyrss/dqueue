@@ -157,7 +157,11 @@ class QueueProxy(DataFacts, Queue):
         else:
             task_key = task.key
 
+        if update_entry is None:
+            update_entry = json.loads(update_entry or '{}')
+
         self.logger.info("moving task %s from %s to %s", task_key, fromk, tok)
+        self.logger.info("moving task uses update entry %s", update_entry)
 
         self.logger.info(dir(self.client.tasks))
 
@@ -167,7 +171,7 @@ class QueueProxy(DataFacts, Queue):
                                       task_key=task_key,
                                       fromk=fromk,
                                       tok=tok,
-                                      update_entry=json.loads(update_entry or '{}'), # todo
+                                      update_entry=update_entry, # todo
                                       ).response().result
 
         self.current_task = None
@@ -178,7 +182,10 @@ class QueueProxy(DataFacts, Queue):
         raise NotImplementedError
 
     def task_failed(self,update=lambda x:None):
-        raise NotImplementedError
+        r = self.client.worker.failed(worker_id=self.worker_id, 
+                                       queue=self.queue, 
+                                       task_dict=self.current_task.as_dict,
+                                      ).response().result
 
 
     def wipe(self,wipe_from=["waiting"]):

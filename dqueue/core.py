@@ -524,6 +524,7 @@ class Queue:
         "moves task"
 
         logger.info("%s moving task %s from %s to %s", self, task, fromk, tok)
+        logger.info("%s moving task update entry %s", self, update_entry)
 
         if isinstance(task, Task):
             task_key = task.key
@@ -540,7 +541,8 @@ class Queue:
 
         #if update_entry:
         #    extra = {TaskEntry.task_dict_string: self.current_task.serialize()}
-        if update_entry:
+        if update_entry is not None:
+            logger.info("will update entry %s", update_entry)
             extra = {TaskEntry.task_dict_string: update_entry}
 
         try:
@@ -775,6 +777,34 @@ class Queue:
 
         self.current_task=None
 
+    def forgive_task_failures(self):
+        entries = TaskEntry.select().where(TaskEntry.state=="failed").order_by(TaskEntry.modified.desc()).limit(1).execute(database=None)
+        entry=entries[0]
+        self.current_task=Task.from_task_dict(entry.task_dict_string)
+        self.current_task_stored_key=self.current_task.key
+
+        task = self.current_task
+
+        history = [model_to_dict(en) for en in EventLog.select().where(EventLog.task_key == task.key).order_by(EventLog.id.desc()).execute(database=None)]
+        n_failed = len([he for he in history if he['task_state'] == "failed"])
+
+        self.log_task("task failed %i times already"%n_failed,task,"failed")
+        if n_failed < n_failed_retries:
+            self.log_task("task failure forgiven, to waiting",task,"waiting")
+            #time.sleep( (5+2**int(n_failed/2))*sleep_multiplier )
+            r=TaskEntry.update({
+                        TaskEntry.state: "waiting",
+                        TaskEntry.task_dict_string:self.current_task.serialize(),
+                        TaskEntry.modified:datetime.datetime.now(),
+                    }).where(TaskEntry.key == self.current_task.key).execute(database=None)
+        else:
+            self.log_task("task failure permanent",task,"waiting")
+
+        self.current_task = None
+        self.current_task_stored_key = None
+        self.current_task_status = None
+
+
 
     def task_failed(self,update=lambda x:None):
         update(self.current_task)
@@ -782,26 +812,14 @@ class Queue:
         task= self.current_task
 
         self.log_task("task failed",self.current_task,"failed")
-        
-        history=[model_to_dict(en) for en in EventLog.select().where(EventLog.task_key==task.key).order_by(EventLog.id.desc()).execute(database=None)]
-        n_failed = len([he for he in history if he['task_state'] == "failed"])
-
-        self.log_task("task failed %i times already"%n_failed,task,"failed")
-        if n_failed < n_failed_retries:
-            next_state = "waiting"
-            self.log_task("task failure forgiven, to waiting",task,"waiting")
-            time.sleep( (5+2**int(n_failed/2))*sleep_multiplier )
-        else:
-            next_state = "failed"
-            self.log_task("task failure permanent",task,"waiting")
 
         r=TaskEntry.update({
-                    TaskEntry.state:next_state,
+                    TaskEntry.state: "failed",
                     TaskEntry.task_dict_string:self.current_task.serialize(),
                     TaskEntry.modified:datetime.datetime.now(),
                 }).where(TaskEntry.key==self.current_task.key).execute(database=None)
 
-        self.current_task_status = next_state
+        self.current_task_status = "failed"
         self.current_task = None
 
 

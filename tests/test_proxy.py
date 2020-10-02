@@ -127,16 +127,32 @@ class TestLiveServer:
         l = self.queue.list()
         len(l) == 1
         k = l[-1]['key']
+        
+        l = self.queue.list()
+        print("queue list before move", l)
 
         lg = self.queue.move_task(task=k, fromk="done", tok="waiting")
 
         l = self.queue.list()
-
         print("queue list after move", l)
 
         assert l[0]['key'] == k
         assert l[0]['state'] == "waiting"
 
+
+        # fail
+        l = self.queue.list()
+        len(l) == 1
+        k = l[-1]['key']
+
+        to = self.queue.get()
+        lg = self.queue.task_failed()
+
+        l = self.queue.list()
+        print("queue list after failed", l)
+
+        assert l[0]['key'] == k
+        assert l[0]['state'] == "failed"
 
     def test_callback(self):
         r = self.queue.callback(

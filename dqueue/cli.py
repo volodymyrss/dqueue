@@ -337,6 +337,13 @@ def start_executor(obj, deploy_runner_command, list_runners_command, timeout, ma
 
         time.sleep(timeout)
 
+@runnercli.command()
+@click.option("-t", "--timeout", default=10)
+@click.option("-m", "--max-runners", default=100)
+@click.pass_obj
+def execute(obj):
+    import dataanalysis.caches.dqueue
+
 def main():
     cli(obj={})
 

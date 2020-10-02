@@ -258,6 +258,71 @@ app.add_url_rule(
           methods=['POST']
 )
 
+class WorkerFailed(SwaggerView):
+    operationId = "failed"
+
+    parameters = [
+                {
+                    'name': 'worker_id',
+                    'in': 'query',
+                    'required': True,
+                    'type': 'string',
+                },
+                {
+                    'name': 'queue',
+                    'in': 'query',
+                    'required': False,
+                    'type': 'string',
+                },
+                {
+                    'name': 'task_dict',
+                    'in': 'body',
+                    'required': True,
+                    'schema': Task, 
+                },
+            ]
+
+    responses = {
+            200: {
+                    'description': 'its ok',
+                    'schema': Task,
+                 }
+            }
+
+    def post(self):
+        queue_name = request.args.get('queue', 'default')
+        worker_id = request.args.get('worker_id')
+
+        queue = dqueue.core.Queue(
+                        worker_id=worker_id, 
+                        queue=queue_name,
+                    )
+
+        task_dict = request.json
+
+        logger.debug("setting current task in %s to %s", queue, task_dict)
+
+        queue.state = "failed"
+        queue.current_task = dqueue.core.Task.from_task_dict(task_dict)
+        queue.current_task_stored_key = queue.current_task.key
+        task = queue.current_task
+
+        logger.debug("marking current task in %s failed", queue)
+        queue.task_failed()
+
+        # here also upload data nad store?
+
+        return jsonify(
+                    { 'task_key': task.key, **task.as_dict}
+               )
+
+
+app.add_url_rule(
+         '/worker/failed',
+          view_func=WorkerFailed.as_view('worker_failed_task'),
+          methods=['POST']
+)
+
 ## data
 
 class WorkerDataAssertFact(SwaggerView):
@@ -814,6 +879,7 @@ class TaskMoveView(SwaggerView):
             update_entry = None
 
         logger.info("requested to move from %s to %s task_key %s", fromk, tok, task_key)
+        logger.info("requested to move update entry %s", update_entry)
 
         queue.log_task(message=f"moving task from {fromk} to {tok}, update_entry {len(update_entry or [])}", task_key=task_key, state=tok)
         
@@ -822,7 +888,7 @@ class TaskMoveView(SwaggerView):
         queue.move_task(fromk=fromk,
                         tok=tok,
                         task=task_key,
-                        update_entry=json.dumps(update_entry)
+                        update_entry=json.dumps(update_entry) if update_entry else None
                         )
         
         logger.warning("queue after move %s", queue.list_tasks(states=["done", "waiting"]))
