@@ -153,6 +153,16 @@ class TestLiveServer:
 
         assert l[0]['key'] == k
         assert l[0]['state'] == "failed"
+        
+        self.queue.forgive_task_failures()
+        
+        l = self.queue.list()
+        print("queue list after failed", l)
+
+        assert l[0]['key'] == k
+        assert l[0]['state'] == "waiting"
+        
+        to = self.queue.get()
 
     def test_callback(self):
         r = self.queue.callback(

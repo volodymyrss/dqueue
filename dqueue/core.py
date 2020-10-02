@@ -777,8 +777,15 @@ class Queue:
 
         self.current_task=None
 
-    def forgive_task_failures(self):
+    def forgive_task_failures(self) -> int:
         entries = TaskEntry.select().where(TaskEntry.state=="failed").order_by(TaskEntry.modified.desc()).limit(1).execute(database=None)
+
+        if len(entries) == 0:
+            logger.info("no failed tasks: will not try to forgive")
+            return 0
+            
+        logger.info("found %s failed tasks: will try to forgive", len(entries))
+
         entry=entries[0]
         self.current_task=Task.from_task_dict(entry.task_dict_string)
         self.current_task_stored_key=self.current_task.key
@@ -803,6 +810,8 @@ class Queue:
         self.current_task = None
         self.current_task_stored_key = None
         self.current_task_status = None
+
+        return 1
 
 
 

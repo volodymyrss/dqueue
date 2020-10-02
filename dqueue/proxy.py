@@ -186,6 +186,7 @@ class QueueProxy(DataFacts, Queue):
                                        queue=self.queue, 
                                        task_dict=self.current_task.as_dict,
                                       ).response().result
+        self.current_task = None
 
 
     def wipe(self,wipe_from=["waiting"]):
@@ -221,6 +222,9 @@ class QueueProxy(DataFacts, Queue):
 
     def try_all_locked(self):
         return self.client.tasks.try_all_locked(worker_id=self.worker_id, queue=self.queue).response().result
+
+    def forgive_task_failures(self):
+        return self.client.tasks.forgive_failures(worker_id=self.worker_id, queue=self.queue).response().result
 
     def callback(self, url, params):
         """

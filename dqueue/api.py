@@ -523,6 +523,51 @@ app.add_url_rule(
           methods=['GET']
 )
 
+class ForgiveFailures(SwaggerView):
+    operationId = "forgive_failures"
+
+    # locally or remotely?
+
+    parameters = [
+                {
+                    'name': 'worker_id',
+                    'in': 'path',
+                    'required': True,
+                    'type': 'string',
+                },
+                {
+                    'name': 'queue',
+                    'in': 'query',
+                    'required': False,
+                    'type': 'string',
+                },
+            ]
+
+    responses = {
+            200: {
+                    'description': 'unlocked!',
+                },
+            204: {
+                    'description': 'problem: no tasks can be offered',
+                }
+        }
+
+    def get(self, worker_id):
+        queue = dqueue.core.Queue(request.args.get('queue', 'default'), worker_id=worker_id)
+
+        r = queue.forgive_task_failures()
+
+        logger.info("forgiven: %d", r)
+
+        return jsonify(tasks=r)
+
+
+app.add_url_rule(
+          '/tasks/<string:worker_id>/forgive_failures',
+          view_func=ForgiveFailures.as_view('forgive_failures'),
+          methods=['GET']
+)
+
 class ViewLogView(SwaggerView):
     operationId = "view"
 
