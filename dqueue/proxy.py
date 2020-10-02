@@ -166,7 +166,7 @@ class QueueProxy(DataFacts, Queue):
             update_entry = json.loads(update_entry)
 
         self.logger.info("moving task %s from %s to %s", task_key, fromk, tok)
-        self.logger.info("moving task uses update entry %s", update_entry)
+        self.logger.info("moving task uses update entry %s", repr(update_entry)[:300])
 
         self.logger.info(dir(self.client.tasks))
 
