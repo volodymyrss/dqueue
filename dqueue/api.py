@@ -953,6 +953,12 @@ class TaskCallbackView(SwaggerView):
 
     parameters = [
                 {
+                    'name': 'worker_id',
+                    'in': 'path',
+                    'required': True,
+                    'type': 'string',
+                },
+                {
                     'name': 'payload',
                     'in': 'body',
                     'required': True,
@@ -983,6 +989,9 @@ class TaskCallbackView(SwaggerView):
             r = requests.get(url, params=params)
         else:
             raise RuntimeError(f"unable to deal with non-standard dispatcher, allowed {allowed_dispatcher}")
+        
+        queue = dqueue.core.Queue()
+        queue.log_task(message="passing callback: {url} {params}", task_key="", state="")
 
         return jsonify(
                 dict(

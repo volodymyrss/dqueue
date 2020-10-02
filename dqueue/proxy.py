@@ -230,6 +230,7 @@ class QueueProxy(DataFacts, Queue):
         """
         """
         return self.client.worker.callback(
+                    worker_id = self.worker_id,
                     payload=dict(
                             url = url,
                             params = params,
