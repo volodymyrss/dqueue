@@ -158,7 +158,9 @@ class QueueProxy(DataFacts, Queue):
             task_key = task.key
 
         if update_entry is None:
-            update_entry = json.loads(update_entry or '{}')
+            update_entry = {}
+        else:
+            update_entry = json.loads(update_entry)
 
         self.logger.info("moving task %s from %s to %s", task_key, fromk, tok)
         self.logger.info("moving task uses update entry %s", update_entry)
