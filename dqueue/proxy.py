@@ -110,13 +110,15 @@ class QueueProxy(DataFacts, Queue):
     def insert_task_entry(self,task,state):
         raise NotImplementedError
 
-    def put(self,task_data,submission_data=None, depends_on=None):
+    def put(self,task_data, submission_data=None, depends_on=None):
         print(dir(self.client.worker))
 
         return self.client.worker.questionTask(
                     worker_id=self.worker_id,
-                    task_data=task_data,
-                    submission_data=submission_data,
+                    task_payload=dict(
+                        task_data=task_data,
+                        submission_data=submission_data,
+                    ),
                     queue=self.queue,
                 ).response().result
 

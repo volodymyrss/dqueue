@@ -59,6 +59,10 @@ class TaskData(Schema):
 class SubmissionData(Schema):
     pass
 
+class TaskPayload(Schema):
+    task_data = TaskData
+    submission_data = SubmissionData
+
 class Task(Schema):
     state = fields.Str()
     queue = fields.Str()
@@ -802,16 +806,10 @@ class WorkerQuestion(SwaggerView):
                     'type': 'string',
                 },
                 {
-                    'name': 'task_data',
+                    'name': 'task_payload',
                     'in': 'body',
                     'required': True,
-                    'schema': TaskData,
-                },
-                {
-                    'name': 'submission_data',
-                    'in': 'body',
-                    'required': True,
-                    'schema': SubmissionData,
+                    'schema': TaskPayload,
                 },
                 {
                     'name': 'queue',

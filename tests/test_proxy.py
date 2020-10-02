@@ -46,8 +46,8 @@ class TestLiveServer:
 
         td = {'1':'2'}
 
-        self.local_queue.put(td)
-        r = self.queue.put(td)
+        self.local_queue.put(td, {})
+        r = self.queue.put(td, {})
 
         print("put returns", r)
         rd = json.loads(r['task_dict_string'])
