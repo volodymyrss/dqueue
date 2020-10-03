@@ -27,6 +27,7 @@ class APIClient:
     queue = None
 
     _token = None
+    worker_id = None
 
     def __repr__(self):
         return f"[ {self.__class__.__name__}: leader={self.leader} queue={self.queue} ]"

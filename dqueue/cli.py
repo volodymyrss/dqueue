@@ -60,10 +60,10 @@ def auth(obj):
 @click.pass_obj
 def info(obj):
     for q in obj['queue'].list_queues(None):
-        log(colored(q, 'green'))
+        logger.info(colored(q, 'green'))
         for k,v in q.info.items():
-            print(k, ":", len(v), end="; ")
-        print("\n")
+            logger.info(k, ":", len(v), end="; ")
+        logger.info("\n")
 
 @cli.command()
 @click.pass_obj
@@ -72,8 +72,8 @@ def purge(obj):
         obj['queue'].purge()
     else:
         for q in Queue().list_queues():
-            log(q.info)
-            log(q.list_task(kinds=["waiting","done","failed","running"]))
+            logger.info(q.info)
+            logger.info(q.list_task(kinds=["waiting","done","failed","running"]))
             q.purge()
 
 def console_size():
