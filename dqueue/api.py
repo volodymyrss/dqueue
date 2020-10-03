@@ -13,6 +13,7 @@ import urllib.parse
 import traceback
 import base64
 import minio
+from urllib.parse import urlparse, parse_qs
 
 import dqueue.core 
 import dqueue.app
@@ -52,6 +53,9 @@ logger=logging.getLogger(__name__)
 
 
 ## === schemas
+
+class HubVersion(Schema):
+    version = fields.Str()
 
 class TaskData(Schema):
     pass
@@ -849,6 +853,50 @@ app.add_url_rule(
       methods=['POST']
 )
 
+class HubVersionView(SwaggerView):
+    operationId = "version"
+
+    parameters = [
+                {
+                    'name': 'client_version',
+                    'in': 'query',
+                    'required': False,
+                    'type': 'string',
+                },
+                {
+                    'name': 'worker_id',
+                    'in': 'query',
+                    'required': False,
+                    'type': 'string',
+                },
+            ]
+
+    responses = {
+            200: {
+                    'description': 'hub version info',
+                    'schema': HubVersion,
+                }
+        }
+
+    def get(self):
+        client_version = request.args.get('client_version', None)
+        worker_id = request.args.get('worker_id', None)
+
+        queue = dqueue.core.Queue(worker_id=worker_id)
+        queue.log_task(message=f"client test {client_version} worker {worker_id}", task_key="unset", state="unset")
+
+        version = dqueue.core.__version__
+
+        return jsonify(
+                version=version
+            )
+
+app.add_url_rule(
+         '/hub/version',
+          view_func=HubVersionView.as_view('version'),
+          methods=['GET']
+)
+
 class TaskInfoView(SwaggerView):
     operationId = "task_info"
 
@@ -962,7 +1010,7 @@ class TaskCallbackView(SwaggerView):
     parameters = [
                 {
                     'name': 'worker_id',
-                    'in': 'path',
+                    'in': 'query',
                     'required': True,
                     'type': 'string',
                 },
@@ -981,6 +1029,8 @@ class TaskCallbackView(SwaggerView):
         }
 
     def post(self):
+        worker_id = request.args.get('worker_id')
+
         payload = request.json
 
         url = payload['url']
@@ -997,9 +1047,12 @@ class TaskCallbackView(SwaggerView):
             r = requests.get(url, params=params)
         else:
             raise RuntimeError(f"unable to deal with non-standard dispatcher, allowed {allowed_dispatcher}")
+
+        url_parsed = urlparse(url)
+        qs = parse_qs(url_parsed.query)
         
-        queue = dqueue.core.Queue()
-        queue.log_task(message=f"passing callback: {url} {params}", task_key="unset", state="unset")
+        queue = dqueue.core.Queue(worker_id=worker_id)
+        queue.log_task(message=f"callback: {qs.get('job_id', 'unknown')} {params.get('node', 'no-node')}", task_key="unset", state="unset")
 
         return jsonify(
                 dict(

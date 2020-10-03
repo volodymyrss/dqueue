@@ -26,6 +26,9 @@ from dqueue.client import APIClient
 from dqueue.data import DataFacts
 
 class QueueProxy(DataFacts, Queue):
+    
+    def version(self):
+        return self.client.hub.version().response().result
 
     def list_queues(self, pattern):
         print(self.client.queues.list().response().result)

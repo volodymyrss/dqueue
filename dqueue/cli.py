@@ -2,18 +2,19 @@ import click
 import logging
 import json
 import os
+import sys
 import pprint
 import time
 import subprocess
 from termcolor import colored
 
-logger = logging.getLogger()
-
-log = lambda *x,**xx:logger.info(*x, **xx)
-
 from dqueue import from_uri
 from dqueue.core import Queue, Task
 from dqueue.proxy import QueueProxy
+
+import dqueue.core as core 
+
+logger = logging.getLogger()
 
 @click.group()
 @click.option("-q", "--quiet", default=False, is_flag=True)
@@ -33,18 +34,36 @@ def cli(obj, quiet=False, debug=False, queue=None):
         queue = os.environ.get('ODAHUB', None)
 
     obj['queue'] = from_uri(queue)
-    logger.info("using queue: %s", obj['queue'])
+    logger.debug("using queue: %s", obj['queue'])
+
+@cli.command()
+@click.option("-v", "--validate", default=False, is_flag=True)
+@click.pass_obj
+def version(obj, validate):
+    hub = obj['queue'].version()
+    print("client:", core.__version__)
+    print("hub:", hub['version'])
+
+    if validate:
+        if core.__version__ == hub['version']:
+            logger.info("versions compatible!")
+        else:
+            logger.error("versions INcompatible!")
+            sys.exit(1)
+
+@cli.command()
+@click.pass_obj
+def auth(obj):
+    print(core.__version__)
 
 @cli.command()
 @click.pass_obj
 def info(obj):
     for q in obj['queue'].list_queues(None):
-        log(colored(q, 'green'))
+        logger.info(colored(q, 'green'))
         for k,v in q.info.items():
-            print(k, ":", len(v), end="; ")
-        print("\n")
-        #log(q.list(kinds=["waiting","done","failed","running"]))
-        #print(q.show())
+            logger.info(k, ":", len(v), end="; ")
+        logger.info("\n")
 
 @cli.command()
 @click.pass_obj
@@ -53,8 +72,8 @@ def purge(obj):
         obj['queue'].purge()
     else:
         for q in Queue().list_queues():
-            log(q.info)
-            log(q.list_task(kinds=["waiting","done","failed","running"]))
+            logger.info(q.info)
+            logger.info(q.list_task(kinds=["waiting","done","failed","running"]))
             q.purge()
 
 def console_size():

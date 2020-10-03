@@ -27,6 +27,7 @@ class APIClient:
     queue = None
 
     _token = None
+    worker_id = None
 
     def __repr__(self):
         return f"[ {self.__class__.__name__}: leader={self.leader} queue={self.queue} ]"
@@ -43,7 +44,7 @@ class APIClient:
 
         self.logger = logging.getLogger(repr(self))
 
-        self.logger.info("initialized %s: %s", self.__class__, self)
+        self.logger.info("initialized")
 
     @property
     def client(self):
@@ -74,15 +75,15 @@ class APIClient:
                     ("./.dda-token", lambda: open(".dda-token", "rt").read().strip()), # type: ignore
                     ]:
                 try:
-                    print("trying", n)
+                    logger.debug("trying to get token with method %s", n)
                     self._token = m()
-                    print("method succeeded!")
+                    logger.info("managed to get token with method %s", n)
                     break
                 except Exception as e:
-                    print(f"method {n} failed: {e}")
+                    logger.debug("failed to get token with method %s : %s", n, e)
 
             if self._token is None:
-                print(f"all methods to get token failed using default empty")
+                logger.debug("all methods to get token failed using default empty")
                 self._token = ""
 
         return self._token

@@ -21,5 +21,5 @@ def from_uri(queue_uri: Union[str, None]=None):
     else:
         r = local(queue_uri)
 
-    logger.info("constructing queue from %s: %s", queue_uri, r)
+    logger.debug("constructing queue from %s: %s", queue_uri, r)
     return r
