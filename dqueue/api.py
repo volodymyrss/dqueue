@@ -857,6 +857,18 @@ class HubVersionView(SwaggerView):
     operationId = "version"
 
     parameters = [
+                {
+                    'name': 'client_version',
+                    'in': 'query',
+                    'required': False,
+                    'type': 'string',
+                },
+                {
+                    'name': 'worker_id',
+                    'in': 'query',
+                    'required': False,
+                    'type': 'string',
+                },
             ]
 
     responses = {
@@ -867,6 +879,11 @@ class HubVersionView(SwaggerView):
         }
 
     def get(self):
+        client_version = request.args.get('client_version', None)
+        worker_id = request.args.get('worker_id', None)
+
+        queue.log_task(message=f"client test {client_version} worker {worker_id}", task_key="unset", state="unset")
+
         version = dqueue.core.__version__
 
         return jsonify(

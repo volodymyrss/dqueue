@@ -36,10 +36,19 @@ def cli(obj, quiet=False, debug=False, queue=None):
     logger.debug("using queue: %s", obj['queue'])
 
 @cli.command()
+@click.option("-v", "--validate", default=False, is_flag=True)
 @click.pass_obj
-def version(obj):
+def version(obj, validate):
+    hub = obj['queue'].version()
     print("client:", core.__version__)
-    print("hub:", obj['queue'].version())
+    print("hub:", hub['version'])
+
+    if validate:
+        if core.__version__ == hub['version']:
+            print("versions compatible!")
+        else:
+            print("versions INcompatible!")
+            os.exit(1)
 
 @cli.command()
 @click.pass_obj
