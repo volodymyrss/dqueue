@@ -54,6 +54,9 @@ logger=logging.getLogger(__name__)
 
 ## === schemas
 
+class HubVersion(Schema):
+    version = fields.Str()
+
 class TaskData(Schema):
     pass
 
@@ -848,6 +851,32 @@ app.add_url_rule(
      '/worker/question',
       view_func=WorkerQuestion.as_view('worker_question_task'),
       methods=['POST']
+)
+
+class HubVersionView(SwaggerView):
+    operationId = "version"
+
+    parameters = [
+            ]
+
+    responses = {
+            200: {
+                    'description': 'hub version info',
+                    'schema': HubVersion,
+                }
+        }
+
+    def get(self):
+        version = dqueue.core.__version__
+
+        return jsonify(
+                version=version
+            )
+
+app.add_url_rule(
+         '/hub/version',
+          view_func=HubVersionView.as_view('version'),
+          methods=['GET']
 )
 
 class TaskInfoView(SwaggerView):

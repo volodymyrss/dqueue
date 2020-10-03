@@ -26,11 +26,15 @@ def find_hexified_secret(): # hexified in in nginx module too
             logger.warning("failed to discover secret with %s: %s", n, e)
     logger.warning("all secret discovery methods failed: auth will not work")
 
-def decode(token, secret=None):
-    if secret is None:
-        secret = binascii.unhexlify(find_hexified_secret())
+def decode(token, secret=None, verify=True):
+    if verify:
+        if secret is None:
+            secret = binascii.unhexlify(find_hexified_secret())
 
-    data = jwt.decode(token, key=secret)
+        data = jwt.decode(token, key=secret)
+    else:
+        data = jwt.decode(token, verify=False)
+
     logger.info("decoded %s", data)
 
     return data

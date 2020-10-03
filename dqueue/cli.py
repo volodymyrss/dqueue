@@ -7,15 +7,13 @@ import time
 import subprocess
 from termcolor import colored
 
-__version__ = "0.1.8"
-
-logger = logging.getLogger()
-
-log = lambda *x,**xx:logger.info(*x, **xx)
-
 from dqueue import from_uri
 from dqueue.core import Queue, Task
 from dqueue.proxy import QueueProxy
+
+import dqueue.core as core 
+
+logger = logging.getLogger()
 
 @click.group()
 @click.option("-q", "--quiet", default=False, is_flag=True)
@@ -35,13 +33,18 @@ def cli(obj, quiet=False, debug=False, queue=None):
         queue = os.environ.get('ODAHUB', None)
 
     obj['queue'] = from_uri(queue)
-    logger.info("using queue: %s", obj['queue'])
+    logger.debug("using queue: %s", obj['queue'])
 
 @cli.command()
 @click.pass_obj
 def version(obj):
-    print(__version__)
+    print("client:", core.__version__)
+    print("hub:", obj['queue'].version())
 
+@cli.command()
+@click.pass_obj
+def auth(obj):
+    print(core.__version__)
 
 @cli.command()
 @click.pass_obj

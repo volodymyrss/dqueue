@@ -5,6 +5,7 @@ from flask import url_for
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
+import dqueue.core as core
 from dqueue.core import Queue
 from dqueue import from_uri
 
@@ -38,6 +39,9 @@ class TestLiveServer:
         print(tl)
 
         self.queue.purge()
+
+        assert self.queue.version()['version'] == core.__version__
+    
     
     def test_offer(self):
         self.queue.purge()
