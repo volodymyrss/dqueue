@@ -146,7 +146,7 @@ class QueueProxy(DataFacts, Queue):
     def task_done(self):
         self.logger.info("task done, closing: %s : %s", self.current_task.key, self.current_task)
         self.logger.info("task done, stored key: %s", self.current_task_stored_key)
-        self.logger.info("current task: %s", self.current_task.as_dict)
+        self.logger.info("current task: %s", repr(self.current_task.as_dict)[:500]+" ...")
 
         r = self.client.worker.answer(worker_id=self.worker_id, 
                                       queue=self.queue, 
