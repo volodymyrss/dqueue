@@ -882,6 +882,7 @@ class HubVersionView(SwaggerView):
         client_version = request.args.get('client_version', None)
         worker_id = request.args.get('worker_id', None)
 
+        queue = dqueue.core.Queue(worker_id=worker_id)
         queue.log_task(message=f"client test {client_version} worker {worker_id}", task_key="unset", state="unset")
 
         version = dqueue.core.__version__

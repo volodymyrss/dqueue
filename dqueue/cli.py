@@ -2,6 +2,7 @@ import click
 import logging
 import json
 import os
+import sys
 import pprint
 import time
 import subprocess
@@ -45,10 +46,10 @@ def version(obj, validate):
 
     if validate:
         if core.__version__ == hub['version']:
-            print("versions compatible!")
+            logger.info("versions compatible!")
         else:
-            print("versions INcompatible!")
-            os.exit(1)
+            logger.error("versions INcompatible!")
+            sys.exit(1)
 
 @cli.command()
 @click.pass_obj
