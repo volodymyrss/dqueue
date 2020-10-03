@@ -61,8 +61,9 @@ def auth(obj):
 def info(obj):
     for q in obj['queue'].list_queues(None):
         logger.info(colored(q, 'green'))
-        for k,v in q.info.items():
-            logger.info(k, ":", len(v), end="; ")
+        logger.info("; ".join(
+                f"{k}: {len(v)}" for k,v in q.info.items()
+            ))
         logger.info("\n")
 
 @cli.command()
