@@ -197,8 +197,8 @@ def view(obj, follow, since=0):
             if name is None or name == "??": # ???
                 try:
                     m = json.loads(l['message'])
-                    name = m['params']['mode']
-                    l['message'] = f"{m['qs']['job_id']} {m['params']['message']}"
+                    name = m['params']['node']
+                    l['message'] = f"{m['qs']['job_id'][0][:8]} {m['params']['message']}"
                 except Exception as e:
                     logger.error("%s", repr(e))
 
