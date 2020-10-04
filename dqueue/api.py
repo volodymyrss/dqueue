@@ -1050,9 +1050,13 @@ class TaskCallbackView(SwaggerView):
 
         url_parsed = urlparse(url)
         qs = parse_qs(url_parsed.query)
+
+        logger.info("qs: %s", qs)
+        logger.info("params: %s", params)
         
         queue = dqueue.core.Queue(worker_id=worker_id)
-        queue.log_task(message=f"callback: {qs.get('job_id', 'unknown')} {params.get('node', 'no-node')}", task_key="unset", state="unset")
+        queue.log_task(message=json.dumps(dict(qs=qs, params=params)), task_key="unset", state="unset")
+        #queue.log_task(message=f"callback: {qs.get('job_id', 'unknown')} {params.get('node', 'no-node')}", task_key="unset", state="unset")
 
         return jsonify(
                 dict(
