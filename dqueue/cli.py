@@ -56,15 +56,19 @@ def version(obj, validate):
 def auth(obj):
     print(core.__version__)
 
-@cli.command()
-@click.pass_obj
-def info(obj):
-    for q in obj['queue'].list_queues(None):
+
+def log_info(queue):
+    for q in queue.list_queues(None):
         logger.info(colored(q, 'green'))
         logger.info("; ".join(
                 f"{k}: {len(v)}" for k,v in q.info.items()
             ))
         logger.info("\n")
+
+@cli.command()
+@click.pass_obj
+def info(obj):
+    log_info(obj['queue'])
 
 @cli.command()
 @click.pass_obj
@@ -172,6 +176,7 @@ def view(obj, follow, since=0):
                 print("")
                 waiting=False
 
+
             if l['task_key'] not in task_info_cache:
                 ti = obj['queue'].task_by_key(l['task_key'], decode=True)
                 task_info_cache[l['task_key']] = ti
@@ -181,14 +186,18 @@ def view(obj, follow, since=0):
 
             logger.debug(ti)
 
+            name = None
             if ti is not None:
                 try:
                     name = ti['task_dict']['task_data']['object_identity']['factory_name']
                 except Exception as e:
                     logger.error("very stange task: %s; %s", ti.keys(), e)
-                    name = "unnamed"
-            else:
-                name = "unnamed"
+                    name = "missing"
+                    
+            if name is None or name == "??": # ???
+                name = l['message'].split()[-1]
+                l['message'] = l['message'][:-len(name)]
+
 
             print(("{since} {timestamp} "+colored("{task_key:10s}", "red") + " {message:40s} "+colored("{name:20s}", "yellow") + colored(" {worker_id:40s}", "cyan") ).format(
                     since=since,
@@ -322,8 +331,10 @@ def question(obj, task_data):
 def resubmit(obj, scope_selector):
     scope, selector = scope_selector.split(":")
 
+    log_info(obj['queue'])
     r = obj['queue'].resubmit(scope, selector)
     print(colored("resubmitted:", "green"), ":", r)
+    log_info(obj['queue'])
 
 #####
 @cli.group("runner")
