@@ -195,9 +195,12 @@ def view(obj, follow, since=0):
                     name = "missing"
                     
             if name is None or name == "??": # ???
-                name = l['message'].split()[-1]
-                l['message'] = l['message'][:-len(name)]
-
+                try:
+                    m = json.loads(l['message'])
+                    name = m['params']['mode']
+                    l['message'] = f"{m['qs']['job_id']} {m['params']['message']}"
+                except Exception as e:
+                    logger.error("%s", repr(e))
 
             print(("{since} {timestamp} "+colored("{task_key:10s}", "red") + " {message:40s} "+colored("{name:20s}", "yellow") + colored(" {worker_id:40s}", "cyan") ).format(
                     since=since,
