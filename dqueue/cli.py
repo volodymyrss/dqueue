@@ -200,7 +200,7 @@ def view(obj, follow, since=0):
                     name = m['params']['node']
                     l['message'] = f"{m['qs']['job_id'][0][:8]} {m['params']['message']}"
                 except Exception as e:
-                    logger.error("%s", repr(e))
+                    logger.debug("%s", repr(e))
 
             print(("{since} {timestamp} "+colored("{task_key:10s}", "red") + " {message:40s} "+colored("{name:20s}", "yellow") + colored(" {worker_id:40s}", "cyan") ).format(
                     since=since,
@@ -292,6 +292,11 @@ def list_facts(obj):
 @click.pass_obj
 def guardian(obj, watch):
     while True:
+        #expre
+        print("exiure some tasks")
+        r = obj['queue'].expire_tasks()
+        print(colored("expired:", "yellow"), r)
+
         #try_all_locked
         print("trying to unlock something")
         task_data=obj['queue'].try_all_locked()

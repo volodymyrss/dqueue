@@ -126,13 +126,13 @@ class QueueProxy(DataFacts, Queue):
                 ).response().result
 
 
-    def get(self):
+    def get(self, update_expected_in_s=-1):
         if self.current_task is not None:
             raise CurrentTaskUnfinished(self.current_task)
 
         print(dir(self.client.worker))
 
-        r = self.client.worker.getOffer(worker_id=self.worker_id, queue=self.queue).response()
+        r = self.client.worker.getOffer(worker_id=self.worker_id, queue=self.queue, update_expected_in_s= update_expected_in_s).response()
 
         if r.result is None:
             raise Empty()
@@ -233,6 +233,9 @@ class QueueProxy(DataFacts, Queue):
 
     def forgive_task_failures(self):
         return self.client.tasks.forgive_failures(worker_id=self.worker_id, queue=self.queue).response().result
+    
+    def expire_tasks(self):
+        return self.client.tasks.expire().response().result
 
     def callback(self, url, params):
         """

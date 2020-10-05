@@ -37,6 +37,8 @@ class TaskEntry(peewee.Model):
     created = peewee.DateTimeField()
     modified = peewee.DateTimeField()
 
+    update_expected_in_s = peewee.FloatField(default=-1)
+
     class Meta:
         database = db
 

@@ -169,6 +169,12 @@ class WorkerOffer(SwaggerView):
                     'required': False,
                     'type': 'string',
                 },
+                {
+                    'name': 'update_expected_in_s',
+                    'in': 'query',
+                    'required': False,
+                    'type': 'number',
+                },
             ]
 
     responses = {
@@ -182,10 +188,11 @@ class WorkerOffer(SwaggerView):
         }
 
     def get(self, worker_id):
+        update_expected_in_s = request.args.get('update_expected_in_s', -1, type=float)
         queue = dqueue.core.Queue(request.args.get('queue', 'default'), worker_id=worker_id)
 
         try:
-            task = queue.get()
+            task = queue.get(update_expected_in_s)
             logger.warning("got task: %s", task)
             return jsonify(
                     task.as_dict,
@@ -576,6 +583,36 @@ class ForgiveFailures(SwaggerView):
 app.add_url_rule(
           '/tasks/<string:worker_id>/forgive_failures',
           view_func=ForgiveFailures.as_view('forgive_failures'),
+          methods=['GET']
+)
+
+class ExpireTasks(SwaggerView):
+    operationId = "expire"
+
+    # locally or remotely?
+
+    parameters = [
+            ]
+
+    responses = {
+            200: {
+                    'description': 'expired',
+                },
+        }
+
+    def get(self):
+        queue = dqueue.core.Queue(request.args.get('queue', 'default'))
+
+        r = queue.expire_tasks()
+
+        logger.info("expired: %s", r)
+
+        return jsonify(tasks=r)
+
+
+app.add_url_rule(
+          '/tasks/expire',
+          view_func=ExpireTasks.as_view('expire_tasks'),
           methods=['GET']
 )
 

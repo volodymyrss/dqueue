@@ -422,17 +422,23 @@ class Queue:
     def get_worker_states(self):
         return [ model_to_dict(r) for r in EventLog.select().where(EventLog.worker_state!="unset").order_by(EventLog.timestamp.desc()).limit(1).execute(database=None) ]
 
-    def get(self):
+    def get(self, update_expected_in_s: float=-1):
         ""
         if self.current_task is not None:
             raise CurrentTaskUnfinished(self.current_task)
 
         self.note_worker_state("ready")
+
+        max_update_expected_in_s = 3600
+        if update_expected_in_s > max_update_expected_in_s:
+            logger.warning("update expected timeout %s is too long, setting to maximum %s", update_expected_in_s, max_update_expected_in_s)
+            update_expected_in_s = max_update_expected_in_s
     
         r=TaskEntry.update({
                         TaskEntry.state:"running",
                         TaskEntry.worker_id:self.worker_id,
                         TaskEntry.modified:datetime.datetime.now(),
+                        TaskEntry.update_expected_in_s:update_expected_in_s
                     })\
                     .order_by(TaskEntry.created)\
                     .where( (TaskEntry.state=="waiting") & (TaskEntry.queue==self.queue) ).limit(1).execute(database=None)
@@ -957,5 +963,39 @@ class Queue:
                 jobs.append(task_entry.key)
 
         return jobs
+
+    def expire_tasks(self):
+        # yes. all of this can be one cmmand. but we want details
+        entries = TaskEntry.select().where(
+                    TaskEntry.state=="running",
+                ).order_by(TaskEntry.modified.desc()).limit(1).execute(database=None)
+
+        N = 0
+
+        for entry in entries:
+            age = datetime.datetime.now().timestamp() - entry.modified.timestamp()
+            expected = entry.update_expected_in_s
+
+            logger.info("running task with age %s limit %s", age, expected)
+            if age > expected:
+                logger.warning("to expire key %s state %s", entry.key, entry.state)
+
+                self.current_task=Task.from_task_dict(entry.task_dict_string)
+                self.current_task_stored_key=self.current_task.key
+
+                self.log_task("task failed",self.current_task,"failed")
+
+                n = TaskEntry.update({
+                            TaskEntry.state:"failed",
+                        }).where(
+                            TaskEntry.state=="running",
+                            TaskEntry.key==entry.key,
+                        ).execute(database=None)
+
+                logger.warning("expired %s", n)
+
+                N += n
+
+        return N
 
 

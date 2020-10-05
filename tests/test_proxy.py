@@ -1,6 +1,7 @@
 import pytest
 import json
 from flask import url_for
+import time
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -167,6 +168,39 @@ class TestLiveServer:
         assert l[0]['state'] == "waiting"
         
         to = self.queue.get()
+    
+    def test_expire(self):
+        self.queue.purge()
+
+        len(self.queue.list()) == 0
+
+        td = {'1':'2'}
+
+        r = self.queue.put(td, {})
+
+        l = self.queue.list()
+        len(l) == 1
+        assert l[0]['state'] == 'waiting'
+
+        to = self.queue.get(2.)
+
+        l = self.queue.list()
+        len(l) == 1
+        assert l[0]['state'] == 'running'
+
+        time.sleep(1.5)
+        self.queue.expire_tasks()
+        
+        l = self.queue.list()
+        len(l) == 1
+        assert l[0]['state'] == 'running'
+        
+        time.sleep(1.5)
+        self.queue.expire_tasks()
+        
+        l = self.queue.list()
+        len(l) == 1
+        assert l[0]['state'] == 'failed'
 
     def test_callback(self):
         r = self.queue.callback(

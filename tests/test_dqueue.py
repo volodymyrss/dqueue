@@ -286,3 +286,54 @@ def test_direct_locking():
     logger.info("task log...")
     for tle in queue.view_log():
         logger.info('current task_log %s %s', tle['timestamp'], tle['message'])
+
+def test_expiration():
+    import dqueue
+    
+    queue=dqueue.Queue("test-queue")
+    queue.wipe(["waiting","done","running","failed","locked"])
+    queue.clear_task_history()
+
+    assert queue.info['waiting']==0
+    assert queue.info['done']==0
+    assert queue.info['running']==0
+    assert queue.info['failed']==0
+    assert queue.info['locked']==0
+
+    t1 = dict(test=1, data=2)
+
+    assert queue.info['waiting']==0
+    assert queue.list('waiting')==[]
+
+    s1 = queue.put(t1)
+    print("s1", s1)
+
+    assert s1['state'] == "submitted"
+
+    print((queue.info))
+    assert queue.info['waiting'] == 1
+
+    assert queue.put(t1)['state'] == "waiting"
+
+    time.sleep(0.1)
+
+    task=queue.get(2.)
+    
+    assert queue.info['waiting'] == 0
+    assert queue.info['running'] == 1
+    assert queue.info['failed'] == 0
+
+    time.sleep(1.5)
+    queue.expire_tasks()
+    
+    assert queue.info['waiting'] == 0
+    assert queue.info['running'] == 1
+    assert queue.info['failed'] == 0
+    
+    time.sleep(1.5)
+    queue.expire_tasks()
+
+    assert queue.info['waiting'] == 0
+    assert queue.info['running'] == 0
+    assert queue.info['failed'] == 1
+
