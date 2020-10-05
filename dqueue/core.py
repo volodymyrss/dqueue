@@ -435,7 +435,7 @@ class Queue:
             logger.warning("update expected timeout %s is too long, setting to maximum %s", update_expected_in_s, max_update_expected_in_s)
             update_expected_in_s = max_update_expected_in_s
 
-        if update_expected_in_s < -1:
+        if update_expected_in_s <= 0:
             logger.warning("no update expected timeout, setting to maximum %s" , max_update_expected_in_s)
             update_expected_in_s = max_update_expected_in_s
     
