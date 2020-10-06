@@ -468,7 +468,11 @@ class WorkerDataConsultFact(SwaggerView):
                 try:
                     meta, payload  = odakb.datalake.restore(dag_bucket, return_metadata=True)
                 except minio.error.NoSuchBucket:
-                    raise Exception("bucket was just suppose to exists!")
+                    logger.error("bucket was just supposed to exists! race condition?")
+                    return Response(
+                              f"no such dag! bucket: {dag_bucket}",
+                              status=400,
+                           )
 
                 assert payload['dag'] == dag
                 
