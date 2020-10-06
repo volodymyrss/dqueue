@@ -796,12 +796,20 @@ class Queue:
         if len(entries) == 0:
             logger.info("no failed tasks: will not try to forgive")
             return 0
-            
-        logger.info("found %s failed tasks: will try to forgive", len(entries))
+
 
         entry=entries[0]
-        self.current_task=Task.from_task_dict(entry.task_dict_string)
-        self.current_task_stored_key=self.current_task.key
+
+        try:
+            self.current_task=Task.from_task_dict(entry.task_dict_string)
+            self.current_task_stored_key=self.current_task.key
+            logger.info("found %s failed tasks: will try to forgive", len(entries))
+        except Exception as e:
+            logger.info("will not forgive task %s with corrupt json, updating modified", entry.key)
+            r=TaskEntry.update({
+                        TaskEntry.modified:datetime.datetime.now(),
+                    }).where(TaskEntry.key == entry.key).execute(database=None)
+            return 0
 
         task = self.current_task
 
