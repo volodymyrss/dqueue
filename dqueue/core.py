@@ -808,6 +808,7 @@ class Queue:
             logger.info("will not forgive task %s with corrupt json, updating modified", entry.key)
             r=TaskEntry.update({
                         TaskEntry.modified:datetime.datetime.now(),
+                        TaskEntry.state: "corrupt",
                     }).where(TaskEntry.key == entry.key).execute(database=None)
             return 0
 
