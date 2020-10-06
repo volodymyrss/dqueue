@@ -981,11 +981,17 @@ class Queue:
             age = datetime.datetime.now().timestamp() - entry.modified.timestamp()
             expected = entry.update_expected_in_s
 
+            logger.error(">>>>> raw model: %s", model_to_dict(entry))
+
             logger.info("running task with age %s limit %s", age, expected)
             if age > expected:
                 logger.warning("to expire key %s state %s", entry.key, entry.state)
 
-                self.current_task=Task.from_task_dict(entry.task_dict_string)
+                try:
+                    self.current_task=Task.from_task_dict(entry.task_dict_string)
+                except Exception as e:
+                    logger.error("unexpected error in decoding task content: %s", repr(e))
+
                 self.current_task_stored_key=self.current_task.key
 
                 self.log_task("task failed",self.current_task,"failed")
