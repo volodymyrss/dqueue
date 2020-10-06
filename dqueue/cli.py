@@ -302,6 +302,11 @@ def guardian(obj, watch):
         task_data=obj['queue'].try_all_locked()
         print(colored("unlocked:", "green"), task_data)
         
+        #try_all_locked
+        print("trying to forgive failures")
+        task_data=obj['queue'].forgive_task_failures()
+        print(colored("forgiven:", "green"), task_data)
+        
         #clear event log 
         N = obj['queue'].clear_event_log(only_older_than_days=2./24.)
         print(f"cleared event log of {N} entries")
