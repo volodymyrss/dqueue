@@ -991,8 +991,6 @@ class Queue:
             age = datetime.datetime.now().timestamp() - entry.modified.timestamp()
             expected = entry.update_expected_in_s
 
-            logger.error(">>>>> raw model: %s", model_to_dict(entry))
-
             logger.info("running task with age %s limit %s", age, expected)
             if age > expected:
                 logger.warning("to expire key %s state %s", entry.key, entry.state)
