@@ -61,7 +61,7 @@ def log_info(queue):
     for q in queue.list_queues(None):
         logger.info(colored(q, 'green'))
         logger.info("; ".join(
-                f"{k}: {len(v)}" for k,v in q.info.items()
+                f"{k}: {v}" for k,v in q.summary.items()
             ))
         logger.info("\n")
 
@@ -237,7 +237,7 @@ def view(obj, follow, since=0):
 
         if time.time() - last_info_time > 5:
             print()
-            print("\033[34m", "; ".join(f"{k}: {len(v)}" for k,v in obj['queue'].info.items()), "\033[0m")
+            print("\033[34m", "; ".join(f"{k}: {v}" for k,v in obj['queue'].summary.items()), "\033[0m")
             recent_workers = [k for k,v in active_workers.items() if v>time.time()-120]
             print(f"\033[35m{len(recent_workers)} recent workers: {recent_workers}\033[0m")
 
@@ -325,7 +325,7 @@ def guardian(obj, watch):
 
         print("getting queue statistics...")
         for k,v in obj['queue'].info.items():
-            print(k, ":", len(v), end="; ")
+            print(k, ":", v, end="; ")
         print("\n")
 
         print("sleeping", watch)
@@ -375,7 +375,7 @@ def start_executor(obj, deploy_runner_command, list_runners_command, timeout, ma
         r = obj['queue'].list_queues(None)
         for q in r:
             info = dict(q.info.items())
-            print(f"queue: \033[33m{q}\033[0m", "; ".join([ f"{k}: {len(v)}" for k, v in info.items() ]))
+            print(f"queue: \033[33m{q}\033[0m", "; ".join([ f"{k}: {v}" for k, v in info.items() ]))
             if len(info['waiting']) > 0:
                 print(f"\033[31mfound {len(info['waiting'])} waiting jobs, need to start some runners\033[0m")
                 

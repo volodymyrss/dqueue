@@ -860,14 +860,25 @@ class Queue:
             for key in self.list_tasks(fromk):
                 log("removing",fromk + "/" + key)
                 TaskEntry.delete().where(TaskEntry.key==key).execute(database=None)
+
+    @property
+    def summary(self):
+        r={}
+        for kind in "waiting","running","done","failed","locked":
+            r[kind] = len(TaskEntry.select().where(TaskEntry.state==kind, TaskEntry.queue==self.queue).execute(database=None))
+
+        return r
         
     @property
     def info(self):
         ""
-        r={}
-        for kind in "waiting","running","done","failed","locked":
-            r[kind]=len(self.list_tasks(kind))
-        return r
+        return self.summary
+
+        #r = {}
+        #for kind in "waiting","running","done","failed","locked":
+        #    r[kind] = len(self.list_tasks(state=kind))
+
+        #return r
 
     def show(self):
         ""

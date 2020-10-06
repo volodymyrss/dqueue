@@ -105,6 +105,41 @@ class DataFact(Schema):
 
 ## === views
 
+class SummaryView(SwaggerView):
+    operationId = "summary"
+    parameters = [
+        {
+            "name": "queue",
+            "in": "query",
+            "type": "string",
+            "required": False,
+        },
+    ]
+    responses = {
+        200: {
+            "description": "A summary of tasks",
+        }
+    }
+
+    def get(self):
+        """
+        get summary of tasks
+        """
+
+        queue = dqueue.core.Queue(request.args.get('queue', 'default'))
+
+        tasks = self.summary()
+
+        return jsonify(
+                tasks=tasks
+            )
+
+app.add_url_rule(
+         '/tasks/summary',
+          view_func=SummaryView.as_view('summary_tasks'),
+          methods=['GET']
+)
+
 class TaskListView(SwaggerView):
     operationId = "listTasks"
     parameters = [
@@ -121,7 +156,7 @@ class TaskListView(SwaggerView):
             "enum": ["submitted", "waiting", "done", "any", "failed"],
             "required": False,
             "default": "any",
-        }
+        },
     ]
     responses = {
         200: {

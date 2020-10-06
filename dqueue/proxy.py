@@ -220,6 +220,10 @@ class QueueProxy(DataFacts, Queue):
         for kind in "waiting","running","done","failed","locked":
             r[kind]=[t for t in tasks if t['state'] == kind]
         return r
+    
+    @property
+    def summary(self):
+        return self.client.tasks.listTasks(state=state, summary=True).response().result
 
     def show(self):
         r=""
