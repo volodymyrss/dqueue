@@ -130,6 +130,8 @@ class SummaryView(SwaggerView):
 
         tasks = queue.summary
 
+        logger.info("got summary: %s", tasks)
+
         return jsonify(
                 tasks=tasks
             )

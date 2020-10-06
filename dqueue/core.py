@@ -866,7 +866,6 @@ class Queue:
         r={}
         for kind in "waiting","running","done","failed","locked":
             r[kind] = len(TaskEntry.select().where(TaskEntry.state==kind, TaskEntry.queue==self.queue).execute(database=None))
-
         return r
         
     @property
