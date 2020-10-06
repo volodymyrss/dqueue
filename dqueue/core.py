@@ -430,14 +430,15 @@ class Queue:
         self.note_worker_state("ready")
 
         max_update_expected_in_s = 3600
+        default_update_expected_in_s = 1200
 
         if update_expected_in_s > max_update_expected_in_s:
             logger.warning("update expected timeout %s is too long, setting to maximum %s", update_expected_in_s, max_update_expected_in_s)
             update_expected_in_s = max_update_expected_in_s
 
         if update_expected_in_s <= 0:
-            logger.warning("no update expected timeout, setting to maximum %s" , max_update_expected_in_s)
-            update_expected_in_s = max_update_expected_in_s
+            logger.warning("no update expected timeout, setting to default %s", default_update_expected_in_s)
+            update_expected_in_s = default_update_expected_in_s
     
         r=TaskEntry.update({
                         TaskEntry.state:"running",
