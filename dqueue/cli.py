@@ -198,7 +198,7 @@ def view(obj, follow, since=0):
                 except Exception as e:
                     logger.error("very stange task: %s; %s", ti.keys(), e)
                     name = "missing"
-                    
+
             if name is None or name == "??": # ???
                 try:
                     m = json.loads(l['message'])
@@ -237,7 +237,9 @@ def view(obj, follow, since=0):
 
         if time.time() - last_info_time > 5:
             print()
+            log_info(obj['queue'])
             print("\033[34m", "; ".join(f"{k}: {v}" for k,v in obj['queue'].summary.items()), "\033[0m")
+
             recent_workers = [k for k,v in active_workers.items() if v>time.time()-120]
             print(f"\033[35m{len(recent_workers)} recent workers: {recent_workers}\033[0m")
 
