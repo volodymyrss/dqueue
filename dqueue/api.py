@@ -85,6 +85,8 @@ class LogEntry(Schema):
 class LogSummaryReport(Schema):
     N = fields.Int()
 
+class Summary(Schema):
+    pass
 
 class QueueLogEntry(Schema):
     state = fields.Str()
@@ -118,6 +120,7 @@ class SummaryView(SwaggerView):
     responses = {
         200: {
             "description": "A summary of tasks",
+            "schema": Summary,
         }
     }
 

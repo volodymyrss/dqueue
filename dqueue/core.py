@@ -865,7 +865,9 @@ class Queue:
     def summary(self):
         r={}
         for kind in "waiting","running","done","failed","locked":
-            r[kind] = len(TaskEntry.select().where(TaskEntry.state==kind, TaskEntry.queue==self.queue).execute(database=None))
+            r[kind] = TaskEntry.select().where(TaskEntry.state==kind, TaskEntry.queue==self.queue).count()
+           # .execute(database=None)
+            #
         return r
         
     @property
