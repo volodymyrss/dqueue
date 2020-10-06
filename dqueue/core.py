@@ -987,17 +987,21 @@ class Queue:
             if age > expected:
                 logger.warning("to expire key %s state %s", entry.key, entry.state)
 
+                extra = {}
+
                 try:
                     self.current_task=Task.from_task_dict(entry.task_dict_string)
+                    self.current_task_stored_key=self.current_task.key
                 except Exception as e:
                     logger.error("unexpected error in decoding task content: %s", repr(e))
+                    extra = {TaskEntry.task_dict_string: json.dumps({'corrupt_json': entry.task_dict_string})}
 
-                self.current_task_stored_key=self.current_task.key
 
                 self.log_task("task failed",self.current_task,"failed")
 
                 n = TaskEntry.update({
                             TaskEntry.state:"failed",
+                            **extra
                         }).where(
                             TaskEntry.state=="running",
                             TaskEntry.key==entry.key,
