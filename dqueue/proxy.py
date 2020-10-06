@@ -208,8 +208,8 @@ class QueueProxy(DataFacts, Queue):
         self.logger.info("deleted %s", nentries)
 
 
-    def list_tasks(self):
-        l = [task for task in self.client.tasks.listTasks().response().result['tasks']]
+    def list_tasks(self, state="any"):
+        l = [task for task in self.client.tasks.listTasks(state=state).response().result['tasks']]
         self.logger.info(f"found tasks: {len(l)}")
         return l
 

@@ -118,9 +118,9 @@ class TaskListView(SwaggerView):
             "name": "state",
             "in": "query",
             "type": "string",
-            "enum": ["submitted", "waiting", "done", "all"],
+            "enum": ["submitted", "waiting", "done", "any", "failed"],
             "required": False,
-            "default": "all",
+            "default": "any",
         }
     ]
     responses = {
@@ -136,8 +136,9 @@ class TaskListView(SwaggerView):
         """
 
         queue = dqueue.core.Queue(request.args.get('queue', 'default'))
+        state = request.args.get('state', 'any')
 
-        tasks = [e for e in tools.list_tasks(include_task_data=True)]
+        tasks = [e for e in tools.list_tasks(include_task_data=True, state=state)]
 
         #tasks = queue.list_tasks(decode=True) #state=state)
 

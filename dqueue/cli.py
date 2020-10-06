@@ -92,9 +92,11 @@ def console_size():
 @click.option("-d", "--debug", default=False, is_flag=True)
 @click.option("-l", "--log", default=False, is_flag=True)
 @click.option("-i", "--info", default=False, is_flag=True)
+@click.option("-s", "--state", default=None)
+#@click.option("-a", "--max-age", default=None)
 @click.pass_obj
-def list(obj, debug, log, info):
-    for task in obj['queue'].list_tasks():
+def list(obj, debug, log, info, state):
+    for task in obj['queue'].list_tasks(state=state):
 
         td = task['task_dict']['task_data']
 
@@ -162,8 +164,11 @@ def view(obj, follow, since=0):
 
     info_cadence = 10
     till_next_info = info_cadence
+    last_info_time = 0
 
     task_info_cache={}
+
+    active_workers = {}
 
     while True:
         new_messages = obj['queue'].view_log(since=since)['event_log']
@@ -207,6 +212,8 @@ def view(obj, follow, since=0):
                     name=name,
                     **l))
 
+            active_workers[l['worker_id']] = time.time()
+
             logger.debug(l)
             
 
@@ -226,12 +233,15 @@ def view(obj, follow, since=0):
             till_next_info -= 1
 
             if till_next_info <=0:
-                print()
-                for k,v in obj['queue'].info.items():
-                    print(k, ":", len(v), end="; ")
-                print()
-
                 till_next_info = info_cadence
+
+        if time.time() - last_info_time > 5:
+            print()
+            print("\033[34m", "; ".join(f"{k}: {len(v)}" for k,v in obj['queue'].info.items()), "\033[0m")
+            recent_workers = [k for k,v in active_workers.items() if v>time.time()-120]
+            print(f"\033[35m{len(recent_workers)} recent workers: {recent_workers}\033[0m")
+
+            last_info_time = time.time()
 
 
         time.sleep(1) # nobody ever needs anything but this default
