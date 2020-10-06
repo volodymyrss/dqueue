@@ -223,7 +223,7 @@ class QueueProxy(DataFacts, Queue):
     
     @property
     def summary(self):
-        return self.client.tasks.listTasks(state=state, summary=True).response().result
+        return self.client.tasks.summary().response().result
 
     def show(self):
         r=""

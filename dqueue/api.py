@@ -128,7 +128,7 @@ class SummaryView(SwaggerView):
 
         queue = dqueue.core.Queue(request.args.get('queue', 'default'))
 
-        tasks = self.summary()
+        tasks = queue.summary
 
         return jsonify(
                 tasks=tasks
