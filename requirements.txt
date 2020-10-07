@@ -9,3 +9,4 @@ bravado
 retrying
 Flask-HTTPAuth
 pyjwt==1.7.1
+flask-statistics

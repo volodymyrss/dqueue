@@ -8,7 +8,7 @@ prep:
 	python -m pytest tests --maxfail=1
 
 listen: 
-	gunicorn --workers 8 dqueue.api:app -b 0.0.0.0:8000 --log-level DEBUG
+	gunicorn --workers 1 dqueue.api:app -b 0.0.0.0:8000 --log-level DEBUG
 
 run: build
 	docker rm -f $(CONTAINER) || true
