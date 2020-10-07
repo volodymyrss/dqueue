@@ -378,10 +378,10 @@ def start_executor(obj, deploy_runner_command, list_runners_command, timeout, ma
     while True:
         r = obj['queue'].list_queues(None)
         for q in r:
-            info = dict(q.info.items())
-            print(f"queue: \033[33m{q}\033[0m", "; ".join([ f"{k}: {v}" for k, v in info.items() ]))
-            if len(info['waiting']) > 0:
-                print(f"\033[31mfound {len(info['waiting'])} waiting jobs, need to start some runners\033[0m")
+            summary = q.summary
+            print(f"queue: \033[33m{q}\033[0m", "; ".join([ f"{k}: {v}" for k, v in summary.items() ]))
+            if summary['waiting'] > 0:
+                print(f"\033[31mfound {summary['waiting']} waiting jobs, need to start some runners\033[0m")
                 
                 runners = subprocess.check_output(["bash", "-c", list_runners_command]).decode().split("\n")
                 
