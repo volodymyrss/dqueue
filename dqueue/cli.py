@@ -328,7 +328,7 @@ def guardian(obj, watch):
         # stats
 
         print("getting queue statistics...")
-        for k,v in obj['queue'].info.items():
+        for k,v in obj['queue'].summary.items():
             print(k, ":", v, end="; ")
         print("\n")
 
