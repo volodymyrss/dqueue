@@ -514,6 +514,13 @@ class WorkerDataConsultFact(SwaggerView):
                               f"no such dag! bucket: {dag_bucket}",
                               status=400,
                            )
+                except minio.error.NoSuchKey:
+                    odakb.datalake.delete(dag_bucket)
+                    logger.error("bucket was corrupt, deleging")
+                    return Response(
+                              f"corrupt bucket: {dag_bucket}",
+                              status=400,
+                           )
 
                 assert payload['dag'] == dag
                 
