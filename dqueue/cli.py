@@ -242,7 +242,7 @@ def view(obj, follow, since=0):
             for q in obj['queue'].list_queues(None):
                 print("\033[34m", "; ".join(f"{k}: {v}" for k,v in obj['queue'].summary.items()), "\033[0m")
 
-            recent_workers = [k for k,v in active_workers.items() if v>time.time()-30]
+            recent_workers = [k for k,v in active_workers.items() if v>time.time()-30 and not k.startswith('oda-dqueue-')]
             print(f"\033[35m{len(recent_workers)} recent workers\033[0m: {', '.join(recent_workers)}")
 
             last_info_time = time.time()
