@@ -16,10 +16,20 @@ def from_uri(queue_uri: Union[str, None]=None):
             queue_uri = os.environ['ODAHUB']
             logger.info("getting ODAHUB from env: %s", queue_uri)
 
-    if queue_uri.startswith("http://") or queue_uri.startswith("https://"):
-        r = remote(queue_uri)
-    else:
-        r = local(queue_uri)
+    for uri in queue_uri.split(","):
+        logger.info("found ODAHUB URI option: %s", uri)
 
-    logger.debug("constructing queue from %s: %s", queue_uri, r)
-    return r
+        if uri.startswith("http://") or uri.startswith("https://"):
+            r = remote(uri)
+        else:
+            r = local(uri)
+
+        try:
+            logger.info("probing connection...")
+            r.version()
+            logger.info("succeeded!")
+            logger.debug("constructed queue from %s: %s", uri, r)
+            return r
+        except Exception as e: #todo
+            logger.warning("ODAHUB option %s unavailable: %s", uri, e)
+
