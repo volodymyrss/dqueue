@@ -87,10 +87,10 @@ class Request(db.Model):
     platform = db.Column(db.String(1000))
     mimetype = db.Column(db.String(1000))
 
-#try: # TODO!!
-db.create_all()
-#except:
-#    pass
+try: # TODO!!
+    db.create_all()
+except:
+    pass
 
 statistics = Statistics(app, db, Request)
 
