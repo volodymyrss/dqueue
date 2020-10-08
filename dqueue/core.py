@@ -383,8 +383,19 @@ class Queue:
             self.insert_task_entry(task, "locked")
             log("task inserted as locked")
 
-        instance_for_key = self.find_task_instances(task)[0]
-        recovered_task = Task.from_task_dict(instance_for_key['task_dict_string']) # type: ignore
+        instance_for_key = None
+        for i in range(5):
+            try:
+                instance_for_key = self.find_task_instances(task)[0]
+                recovered_task = Task.from_task_dict(instance_for_key['task_dict_string']) # type: ignore
+                break
+            except Exception as e:
+                logger.warning("race condition?")
+                time.sleep(2.)
+
+        if instance_for_key is None:
+            raise Exception("inserted task does not exist!")
+
 
         if recovered_task.key != task.key:
             log("inconsitent storage:")
