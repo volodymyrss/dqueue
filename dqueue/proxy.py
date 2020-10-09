@@ -114,8 +114,6 @@ class QueueProxy(DataFacts, Queue):
         raise NotImplementedError
 
     def put(self,task_data, submission_data=None, depends_on=None):
-        print(dir(self.client.worker))
-
         return self.client.worker.questionTask(
                     worker_id=self.worker_id,
                     task_payload=dict(
@@ -129,8 +127,6 @@ class QueueProxy(DataFacts, Queue):
     def get(self, update_expected_in_s=-1):
         if self.current_task is not None:
             raise CurrentTaskUnfinished(self.current_task)
-
-        print(dir(self.client.worker))
 
         r = self.client.worker.getOffer(worker_id=self.worker_id, queue=self.queue, update_expected_in_s= update_expected_in_s).response()
 
@@ -170,8 +166,6 @@ class QueueProxy(DataFacts, Queue):
 
         self.logger.info("moving task %s from %s to %s", task_key, fromk, tok)
         self.logger.info("moving task uses update entry %s", repr(update_entry)[:300])
-
-        self.logger.info(dir(self.client.tasks))
 
         r = self.client.tasks.move_task(
                                       #worker_id=self.worker_id, 
