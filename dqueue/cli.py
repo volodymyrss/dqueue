@@ -236,14 +236,13 @@ def view(obj, follow, since=0):
                 till_next_info = info_cadence
 
         if time.time() - last_info_time > 5:
-            print()
-            log_info(obj['queue'])
+            #log_info(obj['queue'])
 
             for q in obj['queue'].list_queues(None):
-                print("\033[34m", "; ".join(f"{k}: {v}" for k,v in obj['queue'].summary.items()), "\033[0m")
+                print(f"\033[1;31m{'live facts':>20s}: \033[0m\033[1;36m", "; ".join(f"{k}: {v}" for k,v in obj['queue'].summary.items()), "\033[0m")
 
             recent_workers = [k for k,v in active_workers.items() if v>time.time()-30 and not k.startswith('oda-dqueue-')]
-            print(f"\033[35m{len(recent_workers)} recent workers\033[0m: {', '.join(recent_workers)}")
+            print(f"\033[1;31m{len(recent_workers):>5d} recent workers:\033[0m \033[1;35m{', '.join(recent_workers)}\033[0m")
 
             last_info_time = time.time()
 
