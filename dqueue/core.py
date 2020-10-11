@@ -507,13 +507,27 @@ class Queue:
         # compatibility
         return self.clear_event_log()
 
-    def clear_event_log(self, only_older_than_days: Union[float,None]=None, only_kind: Union[str,None]=None):
+    def clear_event_log(self, 
+                        only_older_than_days: Union[float,None]=None, 
+                        only_kind: Union[str,None]=None,
+                        leave_last: Union[int,None]=None):
         ""
-        if only_older_than_days is None and only_kind is None:
+        if only_older_than_days is None and only_kind is None and leave_last is None:
             logger.warning('this is very desctructive: clearing all event log')
             return EventLog.delete().execute(database=None)
 
         f = []
+
+        if leave_last:
+            i_last = EventLog.select().order_by(EventLog.id.desc()).limit(1).execute(database=None)
+
+            if len(i_last) == 0:
+                logger.warning('no events left, can not clean')
+            else:
+                i_last = i_last[0].id
+                logger.warning('last event %d, clearing all but %s', i_last, leave_last)
+                f.append(EventLog.id < i_last - leave_last)
+                logger.warning('clearing older events: %s', f)
 
         if only_older_than_days:
             t0 = datetime.datetime.now() - datetime.timedelta(days=only_older_than_days)
@@ -531,11 +545,14 @@ class Queue:
             else:
                 raise RuntimeError(f"unknown kind {only_kind}; expecting 'task' or 'worker'")
 
-        F = reduce(lambda x,y: x&y, f)
+        if len(f) > 0:
+            F = reduce(lambda x,y: x&y, f)
 
-        N = EventLog.delete().where(F).execute(database=None)
+            N = EventLog.delete().where(F).execute(database=None)
 
-        logger.info("clearing: %s", N)
+            logger.info("clearing: %s", N)
+        else:
+            N = 0
 
         return N
     

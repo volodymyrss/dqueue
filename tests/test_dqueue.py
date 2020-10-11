@@ -128,6 +128,8 @@ def test_one():
     task_log =  queue.view_log()
     
     print("complete log", len(task_log))
+    x = queue.clear_event_log(leave_last=50)
+    print("clear last 10", x)
 
     n = queue.clear_event_log(only_older_than_days=-1, only_kind="task")
     print("clear of task", n)
@@ -137,6 +139,9 @@ def test_one():
 
     x = queue.clear_event_log()
     print("final clear", x)
+    
+    x = queue.clear_event_log(leave_last=10)
+    print("clear last 10", x)
 
     assert x == 0
     assert n + m == len(task_log)
