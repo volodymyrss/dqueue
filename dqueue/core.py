@@ -68,6 +68,9 @@ def log(*args,**kwargs):
 class Empty(Exception):
     pass
 
+class CorruptEntry(Exception):
+    pass
+
 class CurrentTaskUnfinished(Exception):
     pass
 
@@ -131,7 +134,7 @@ class Task:
                 for i, e_l in enumerate(entry.splitlines()):
                     print(f"problematic json: {i:5d}", e_l)
                 open("/tmp/problematic_entry.json", "wt").write(entry)
-                raise
+                raise CorruptEntry(e, task_dict)
         else:
             task_dict = entry
 
@@ -473,7 +476,18 @@ class Queue:
             raise Exception(f"several tasks ({len(entries)}) are running for this worker: impossible!")
 
         entry=entries[0]
-        self.current_task=Task.from_task_dict(entry.task_dict_string)
+
+        try:
+            self.current_task=Task.from_task_dict(entry.task_dict_string)
+        except CorruptEntry:
+            r=TaskEntry.update({
+                        TaskEntry.modified:datetime.datetime.now(),
+                        TaskEntry.state: "corrupt",
+                    }).where(TaskEntry.key == entry.key).execute(database=None)
+
+            logger.error("found corrupt entry %s, marking as so", entry.key)
+            return self.get(update_expected_in_s)
+
         self.current_task_stored_key=self.current_task.key
 
         if self.current_task.key != entry.key:
