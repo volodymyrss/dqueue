@@ -134,7 +134,7 @@ class Task:
                 for i, e_l in enumerate(entry.splitlines()):
                     print(f"problematic json: {i:5d}", e_l)
                 open("/tmp/problematic_entry.json", "wt").write(entry)
-                raise CorruptEntry(e, task_dict)
+                raise CorruptEntry(e, entry)
         else:
             task_dict = entry
 
