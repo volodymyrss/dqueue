@@ -376,12 +376,15 @@ class Queue:
             logger.debug("task entry: %s", d)
             return d
 
-        if depends_on is None:
-            self.insert_task_entry(task, "waiting")
-            log("task inserted as waiting")
-        else:
-            self.insert_task_entry(task, "locked")
-            log("task inserted as locked")
+        def insert_it():
+            if depends_on is None:
+                self.insert_task_entry(task, "waiting")
+                log("task inserted as waiting")
+            else:
+                self.insert_task_entry(task, "locked")
+                log("task inserted as locked")
+        
+        insert_it()
 
         instance_for_key = None
         for i in range(5):
@@ -392,6 +395,7 @@ class Queue:
             except Exception as e:
                 logger.warning("race condition?")
                 time.sleep(2.)
+                insert_it()
 
         if instance_for_key is None:
             raise Exception("inserted task does not exist!")
