@@ -936,12 +936,19 @@ class WorkerQuestion(SwaggerView):
 
         print("got:", worker_id, task_data)
 
-        task_entry = queue.put(task_data, submission_data=submission_data)
+        try:
+            task_entry = queue.put(task_data, submission_data=submission_data)
+            logger.warning("questioned task: %s", task_entry)
+            return jsonify(
+                        task_entry
+                    )
+        except Exception as e:
+            r = jsonify(
+                        {"exception": "unable to insert"}
+                    )
+            r.status_code = 400
+            return r
 
-        logger.warning("questioned task: %s", task_entry)
-        return jsonify(
-                    task_entry
-                )
 
 app.add_url_rule(
      '/worker/question',
