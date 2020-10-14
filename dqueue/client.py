@@ -77,7 +77,7 @@ class APIClient:
                 try:
                     logger.debug("trying to get token with method %s", n)
                     self._token = m()
-                    logger.info("managed to get token with method %s", n)
+                    logger.debug("managed to get token with method %s", n)
                     break
                 except Exception as e:
                     logger.debug("failed to get token with method %s : %s", n, e)

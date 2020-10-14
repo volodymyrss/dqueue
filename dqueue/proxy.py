@@ -31,7 +31,6 @@ class QueueProxy(DataFacts, Queue):
         return self.client.hub.version().response().result
 
     def list_queues(self, pattern):
-        print(self.client.queues.list().response().result)
         return [ QueueProxy(self.leader+"@"+q) for q in self.client.queues.list().response().result ]
 
     def find_task_instances(self,task,klist=None):

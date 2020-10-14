@@ -59,7 +59,8 @@ def auth(obj):
 
 def log_info(queue):
     for q in queue.list_queues(None):
-        print(f"\033[1;31m{'live facts':>20s}: \033[0m\033[1;36m", "; ".join(f"{k}: {v}" for k,v in queue.summary.items()), "\033[0m")
+        print(f"\033[37m{q}\033[0m")
+        print(f"\033[1;31m{'live facts':>20s}: \033[0m\033[1;36m", "; ".join(f"{k}: {v}" for k,v in q.summary.items()), "\033[0m")
 
 @cli.command()
 @click.pass_obj
@@ -322,8 +323,7 @@ def guardian(obj, watch):
         # stats
 
         print("getting queue statistics...")
-        for k,v in obj['queue'].summary.items():
-            print(k, ":", v, end="; ")
+        log_info(obj['queue'])
         print("\n")
 
         print("sleeping", watch)
