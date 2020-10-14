@@ -322,7 +322,7 @@ class Queue:
 
         if len(r) > 1:
             raise RuntimeError(f"found multiple entries for key {key}: suspecting database inconsistency!")
-        
+
         if len(r) == 0:
             return None
 
@@ -334,7 +334,6 @@ class Queue:
         return r
 
 
-    
     def put(self, task_data: dqtyping.TaskData, submission_data=None, depends_on=None) -> Union[dqtyping.TaskEntry, None]:
         logger.info("putting in queue task_data %s", task_data)
 

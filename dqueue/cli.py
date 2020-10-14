@@ -59,11 +59,7 @@ def auth(obj):
 
 def log_info(queue):
     for q in queue.list_queues(None):
-        logger.info(colored(q, 'green'))
-        logger.info("; ".join(
-                f"{k}: {v}" for k,v in q.summary.items()
-            ))
-        logger.info("\n")
+        print(f"\033[1;31m{'live facts':>20s}: \033[0m\033[1;36m", "; ".join(f"{k}: {v}" for k,v in queue.summary.items()), "\033[0m")
 
 @cli.command()
 @click.pass_obj
@@ -236,10 +232,8 @@ def view(obj, follow, since=0):
                 till_next_info = info_cadence
 
         if time.time() - last_info_time > 5:
-            #log_info(obj['queue'])
 
-            for q in obj['queue'].list_queues(None):
-                print(f"\033[1;31m{'live facts':>20s}: \033[0m\033[1;36m", "; ".join(f"{k}: {v}" for k,v in obj['queue'].summary.items()), "\033[0m")
+            log_info(obj['queue'])
 
             recent_workers = [k for k,v in active_workers.items() if v>time.time()-30 and not k.startswith('oda-dqueue-')]
             print(f"\033[1;31m{len(recent_workers):>5d} recent workers:\033[0m \033[1;35m{', '.join(recent_workers)}\033[0m")

@@ -129,11 +129,12 @@ class SummaryView(SwaggerView):
         get summary of tasks
         """
 
-        queue = dqueue.core.Queue(request.args.get('queue', 'default'))
+        queue_name = request.args.get('queue', 'default')
+        queue = dqueue.core.Queue(queue_name)
 
         tasks = queue.summary
 
-        logger.info("got summary: %s", tasks)
+        logger.info("got summary: %s for %s", tasks, queue_name)
 
         return jsonify(
                 tasks=tasks
