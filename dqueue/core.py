@@ -192,7 +192,7 @@ class Task:
         if 'object_identity' in self.task_data:
             short_name = self.task_data['object_identity']['full_name']
 
-        logger.warning("generating key %s short name %s", key, short_name)
+        logger.debug("generating key %s short name %s", key, short_name)
 
         return key
 
@@ -203,7 +203,28 @@ class Task:
         return "unset"
 
     def score_worker_knowledge(self, worker_knowledge) -> float:
-        return 1.
+        score = 1.
+        
+        for op, pt, s in worker_knowledge:
+            logger.info("scoring worker knowledge: %s %s %s", op, pt, s)
+            
+            s_d = reduce(lambda D,x:D[x], pt, self.task_data)
+
+            if op == "require":
+                if s not in s_d:
+                    score *= 0.
+            elif op == "refuse":
+                if s in s_d:
+                    score *= 0.
+            else:
+                raise RuntimeError(f"unknown operation {op} in score_worker_knowledge")
+
+            logger.info("now score %s", score)
+
+            if score <= 0:
+                break
+
+        return score
 
 def makedir_if_neccessary(directory):
     try:
@@ -442,17 +463,28 @@ class Queue:
     def get_worker_states(self):
         return [ model_to_dict(r) for r in EventLog.select().where(EventLog.worker_state!="unset").order_by(EventLog.timestamp.desc()).limit(1).execute(database=None) ]
 
-    def get_one_task(self, update_expected_in_s):
-        r=TaskEntry.update({
+    def get_one_task(self, update_expected_in_s, offset):
+        select_task = TaskEntry.select(TaskEntry.key)\
+                    .where( (TaskEntry.state=="waiting") & (TaskEntry.queue==self.queue) )\
+                    .order_by(TaskEntry.created)\
+                    .offset(offset)\
+                    .limit(1)
+
+        r = select_task.execute(database=None) # not atomic!?
+
+        t = TaskEntry.update({
                         TaskEntry.state:"running",
                         TaskEntry.worker_id:self.worker_id,
                         TaskEntry.modified:datetime.datetime.now(),
                         TaskEntry.update_expected_in_s:update_expected_in_s
                     })\
-                    .order_by(TaskEntry.created)\
-                    .where( (TaskEntry.state=="waiting") & (TaskEntry.queue==self.queue) ).limit(1).execute(database=None)
+                    .where(TaskEntry.key == r[0].key)
 
-        if r==0:
+        print("task update sql:", t.sql())
+
+        r = t.execute(database=None)
+
+        if r == 0:
             raise Empty()
 
         entries=TaskEntry.select().where(TaskEntry.worker_id==self.worker_id,TaskEntry.state=="running").order_by(TaskEntry.modified.desc()).limit(1).execute(database=None)
@@ -514,22 +546,34 @@ class Queue:
             logger.warning("no update expected timeout, setting to default %s", default_update_expected_in_s)
             update_expected_in_s = default_update_expected_in_s
     
+        offset = 0
         while True:
-            self.get_one_task(update_expected_in_s)
+            self.get_one_task(update_expected_in_s, offset=offset)
 
             if self.current_task is None:
                 time.sleep(1)
                 continue
 
             worker_fit_score = self.current_task.score_worker_knowledge(worker_knowledge) # also sort TODO
-            if worker_fit_score < 0:
+            if worker_fit_score <= 0:
                 logger.warning("picked task %s has negative (%s) worker (%s) score: skipping",
-                        self.current_task.key, worker_fit_score, worker_knowlege)
+                        self.current_task.key, worker_fit_score, worker_knowledge)
+
+                r=TaskEntry.update({
+                                TaskEntry.state:"waiting",
+                            })\
+                            .where( (TaskEntry.key == self.current_task.key) ).limit(1).execute(database=None)
+
+                offset += 1
+                self.current_task = None
+
                 time.sleep(1)
                 continue
 
             break
 
+        if self.current_task is None:
+            raise Empty()
 
 
         log("task is running",self.current_task)
@@ -831,6 +875,10 @@ class Queue:
 
 
     def task_done(self):
+        if self.current_task is None:
+            log("WARNING: trying to claim done task, but no task is current")
+            return
+
         log("task done, closing:",self.current_task.key,self.current_task)
         log("task done, stored key:",self.current_task_stored_key)
 

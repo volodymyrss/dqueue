@@ -342,3 +342,46 @@ def test_expiration():
     assert queue.info['running'] == 0
     assert queue.info['failed'] == 1
 
+def test_score():
+    import dqueue
+    
+    queue=dqueue.Queue("test-queue")
+    queue.wipe(["waiting","done","running","failed","locked"])
+    queue.clear_task_history()
+    
+    assert queue.info['waiting']==0
+    assert queue.info['done']==0
+    assert queue.info['running']==0
+    assert queue.info['failed']==0
+    assert queue.info['locked']==0
+
+
+    t11 = dict(test=1,
+              data=dict(
+                        modules=["osa10-module","osa11-module"]
+                   )
+             )
+    assert queue.put(t11)['state']=="submitted"
+
+    t10 = dict(test=1,
+              data=dict(
+                        modules=["osa10-module"]
+                   )
+             )
+    assert queue.put(t10)['state']=="submitted"
+
+
+    tr11=queue.get(worker_knowledge=[
+             ('require', ['data', 'modules'], 'osa11-module'),
+         ]).task_data
+    queue.task_done()
+    
+    assert t11 == tr11
+    
+    tr10=queue.get(worker_knowledge=[
+             ('refuse', ['data', 'modules'], 'osa11-module'),
+         ]).task_data
+    queue.task_done()
+
+    assert t10 == tr10
+    
