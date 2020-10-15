@@ -204,25 +204,26 @@ class Task:
 
     def score_worker_knowledge(self, worker_knowledge) -> float:
         score = 1.
-        
-        for op, pt, s in worker_knowledge:
-            logger.info("scoring worker knowledge: %s %s %s", op, pt, s)
-            
-            s_d = reduce(lambda D,x:D[x], pt, self.task_data)
 
-            if op == "require":
-                if s not in s_d:
-                    score *= 0.
-            elif op == "refuse":
-                if s in s_d:
-                    score *= 0.
-            else:
-                raise RuntimeError(f"unknown operation {op} in score_worker_knowledge")
+        if worker_knowledge is not None:
+            for op, pt, s in worker_knowledge:
+                logger.info("scoring worker knowledge: %s %s %s", op, pt, s)
+                
+                s_d = reduce(lambda D,x:D[x], pt, self.task_data)
 
-            logger.info("now score %s", score)
+                if op == "require":
+                    if s not in s_d:
+                        score *= 0.
+                elif op == "refuse":
+                    if s in s_d:
+                        score *= 0.
+                else:
+                    raise RuntimeError(f"unknown operation {op} in score_worker_knowledge")
 
-            if score <= 0:
-                break
+                logger.info("now score %s", score)
+
+                if score <= 0:
+                    break
 
         return score
 
@@ -471,6 +472,9 @@ class Queue:
                     .limit(1)
 
         r = select_task.execute(database=None) # not atomic!?
+        
+        if len(r) == 0:
+            raise Empty()
 
         t = TaskEntry.update({
                         TaskEntry.state:"running",
@@ -484,8 +488,6 @@ class Queue:
 
         r = t.execute(database=None)
 
-        if r == 0:
-            raise Empty()
 
         entries=TaskEntry.select().where(TaskEntry.worker_id==self.worker_id,TaskEntry.state=="running").order_by(TaskEntry.modified.desc()).limit(1).execute(database=None)
         if len(entries)>1:
