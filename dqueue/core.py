@@ -202,6 +202,9 @@ class Task:
     def filename_instance(self):
         return "unset"
 
+    def score_worker_knowledge(self, worker_knowledge) -> float:
+        return 1.
+
 def makedir_if_neccessary(directory):
     try:
         os.makedirs(directory)
@@ -439,24 +442,7 @@ class Queue:
     def get_worker_states(self):
         return [ model_to_dict(r) for r in EventLog.select().where(EventLog.worker_state!="unset").order_by(EventLog.timestamp.desc()).limit(1).execute(database=None) ]
 
-    def get(self, update_expected_in_s: float=-1):
-        ""
-        if self.current_task is not None:
-            raise CurrentTaskUnfinished(self.current_task)
-
-        self.note_worker_state("ready")
-
-        max_update_expected_in_s = 3600
-        default_update_expected_in_s = 1200
-
-        if update_expected_in_s > max_update_expected_in_s:
-            logger.warning("update expected timeout %s is too long, setting to maximum %s", update_expected_in_s, max_update_expected_in_s)
-            update_expected_in_s = max_update_expected_in_s
-
-        if update_expected_in_s <= 0:
-            logger.warning("no update expected timeout, setting to default %s", default_update_expected_in_s)
-            update_expected_in_s = default_update_expected_in_s
-    
+    def get_one_task(self, update_expected_in_s):
         r=TaskEntry.update({
                         TaskEntry.state:"running",
                         TaskEntry.worker_id:self.worker_id,
@@ -467,7 +453,6 @@ class Queue:
                     .where( (TaskEntry.state=="waiting") & (TaskEntry.queue==self.queue) ).limit(1).execute(database=None)
 
         if r==0:
-            #self.try_all_locked()
             raise Empty()
 
         entries=TaskEntry.select().where(TaskEntry.worker_id==self.worker_id,TaskEntry.state=="running").order_by(TaskEntry.modified.desc()).limit(1).execute(database=None)
@@ -477,16 +462,17 @@ class Queue:
         entry=entries[0]
 
         try:
-            self.current_task=Task.from_task_dict(entry.task_dict_string)
+            self.current_task = Task.from_task_dict(entry.task_dict_string)
         except CorruptEntry:
-            r=TaskEntry.update({
+            r = TaskEntry.update({
                         TaskEntry.modified:datetime.datetime.now(),
                         TaskEntry.state: "corrupt",
                     }).where(TaskEntry.key == entry.key).execute(database=None)
 
             logger.error("found corrupt entry %s, marking as so", entry.key)
-            return self.get(update_expected_in_s)
+            return None
 
+        # validate
         self.current_task_stored_key=self.current_task.key
 
         if self.current_task.key != entry.key:
@@ -509,6 +495,41 @@ class Queue:
             #open(fn, "w").write(open(self.queue_dir("waiting")+"/"+task_name).read())
 
             raise Exception("Inconsistent storage")
+
+    def get(self, update_expected_in_s: float=-1, worker_knowledge=None):
+        ""
+        if self.current_task is not None:
+            raise CurrentTaskUnfinished(self.current_task)
+
+        self.note_worker_state("ready")
+
+        max_update_expected_in_s = 3600
+        default_update_expected_in_s = 1200
+
+        if update_expected_in_s > max_update_expected_in_s:
+            logger.warning("update expected timeout %s is too long, setting to maximum %s", update_expected_in_s, max_update_expected_in_s)
+            update_expected_in_s = max_update_expected_in_s
+
+        if update_expected_in_s <= 0:
+            logger.warning("no update expected timeout, setting to default %s", default_update_expected_in_s)
+            update_expected_in_s = default_update_expected_in_s
+    
+        while True:
+            self.get_one_task(update_expected_in_s)
+
+            if self.current_task is None:
+                time.sleep(1)
+                continue
+
+            worker_fit_score = self.current_task.score_worker_knowledge(worker_knowledge) # also sort TODO
+            if worker_fit_score < 0:
+                logger.warning("picked task %s has negative (%s) worker (%s) score: skipping",
+                        self.current_task.key, worker_fit_score, worker_knowlege)
+                time.sleep(1)
+                continue
+
+            break
+
 
 
         log("task is running",self.current_task)

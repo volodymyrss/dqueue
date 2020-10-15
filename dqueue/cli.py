@@ -89,11 +89,31 @@ def console_size():
 @click.option("-d", "--debug", default=False, is_flag=True)
 @click.option("-l", "--log", default=False, is_flag=True)
 @click.option("-i", "--info", default=False, is_flag=True)
-@click.option("-s", "--state", default=None)
+@click.option("-s", "--select", default=None)
+@click.option("-j", "--json-output", default=None)
 #@click.option("-a", "--max-age", default=None)
 @click.pass_obj
-def list(obj, debug, log, info, state):
+def list(obj, debug, log, info, select, json_output):
+    state = None
+    select_task = None
+
+    j_f = None
+    if json_output:
+        j_f = open(json_output, "wt")
+
+
+    if select is not None:
+        selector, selection = select.split(":")
+
+        if selector == "state":
+            state = selection
+        elif selector == "task":
+            select_task = selection
+
     for task in obj['queue'].list_tasks(state=state):
+        if select_task is not None:
+            if task['key'] != select_task:
+                continue
 
         td = task['task_dict']['task_data']
 
@@ -132,6 +152,9 @@ def list(obj, debug, log, info, state):
             t = Task.from_task_dict(task['task_dict'])
             print("Task: ", t)
             print("Task key: ", t.key)
+        
+        if j_f is not None:
+            json.dump(task['task_dict'], j_f)
 
         if log:
             for l in obj['queue'].view_log(task['key'])['event_log']:
