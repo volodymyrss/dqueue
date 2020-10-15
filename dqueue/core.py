@@ -212,7 +212,9 @@ class Task:
                 op, pt, s = r 
                 logger.info("scoring worker knowledge: %s %s %s", op, pt, s)
                 
-                s_d = reduce(lambda D,x:D[x], pt, self.task_data)
+                s_d = json.loads(
+                        json.dumps(reduce(lambda D,x:D[x], pt, self.task_data)).replace('null', '"None"')
+                        )
                 logger.info("scoring on task data selection %s", s_d)
 
                 if op == "require":
