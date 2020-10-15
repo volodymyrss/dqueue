@@ -213,6 +213,7 @@ class Task:
                 logger.info("scoring worker knowledge: %s %s %s", op, pt, s)
                 
                 s_d = reduce(lambda D,x:D[x], pt, self.task_data)
+                logger.info("scoring on task data selection %s", s_d)
 
                 if op == "require":
                     if s not in s_d:
