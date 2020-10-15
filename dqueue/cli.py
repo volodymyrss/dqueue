@@ -55,6 +55,7 @@ def version(obj, validate):
 @click.pass_obj
 def auth(obj):
     print(core.__version__)
+    print("my auth level: ADMIN")
 
 
 def log_info(queue):
