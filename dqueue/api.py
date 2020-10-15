@@ -218,7 +218,7 @@ class WorkerOffer(SwaggerView):
                     'type': 'number',
                 },
                 {
-                    'name': 'worker_knowledge',
+                    'name': 'worker_knowledge_json',
                     'in': 'query',
                     'required': False,
                     'type': 'string',
@@ -237,7 +237,12 @@ class WorkerOffer(SwaggerView):
 
     def get(self, worker_id):
         update_expected_in_s = request.args.get('update_expected_in_s', -1, type=float)
-        worker_knowledge = request.args.get('worker_knowledge', None)
+
+        worker_knowledge = json.loads(request.args.get('worker_knowledge_json', '{}'))
+
+        if worker_knowledge == {}:
+            worker_knowledge = None
+
         queue = dqueue.core.Queue(request.args.get('queue', 'default'), worker_id=worker_id)
 
         try:

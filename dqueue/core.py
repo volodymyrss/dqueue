@@ -206,7 +206,10 @@ class Task:
         score = 1.
 
         if worker_knowledge is not None:
-            for op, pt, s in worker_knowledge:
+            for r in worker_knowledge:
+                if len(r) != 3:
+                    raise RuntimeError(f"worker knowledge strange: {r}")
+                op, pt, s = r 
                 logger.info("scoring worker knowledge: %s %s %s", op, pt, s)
                 
                 s_d = reduce(lambda D,x:D[x], pt, self.task_data)

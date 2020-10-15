@@ -208,4 +208,36 @@ class TestLiveServer:
                     params={},
                 )
 
+    def test_score(self):
+        self.queue.purge()
+        queue = self.queue
+        
+        t11 = dict(test=1,
+                  data=dict(
+                            modules=["osa10-module","osa11-module"]
+                       )
+                 )
+        assert queue.put(t11)['state']=="submitted"
 
+        t10 = dict(test=1,
+                  data=dict(
+                            modules=["osa10-module"]
+                       )
+                 )
+        assert queue.put(t10)['state']=="submitted"
+
+
+        tr11=queue.get(worker_knowledge=[
+                 ('require', ['data', 'modules'], 'osa11-module'),
+             ]).task_data
+        queue.task_done()
+        
+        assert t11 == tr11
+        
+        tr10=queue.get(worker_knowledge=[
+                 ('refuse', ['data', 'modules'], 'osa11-module'),
+             ]).task_data
+        queue.task_done()
+
+        assert t10 == tr10
+        

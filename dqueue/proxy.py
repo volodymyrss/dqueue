@@ -129,11 +129,14 @@ class QueueProxy(DataFacts, Queue):
                 ).response().result
 
 
-    def get(self, update_expected_in_s=-1):
+    def get(self, update_expected_in_s=-1, worker_knowledge=None):
         if self.current_task is not None:
             raise CurrentTaskUnfinished(self.current_task)
 
-        r = self.client.worker.getOffer(worker_id=self.worker_id, queue=self.queue, update_expected_in_s= update_expected_in_s).response()
+        r = self.client.worker.getOffer(worker_id=self.worker_id, 
+                                        queue=self.queue, 
+                                        update_expected_in_s= update_expected_in_s, 
+                                        worker_knowledge_json=json.dumps(worker_knowledge or {})).response()
 
         if r.result is None:
             raise Empty()
