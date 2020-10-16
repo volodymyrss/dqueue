@@ -16,7 +16,7 @@ from functools import reduce
 
 from bravado.client import SwaggerClient
 
-__version__ = "0.1.33-dev0"
+__version__ = "0.1.33"
 
 try:
     import io
