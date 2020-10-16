@@ -228,14 +228,14 @@ class TestLiveServer:
 
 
         tr11=queue.get(worker_knowledge=[
-                 ('require', ['data', 'modules'], 'osa11-module'),
+                {'any-of': [dict(key=['data', 'modules'], value='osa11-module')]},
              ]).task_data
         queue.task_done()
         
         assert t11 == tr11
         
         tr10=queue.get(worker_knowledge=[
-                 ('refuse', ['data', 'modules'], 'osa11-module'),
+                {'none-of': [dict(key=['data', 'modules'], value='osa11-module')]},
              ]).task_data
         queue.task_done()
 

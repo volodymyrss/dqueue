@@ -207,26 +207,40 @@ class Task:
 
         if worker_knowledge is not None:
             for r in worker_knowledge:
-                if len(r) != 3:
-                    raise RuntimeError(f"worker knowledge strange: {r}")
-                op, pt, s = r 
-                logger.info("scoring worker knowledge: %s %s %s", op, pt, s)
+                if len(r) != 1:
+                    raise RuntimeError(f"each worker_knowledge entry needs to have one operation, found {r}")
+
+                op, kv = list(r.items())[0]
+
+                if op == "any-of":
+                    entry_score = 0.
+                elif op == "none-of":
+                    entry_score = 1.
+
+                for l in kv:
+                    pt = l['key']
+                    s = l['value']
+
+                    logger.info("scoring worker knowledge: %s %s %s, current score %s", op, pt, s, entry_score)
                 
-                s_d = json.loads(
-                        json.dumps(reduce(lambda D,x:D[x], pt, self.task_data)).replace('null', '"None"')
-                        )
-                logger.info("scoring on task data selection %s", s_d)
+                    s_d = json.loads(
+                                json.dumps(reduce(lambda D,x:D[x], pt, self.task_data)).replace('null', '"None"')
+                            )
+                    logger.info("scoring on task data selection %s", s_d)
 
-                if op == "require":
-                    if s not in s_d:
-                        score *= 0.
-                elif op == "refuse":
-                    if s in s_d:
-                        score *= 0.
-                else:
-                    raise RuntimeError(f"unknown operation {op} in score_worker_knowledge")
+                    if op == "any-of":
+                        if s in s_d:
+                            entry_score += 1.
+                    elif op == "none-of":
+                        if s in s_d:
+                            entry_score *= 0.
+                    else:
+                        raise RuntimeError(f"unknown operation {op} in score_worker_knowledge")
 
-                logger.info("now score %s", score)
+                    logger.info("now score %s", score)
+                
+                score *= entry_score
+                logger.info("entry score %s, total score %s", entry_score, score)
 
                 if score <= 0:
                     break
@@ -564,7 +578,7 @@ class Queue:
 
             worker_fit_score = self.current_task.score_worker_knowledge(worker_knowledge) # also sort TODO
             if worker_fit_score <= 0:
-                logger.warning("picked task %s has negative (%s) worker (%s) score: skipping",
+                logger.warning("picked task %s has non-positive (%s) worker (%s) score: skipping",
                         self.current_task.key, worker_fit_score, worker_knowledge)
 
                 r=TaskEntry.update({
