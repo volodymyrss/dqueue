@@ -33,10 +33,11 @@ auth = HTTPTokenAuth(scheme='Bearer')
 
 @auth.verify_token
 def verify_token(token):
+    logger.error("verify_token with token: \"%s\"", token)
     try:
         return dqauth.decode(token)
     except Exception as e:
-        logger.error("problem: %s decoding token: %s", e, token)
+        logger.error("verify_token experienced problem: %s decoding token: \"%s\"", e, token)
 
 print("created app", id(app))
 
