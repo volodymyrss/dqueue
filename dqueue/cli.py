@@ -7,6 +7,7 @@ import pprint
 import time
 import subprocess
 from termcolor import colored
+from collections import defaultdict
 
 from dqueue import from_uri
 from dqueue.core import Queue, Task
@@ -180,7 +181,8 @@ def logcli():
 @click.pass_obj
 @click.option("--follow", "-f", is_flag=True, default=False)
 @click.option("--since", "-s", default=0)
-def view(obj, follow, since=0):
+@click.option("--window", "-w", default=60)
+def view(obj, follow, since=0, window=60):
     waiting = False
 
     info_cadence = 10
@@ -189,7 +191,7 @@ def view(obj, follow, since=0):
 
     task_info_cache={}
 
-    active_workers = {}
+    active_workers = defaultdict(dict)
 
     while True:
         new_messages = obj['queue'].view_log(since=since)['event_log']
@@ -198,8 +200,10 @@ def view(obj, follow, since=0):
         for l in new_messages:
             logging.debug(l)
 
+            l['timestamp_seconds'] = time.mktime(time.strptime(l["timestamp"], "%a, %d %b %Y %H:%M:%S %Z"))
+
             if waiting:
-                print("")
+                print("\n")
                 waiting=False
 
 
@@ -233,7 +237,14 @@ def view(obj, follow, since=0):
                     name=name,
                     **l))
 
-            active_workers[l['worker_id']] = time.time()
+            w = active_workers[l['worker_id']]
+            w['last_active_timestamp'] = l["timestamp_seconds"]
+            if l['message'] == "task done":
+                w['stats_done'] = w.get('stats_done', 0) + 1
+            w['stats_all'] = w.get('stats_all', 0) + 1
+            w['last_message'] = l['message']
+            w['last_name'] = name
+            w['last_task_key'] = l['task_key']
 
             logger.debug(l)
             
@@ -260,8 +271,17 @@ def view(obj, follow, since=0):
 
             log_info(obj['queue'])
 
-            recent_workers = [k for k,v in active_workers.items() if v>time.time()-30 and not k.startswith('oda-dqueue-')]
+            recent_workers = [k for k, v in active_workers.items() if
+                                    v['last_active_timestamp']>time.mktime(time.gmtime())-window and not k.startswith('oda-dqueue-')]
             print(f"\033[1;31m{len(recent_workers):>5d} recent workers:\033[0m \033[1;35m{', '.join(recent_workers)}\033[0m")
+
+            for k,v in active_workers.items():
+                if k.startswith('oda-dqueue-'): continue
+                if not v['last_active_timestamp']>time.mktime(time.gmtime())-window: continue
+
+                print(f"\033[37m- {time.mktime(time.gmtime())-v['last_active_timestamp']:4.0f}s ago {k[:30]:30}" + 
+                      f" {v.get('stats_done', 0):3d} / {v.get('stats_all', 0):4d}" +
+                      f" {v['last_message']:40s} {v['last_name']:20s} {v['last_task_key']:10s}\033[0m")
 
             last_info_time = time.time()
 
