@@ -389,3 +389,7 @@ def test_score():
 
     assert t10 == tr10
     
+def test_local_queue():
+    import dqueue
+    
+    queue=dqueue.from_uri("test-queue")

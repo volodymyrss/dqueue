@@ -33,3 +33,5 @@ def from_uri(queue_uri: Union[str, None]=None):
         except Exception as e: #todo
             logger.warning("ODAHUB option %s unavailable: %s", uri, e)
 
+    raise Exception(f"failed to find ODAHUB, tried: \"{queue_uri}\"")
+

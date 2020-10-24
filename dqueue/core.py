@@ -292,6 +292,9 @@ class Queue:
     def __repr__(self):
         return f"[{self.__class__.__name__}: {self.queue} @ {self.current_task} ]"
 
+    def version(self):
+        return __version__
+
     def list_queues(self, pattern=None):
         return list_queues(pattern)
 

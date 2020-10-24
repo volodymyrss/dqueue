@@ -35,7 +35,7 @@ run-guardian: build
 build:
 	rm -fv dist/*
 	python setup.py sdist
-	docker build -t $(IMAGE) .
+	DOCKER_BUILDKIT=1 docker build -t $(IMAGE) .
 
 push: build
 	docker push $(IMAGE)
