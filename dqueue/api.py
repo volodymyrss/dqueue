@@ -425,6 +425,8 @@ class WorkerDataAssertFact(SwaggerView):
             }
 
     def post(self):
+        logger = logging.getLogger(__name__ + "." self.operationId)
+
         worker_id = request.args.get('worker_id')
         payload_dict = request.json
 
@@ -450,6 +452,8 @@ class WorkerDataAssertFact(SwaggerView):
                         dict(dag=dag, data=data),
                         bucket_name=dag_bucket,
                     )
+
+            logger.info("returned bucket %s", bucket)
 
             assert bucket == dag_bucket
         except Exception as e:
