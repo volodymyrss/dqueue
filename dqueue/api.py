@@ -432,7 +432,8 @@ class WorkerDataAssertFact(SwaggerView):
 
         try:
             dag = json.loads(payload_dict['dag_json'])
-            data = json.loads(payload_dict['data_json'])
+            data_json = payload_dict['data_json']
+            data = json.loads(data_json)
         except (KeyError, TypeError) as e:
             return Response(
                         f"insufficient data: {e}",
@@ -445,7 +446,7 @@ class WorkerDataAssertFact(SwaggerView):
 
         dag_bucket = "odahub-" + odakb.datalake.form_bucket_name(dag)
         
-        logger.info("storing object %s in dag-motivated bucket: %s", dag[-1], dag_bucket)
+        logger.info("storing object %s size %s Mb in dag-motivated bucket: %s", dag[-1], len(data_json)/1024./1024, dag_bucket)
 
         try:
             bucket = odakb.datalake.store(
