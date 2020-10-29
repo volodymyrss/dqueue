@@ -425,7 +425,7 @@ class WorkerDataAssertFact(SwaggerView):
             }
 
     def post(self):
-        logger = logging.getLogger(__name__ + "." self.operationId)
+        logger = logging.getLogger(__name__ + "." + self.operationId)
 
         worker_id = request.args.get('worker_id')
         payload_dict = request.json
