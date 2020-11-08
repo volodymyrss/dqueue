@@ -431,6 +431,7 @@ class WorkerDataAssertFact(SwaggerView):
         payload_dict = request.json
 
         try:
+            dag_json = json.loads(payload_dict['dag_json'])
             dag = json.loads(payload_dict['dag_json'])
             data_json = payload_dict['data_json']
             data = json.loads(data_json)
@@ -449,6 +450,8 @@ class WorkerDataAssertFact(SwaggerView):
         logger.info("storing object %s size %s Mb in dag-motivated bucket: %s", dag[-1], len(data_json)/1024./1024, dag_bucket)
 
         try:
+            open
+
             bucket = odakb.datalake.store(
                         dict(dag=dag, data=data),
                         bucket_name=dag_bucket,

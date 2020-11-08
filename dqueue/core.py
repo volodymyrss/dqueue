@@ -516,6 +516,10 @@ class Queue:
         if len(entries)>1:
             raise Exception(f"several tasks ({len(entries)}) are running for this worker: impossible!")
 
+        if len(entries) == 0:
+            logger.error("task disappeared")
+            raise Empty()
+
         entry=entries[0]
 
         try:
