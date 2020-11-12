@@ -6,6 +6,9 @@ import sys
 import pprint
 import time
 import subprocess
+import datetime
+import random
+import socket
 from termcolor import colored
 from collections import defaultdict
 
@@ -411,24 +414,43 @@ def runnercli():
 @click.argument("list-runners-command")
 @click.option("-t", "--timeout", default=10)
 @click.option("-m", "--max-runners", default=100)
+@click.option("-n", "--min-waiting-jobs", default=2)
 @click.pass_obj
-def start_executor(obj, deploy_runner_command, list_runners_command, timeout, max_runners):
+def start_executor(obj, deploy_runner_command, list_runners_command, timeout, max_runners, min_waiting_jobs):
+    age = 0
+
     while True:
         r = obj['queue'].list_queues(None)
         for q in r:
             summary = q.summary
             print(f"queue: \033[33m{q}\033[0m", "; ".join([ f"{k}: {v}" for k, v in summary.items() ]))
+
+            tpars = dict(
+                dt=datetime.datetime.now(),
+                randint=random.randint(0, 100000),
+                qsummary=summary,
+                hostname=socket.gethostname(),
+                pid=os.getpid(),
+                age=age,
+            )
+
             if summary['waiting'] > 0:
                 print(f"\033[31mfound {summary['waiting']} waiting jobs, need to start some runners\033[0m")
                 
                 runners = subprocess.check_output(["bash", "-c", list_runners_command]).decode().split("\n")
+
+                if len(runners) == 1 and runners[0] == "":
+                    runners = []
                 
-                print(f"\033[33mfound {len(runners)} live runners, max {max_runners}, need at least {summary['waiting']}\033[0m")
-                if len(runners) >= min(max_runners, summary['waiting']):
+                print(f"\033[33mfound {len(runners)} live runners, max {max_runners}, min waiting to trigger {min_waiting_jobs}, need at least {summary['waiting'] - min_waiting_jobs}\033[0m")
+                if len(runners) >= min(max_runners, summary['waiting'] - min_waiting_jobs):
                     print(f"\033[33mfound enough runners {len(runners)}\033[0m")
                 else:
-                    print(f"\033[31mexecuting: {deploy_runner_command}\033[0m")
-                    subprocess.check_output(["bash", "-c", deploy_runner_command])
+                    cmd = deploy_runner_command.format(**tpars)
+                    print(f"\033[31mexecuting: {cmd}\033[0m")
+                    subprocess.check_output(["bash", "-c", cmd])
+
+            age += 1
 
 
         time.sleep(timeout)
