@@ -5,7 +5,7 @@ from .data import DataFacts
 
 import logging
 
-def from_uri(queue_uri: Union[str, None]=None):
+def from_uri(queue_uri: Union[str, None]=None, worker_id: Union[str, None]=None):
     """"""
     logger = logging.getLogger("from_uri")
 
@@ -20,9 +20,9 @@ def from_uri(queue_uri: Union[str, None]=None):
         logger.info("found ODAHUB URI option: %s", uri)
 
         if uri.startswith("http://") or uri.startswith("https://"):
-            r = remote(uri)
+            r = remote(uri, worker_id)
         else:
-            r = local(uri)
+            r = local(uri, worker_id)
 
         try:
             logger.info("probing connection...")
