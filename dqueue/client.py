@@ -32,8 +32,8 @@ class APIClient:
     def __repr__(self):
         return f"[ {self.__class__.__name__}: leader={self.leader} queue={self.queue} ]"
 
-    def __init__(self, queue_uri="http://localhost:5000@default"):
-        super().__init__()
+    def __init__(self, queue_uri="http://localhost:5000@default", worker_id=None):
+        super().__init__(worker_id=worker_id)
 
         r = re.search("(https?://.*?)@(.*)", queue_uri)
         if not r:

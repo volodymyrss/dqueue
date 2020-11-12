@@ -298,7 +298,7 @@ class Queue:
     def list_queues(self, pattern=None):
         return list_queues(pattern)
 
-    def __init__(self,queue="default", worker_id=None):
+    def __init__(self, queue="default", worker_id=None):
         ""
 
         if worker_id is None:
