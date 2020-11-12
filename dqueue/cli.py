@@ -423,8 +423,8 @@ def start_executor(obj, deploy_runner_command, list_runners_command, timeout, ma
                 
                 runners = subprocess.check_output(["bash", "-c", list_runners_command]).decode().split("\n")
                 
-                print(f"\033[33mfound {len(runners)} live runners, max {max_runners}\033[0m")
-                if len(runners) >= max_runners:
+                print(f"\033[33mfound {len(runners)} live runners, max {max_runners}, need at least {summary['waiting']}\033[0m")
+                if len(runners) >= min(max_runners, summary['waiting']):
                     print(f"\033[33mfound enough runners {len(runners)}\033[0m")
                 else:
                     print(f"\033[31mexecuting: {deploy_runner_command}\033[0m")
