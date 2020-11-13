@@ -22,7 +22,7 @@ setup(name='oda-node',
           'pymysql',
           'peewee',
           'retrying',
-          'oda-knowledge-base[cwl]>=0.6.23', # should be an option
+          'oda-knowledge-base[cwl]>=0.7.0', # should be an option
           'pyjwt',
           ],
       zip_safe=False,
