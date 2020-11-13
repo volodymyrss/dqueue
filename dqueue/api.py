@@ -449,20 +449,28 @@ class WorkerDataAssertFact(SwaggerView):
         
         logger.info("storing object %s size %s Mb in dag-motivated bucket: %s", dag[-1], len(data_json)/1024./1024, dag_bucket)
 
-        try:
-            open
+        attempts_left = 5
+        bucket = None
 
-            bucket = odakb.datalake.store(
-                        dict(dag=dag, data=data),
-                        bucket_name=dag_bucket,
-                    )
+        while bucket is None:
+            try:
+                bucket = odakb.datalake.store(
+                            dict(dag=dag, data=data),
+                            bucket_name=dag_bucket,
+                        )
 
-            logger.info("returned bucket %s", bucket)
+                logger.info("returned bucket %s", bucket)
 
-            assert bucket == dag_bucket
-        except Exception as e:
-            logger.error("unable to store bucket %s in datalake: %s", dag_bucket, e)
-            raise
+                assert bucket == dag_bucket
+            except Exception as e:
+                logger.error("unable to store bucket %s in datalake: %s", dag_bucket, e)
+                if attempts_left > 0:
+                    logger.warning("will retry bucket store, attempts left %s", attempts_left)
+                    attempts_left -= 1
+
+                    time.sleep(5)
+                else:
+                    raise
 
         logger.info("succesfully returning!")
 
