@@ -472,7 +472,7 @@ class WorkerDataAssertFact(SwaggerView):
 
                     time.sleep(5)
                 else:
-                    fn = f"failed-bucket-{dag_bucket}.json"
+                    fn = f"/tmp/failed-bucket-{dag_bucket}.json"
                     json.dump(package, open(fn, "w"))
                     logger.error("stored debug bucket to %s", fn)
                     raise
