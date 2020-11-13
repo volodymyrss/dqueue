@@ -584,6 +584,7 @@ class Queue:
 
             if tried_tasks > 50: # TODO: HC
                 logger.warning("stopping search for task, exceeded max")
+                self.current_task = None
                 break
 
             if self.current_task is None:
