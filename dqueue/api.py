@@ -449,13 +449,15 @@ class WorkerDataAssertFact(SwaggerView):
         
         logger.info("storing object %s size %s Mb in dag-motivated bucket: %s", dag[-1], len(data_json)/1024./1024, dag_bucket)
 
-        attempts_left = 5
+        attempts_left = 1
         bucket = None
 
+        package = dict(dag=dag, data=data)
         while bucket is None:
+
             try:
                 bucket = odakb.datalake.store(
-                            dict(dag=dag, data=data),
+                            package,
                             bucket_name=dag_bucket,
                         )
 
@@ -470,6 +472,7 @@ class WorkerDataAssertFact(SwaggerView):
 
                     time.sleep(5)
                 else:
+                    json.dump(package, open(f"failed-bucket-{dag_bucket}.json", "w"))
                     raise
 
         logger.info("succesfully returning!")
