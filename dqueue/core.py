@@ -576,8 +576,11 @@ class Queue:
             update_expected_in_s = default_update_expected_in_s
     
         offset = 0
+
+        tried_tasks = 0
         while True:
             self.get_one_task(update_expected_in_s, offset=offset)
+            tried_tasks += 1
 
             if self.current_task is None:
                 time.sleep(1)
@@ -585,8 +588,8 @@ class Queue:
 
             worker_fit_score = self.current_task.score_worker_knowledge(worker_knowledge) # also sort TODO
             if worker_fit_score <= 0:
-                logger.warning("picked task %s has non-positive (%s) worker (%s) score: skipping",
-                        self.current_task.key, worker_fit_score, worker_knowledge)
+                logger.warning("picked task %s has non-positive (%s) worker (%s) score: skipping; tried %s current offset %s",
+                        self.current_task.key, worker_fit_score, worker_knowledge, tried_tasks, offset)
 
                 r=TaskEntry.update({
                                 TaskEntry.state:"waiting",
