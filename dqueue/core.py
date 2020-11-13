@@ -582,6 +582,10 @@ class Queue:
             self.get_one_task(update_expected_in_s, offset=offset)
             tried_tasks += 1
 
+            if tried_tasks > 50: # TODO: HC
+                logger.warning("stopping search for task, exceeded max")
+                break
+
             if self.current_task is None:
                 time.sleep(1)
                 continue
