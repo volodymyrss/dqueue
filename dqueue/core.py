@@ -852,6 +852,7 @@ class Queue:
             logger.error("insert result was %s but found mismatch between task_dict_string and stored: %s != %s; complete entry %s", 
                     insert_result,
                     r[0].task_dict_string, serialized_task, model_to_dict(r[0]))
+            logger.error("insert result was %s but found mismatch between task_dict_string and stored: could it be because of size limit of peewee db?")
             raise InsertTaskAnomaly()
 
         log("task successfully inserted")

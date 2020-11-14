@@ -3,6 +3,8 @@ import peewee # type: ignore
 import logging
 import datetime
 
+# beware that insert task may fail if mysql field is too small!
+
 logger = logging.getLogger(__name__)
 
 from playhouse.db_url import connect # type: ignore
