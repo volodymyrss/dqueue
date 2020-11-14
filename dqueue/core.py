@@ -490,7 +490,7 @@ class Queue:
     def get_one_task(self, update_expected_in_s, offset):
         select_task = TaskEntry.select(TaskEntry.key)\
                     .where( (TaskEntry.state=="waiting") & (TaskEntry.queue==self.queue) )\
-                    .order_by(TaskEntry.created)\
+                    .order_by(TaskEntry.modified)\ # or created? was created
                     .offset(offset)\
                     .limit(1)
 
@@ -513,6 +513,7 @@ class Queue:
 
 
         entries=TaskEntry.select().where(TaskEntry.worker_id==self.worker_id,TaskEntry.state=="running").order_by(TaskEntry.modified.desc()).limit(1).execute(database=None)
+
         if len(entries)>1:
             raise Exception(f"several tasks ({len(entries)}) are running for this worker: impossible!")
 
