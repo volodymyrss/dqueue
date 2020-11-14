@@ -396,6 +396,17 @@ def question(obj, task_data):
 @cli.command()
 @click.option('-s', '--scope-selector', default="state:all")
 @click.pass_obj
+def delete(obj, scope_selector):
+    scope, selector = scope_selector.split(":")
+
+    log_info(obj['queue'])
+    r = obj['queue'].delete(scope, selector)
+    print(colored("deleted:", "green"), ":", r)
+    log_info(obj['queue'])
+
+@cli.command()
+@click.option('-s', '--scope-selector', default="state:all")
+@click.pass_obj
 def resubmit(obj, scope_selector):
     scope, selector = scope_selector.split(":")
 

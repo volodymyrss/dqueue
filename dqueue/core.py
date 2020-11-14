@@ -77,6 +77,12 @@ class CurrentTaskUnfinished(Exception):
 class TaskStolen(Exception):
     pass
 
+class DependenciesDoNotExist(Exception):
+    pass
+
+class InsertTaskAnomaly(Exception):
+    pass
+
 class Task:
     reference_task = False
 
@@ -330,7 +336,14 @@ class Queue:
     
     def try_to_unlock(self,task):
         ""
-        dependency_states=self.find_dependecies_states(task)
+
+        try:
+            dependency_states=self.find_dependecies_states(task)
+        except DependenciesDoNotExist:
+            self.log_task("task dependencies do not exist: unlocking",task,"locked")
+            self.move_task("locked", "waiting", task)
+            return dict(state="waiting", key=task.key)
+
         
 
         if all([d['state']=="done" for d in dependency_states]):
@@ -408,6 +421,7 @@ class Queue:
             else:
                 logger.error("instances_for_key is None!")
 
+
             log("sleeping for",retry_sleep_race,"attempt",ntry_race)
             time.sleep(retry_sleep_race)
             ntry_race-=1
@@ -425,6 +439,14 @@ class Queue:
             d = instance_for_key
             logger.debug("task entry: %s", d)
             return d
+
+        logger.info("testing it was put as corrupt...")
+        instances_for_key = self.find_task_instances(task, ["corrupt"])
+        if instances_for_key is not None:
+            logger.error("found corrupt instances for key: %s", instances_for_key)
+            #open("/tmp/problematic_entry.json", "wt").write(entry)
+            nentries = TaskEntry.delete().where(TaskEntry.key == task.key).execute(database=None)
+            logger.error("deleted entries for %s: %s", task.key, nentries)
 
         def insert_it():
             if depends_on is None:
@@ -778,24 +800,30 @@ class Queue:
 
     def insert_task_entry(self,task,state):
         self.log_task("task created",task,state)
-
+        
+        serialized_task = task.serialize()
         log("to insert_task entry: ", dict(
              queue=self.queue,
              key=task.key,
              state=state,
              worker_id=self.worker_id,
-             task_dict_string=task.serialize(),
+             task_dict_string=serialized_task,
              created=datetime.datetime.now(),
              modified=datetime.datetime.now(),
         ))
+        
+        r = TaskEntry.select(TaskEntry.key == task.key).execute()
+        logger.error("prior to inserting, have %s", r)
 
+
+        insert_result = None
         try:
-            TaskEntry.insert(
+            insert_result = "inserted", TaskEntry.insert(
                              queue=self.queue,
                              key=task.key,
                              state=state,
                              worker_id=self.worker_id,
-                             task_dict_string=task.serialize(),
+                             task_dict_string=serialized_task,
                              created=datetime.datetime.now(),
                              modified=datetime.datetime.now(),
                             ).execute(database=None)
@@ -803,11 +831,30 @@ class Queue:
             log("task already inserted, reasserting the queue to",self.queue)
 
             # deadlock
-            TaskEntry.update(
+            insert_result = "updated", TaskEntry.update(
                                 queue=self.queue,
                             ).where(
                                 TaskEntry.key == task.key,
                             ).execute(database=None)
+
+
+        r = list(TaskEntry.select().where(TaskEntry.key == task.key).execute(database=None))
+
+        if len(r) == 0:
+            logger.error("inserted task does not exist, selecting by key %s, result %s", task.key, insert_result)
+            raise Exception(f"inserted task does not exist, selecting by key {task.key}, insert_result {insert_result}")
+        
+        if len(r) > 1:
+            logger.error("multiple tasks for key %s", task.key)
+            raise Exception(f"multiple tasks for key {task.key}")
+
+        if r[0].task_dict_string != serialized_task:
+            logger.error("insert result was %s but found mismatch between task_dict_string and stored: %s != %s; complete entry %s", 
+                    insert_result,
+                    r[0].task_dict_string, serialized_task, model_to_dict(r[0]))
+            raise InsertTaskAnomaly()
+
+        log("task successfully inserted")
 
 
     def find_dependecies_states(self,task):
@@ -836,7 +883,7 @@ class Queue:
             if len(dependencies[-1]['states'])==0:
                 print(("job dependencies do not exist, expecting %s"%dependency_task.key))
                 #print(dependency_task.serialize())
-                raise Exception("job dependencies do not exist, expecting %s"%dependency_task.key)
+                raise DependenciesDoNotExist("job dependencies do not exist, expecting %s"%dependency_task.key)
 
             if 'done' in dependencies[-1]['states']:
                 dependencies[-1]['state']='done'
@@ -1017,7 +1064,7 @@ class Queue:
     @property
     def summary(self):
         r={}
-        for kind in "waiting","running","done","failed","locked":
+        for kind in "waiting","running","done","failed","locked", "corrupt":
             r[kind] = TaskEntry.select().where(TaskEntry.state==kind, TaskEntry.queue==self.queue).count()
            # .execute(database=None)
             #

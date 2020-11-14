@@ -208,6 +208,9 @@ class QueueProxy(DataFacts, Queue):
     def purge(self):
         nentries = self.client.tasks.purge().response().result
         self.logger.info("deleted %s", nentries)
+    
+    def delete(self, scope, selector):
+        return self.client.tasks.delete(scope=scope, selector=selector).response().result
 
 
     def list_tasks(self, state="any"):

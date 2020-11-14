@@ -159,7 +159,7 @@ class TaskListView(SwaggerView):
             "name": "state",
             "in": "query",
             "type": "string",
-            "enum": ["submitted", "waiting", "done", "any", "failed", "running"],
+            "enum": ["submitted", "waiting", "done", "any", "failed", "running", "corrupt"],
             "required": False,
             "default": "any",
         },
@@ -539,7 +539,7 @@ class WorkerDataConsultFact(SwaggerView):
         
         #TODO: logtask?
 
-        logger.error("return_data %s %s", return_data,type( return_data))
+        #logger.error("return_data %s %s", return_data,type( return_data))
 
         if odakb.datalake.exists(dag_bucket):
             if return_data:
@@ -981,6 +981,7 @@ class WorkerQuestion(SwaggerView):
                         task_entry
                     )
         except Exception as e:
+            logger.error("unable to insert task: %s, task_data: %s", e, task_data)
             r = jsonify(
                         {"exception": "unable to insert"}
                     )
@@ -1215,6 +1216,39 @@ app.add_url_rule(
           view_func=TaskCallbackView.as_view('callback'),
           methods=['POST']
 )
+
+@app.route("/tasks/delete/<string:scope>/<string:selector>")
+def tasks_delete(scope, selector):
+    """
+    ---
+    operationId: 'delete'
+    parameters:
+    - name: 'queue'
+      in: 'query'
+      required: false
+      type: 'string'
+
+    - name: 'scope'
+      in: 'path'
+      enum: ['state', 'task']
+      required: true 
+      type: 'string'
+
+    - name: 'selector'
+      in: 'path'
+      required: True
+      type: 'string'
+
+    responses:
+        200: 
+            description: 'entries purged'
+    """
+
+    #queue = dqueue.core.Queue(queue)
+    n = tools.delete(scope, selector)
+    return jsonify(
+            nentries=n
+        )
 
 @app.route("/tasks/resubmit/<string:scope>/<string:selector>")
 def tasks_resubmit(scope, selector):

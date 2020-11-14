@@ -31,9 +31,11 @@ def decode_entry_data(entry: TaskEntry) -> TaskDict:
                 else:
                     task_dict['submission_info']['callback_parameters'].update(dict(job_id="unset",session_id="unset"))# type: ignore
         except Exception as e:
+            traceback.print_stack()
             traceback.print_exc()
             logger.error("problem decoding %s", repr(e))
             print("raw entry (undecodable)", entry['task_dict_string'])
+            raise
 
     return TaskDict(NestedDict(task_dict))
 

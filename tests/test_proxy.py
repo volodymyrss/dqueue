@@ -201,6 +201,10 @@ class TestLiveServer:
         l = self.queue.list()
         len(l) == 1
         assert l[0]['state'] == 'failed'
+        
+        self.queue.delete('state', 'failed')
+        l = self.queue.list()
+        len(l) == 0
 
     def test_callback(self):
         r = self.queue.callback(

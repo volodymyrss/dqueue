@@ -146,6 +146,22 @@ def purge():
     nentries=core.TaskEntry.delete().execute(database=None)
     return make_response("deleted %i"%nentries)
 
+def delete(scope, selector):
+    if scope=="state":
+        if selector=="all":
+            nentries=core.TaskEntry.delete()\
+                        .execute(database=None)
+        else:
+            nentries=core.TaskEntry.delete()\
+                        .where(core.TaskEntry.state==selector)\
+                        .execute(database=None)
+    elif scope=="task":
+        nentries=core.TaskEntry.delete()\
+                    .where(core.TaskEntry.key==selector)\
+                    .execute(database=None)
+
+    return nentries
+
 def resubmit(scope, selector):
     if scope=="state":
         if selector=="all":
