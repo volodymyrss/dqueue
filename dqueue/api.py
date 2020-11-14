@@ -981,6 +981,7 @@ class WorkerQuestion(SwaggerView):
                         task_entry
                     )
         except Exception as e:
+            logger.error("unable to insert task: %s, task_data: %s", e, task_data)
             r = jsonify(
                         {"exception": "unable to insert"}
                     )
