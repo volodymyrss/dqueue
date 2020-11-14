@@ -488,9 +488,10 @@ class Queue:
         return [ model_to_dict(r) for r in EventLog.select().where(EventLog.worker_state!="unset").order_by(EventLog.timestamp.desc()).limit(1).execute(database=None) ]
 
     def get_one_task(self, update_expected_in_s, offset):
+                    # or created? was created
         select_task = TaskEntry.select(TaskEntry.key)\
                     .where( (TaskEntry.state=="waiting") & (TaskEntry.queue==self.queue) )\
-                    .order_by(TaskEntry.modified)\ # or created? was created
+                    .order_by(TaskEntry.modified)\
                     .offset(offset)\
                     .limit(1)
 
