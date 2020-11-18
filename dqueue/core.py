@@ -1150,7 +1150,7 @@ class Queue:
         if state is None:
             state="undefined"
 
-        logger.info("log_task: %s:%s for %s at %s", task, task_key, message, state)
+        logger.info("log_task: task:%s task_key:%s for message:%s at state:%s", task, task_key, message, state)
 
         # pass
 
