@@ -1160,15 +1160,26 @@ class Queue:
                          task_state=state,
                          worker_id=self.worker_id,
                          timestamp=datetime.datetime.now(),
-                         message=message,
                    )
 
-        msg = {**log_data, 'origin': 'oda-node', 'timestamp': log_data['timestamp'].isoformat()}
-        logger.info("to logstash: %s", msg)
+        msg = {
+                **log_data, 
+                'origin': 'oda-node', 
+                'timestamp': log_data['timestamp'].isoformat(),
+            }
+
+        try:
+            msg['message'] = json.loads(message)
+        except Exception as e:
+            logger.warning("unable to decode message: %s - from %s", e, message)
+            msg['message'] = message
+
+        logger.info("to logstash: %s", pylogstash.flatten(msg))
         log_stasher.log({"oda_"+k:v for k,v in msg.items()})
 
         return EventLog.insert(
-                            **log_data
+                            **log_data,
+                            message=message,
                         ).execute(database=None)
 
 
