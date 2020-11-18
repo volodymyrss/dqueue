@@ -1163,7 +1163,9 @@ class Queue:
                          message=message,
                    )
 
-        log_stasher.log({**log_data, 'origin': 'oda-node', 'timestamp': log_data['timestamp'].isoformat()})
+        msg = {**log_data, 'origin': 'oda-node', 'timestamp': log_data['timestamp'].isoformat()}
+        logger.info("to logstash: %s", msg)
+        log_stasher.log(msg)
 
         return EventLog.insert(
                             **log_data
