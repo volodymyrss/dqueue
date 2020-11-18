@@ -1159,13 +1159,11 @@ class Queue:
                          task_key=task_key,
                          task_state=state,
                          worker_id=self.worker_id,
-                         timestamp=datetime.datetime.now(),
                    )
 
         msg = {
                 **log_data, 
                 'origin': 'oda-node', 
-                'timestamp': log_data['timestamp'].isoformat(),
             }
 
         try:
@@ -1180,6 +1178,7 @@ class Queue:
         return EventLog.insert(
                             **log_data,
                             message=message,
+                            timestamp=datetime.datetime.now(),
                         ).execute(database=None)
 
 
