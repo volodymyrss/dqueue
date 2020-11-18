@@ -1172,7 +1172,7 @@ class Queue:
             logger.warning("unable to decode message: %s - from %s", e, message)
             msg['message'] = message
 
-        logger.info("to logstash: %s", pylogstash.flatten(msg))
+        logger.info("to logstash: %s", json.dumps(pylogstash.flatten(msg)))
         log_stasher.log({"oda_"+k:v for k,v in msg.items()})
 
         return EventLog.insert(
