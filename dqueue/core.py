@@ -1168,7 +1168,7 @@ class Queue:
 
         try:
             msg['message'] = json.loads(message)
-            logger.info("managed to decode message json", ,msg['message'])
+            logger.info("managed to decode message json", msg['message'])
         except Exception as e:
             logger.warning("unable to decode message: %s - from %s", e, message)
             msg['message'] = message
