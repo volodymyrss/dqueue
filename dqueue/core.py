@@ -42,7 +42,7 @@ from dqueue.database import EventLog, TaskEntry, db, model_to_dict
 sleep_multiplier = 1
 n_failed_retries = int(os.environ.get('DQUEUE_FAILED_N_RETRY','20'))
 
-log_stasher = pylogstash.LogStasher()
+log_stasher = pylogstash.LogStasher(sep="/")
 
 def get_logger(name):
     level = getattr(logging, os.environ.get('DQUEUE_LOG_LEVEL', 'INFO'))
