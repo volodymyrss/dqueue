@@ -11,6 +11,7 @@ import io
 import re
 import click
 import urllib.parse
+import pylogstash
 
 from functools import reduce
 
@@ -41,6 +42,7 @@ from dqueue.database import EventLog, TaskEntry, db, model_to_dict
 sleep_multiplier = 1
 n_failed_retries = int(os.environ.get('DQUEUE_FAILED_N_RETRY','20'))
 
+log_stasher = pylogstash.LogStasher()
 
 def get_logger(name):
     level = getattr(logging, os.environ.get('DQUEUE_LOG_LEVEL', 'INFO'))
@@ -1150,13 +1152,21 @@ class Queue:
 
         logger.info("log_task: %s:%s for %s at %s", task, task_key, message, state)
 
+        # pass
+
+        log_data = dict(
+                         queue=self.queue,
+                         task_key=task_key,
+                         task_state=state,
+                         worker_id=self.worker_id,
+                         timestamp=datetime.datetime.now(),
+                         message=message,
+                   )
+
+        log_stasher.log({**log_data, 'timestamp': log_data['timestamp'].isoformat()})
+
         return EventLog.insert(
-                             queue=self.queue,
-                             task_key=task_key,
-                             task_state=state,
-                             worker_id=self.worker_id,
-                             timestamp=datetime.datetime.now(),
-                             message=message,
+                            **log_data
                         ).execute(database=None)
 
 
