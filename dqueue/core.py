@@ -1163,7 +1163,7 @@ class Queue:
                          message=message,
                    )
 
-        log_stasher.log({**log_data, 'timestamp': log_data['timestamp'].isoformat()})
+        log_stasher.log({**log_data, 'origin': 'oda-node', 'timestamp': log_data['timestamp'].isoformat()})
 
         return EventLog.insert(
                             **log_data
