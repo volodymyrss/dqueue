@@ -192,9 +192,11 @@ class QueueProxy(DataFacts, Queue):
         raise NotImplementedError
 
     def task_failed(self,update=lambda x:None):
+        update(self.current_task)
+
         r = self.client.worker.failed(worker_id=self.worker_id, 
-                                       queue=self.queue, 
-                                       task_dict=self.current_task.as_dict,
+                                      queue=self.queue, 
+                                      task_dict=self.current_task.as_dict,
                                       ).response().result
         self.current_task = None
 
