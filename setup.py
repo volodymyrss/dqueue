@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='oda-node',
-      version='0.1.43-dev0',
+      version='0.1.43',
       description='a queue manager (yet another)',
       author='Volodymyr Savchenko',
       author_email='vladimir.savchenko@gmail.com',
