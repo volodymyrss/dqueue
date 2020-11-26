@@ -590,8 +590,8 @@ class Queue:
 
         self.note_worker_state("ready")
 
-        max_update_expected_in_s = 3600
-        default_update_expected_in_s = 1200
+        max_update_expected_in_s = 7200
+        default_update_expected_in_s = 1800
 
         if update_expected_in_s > max_update_expected_in_s:
             logger.warning("update expected timeout %s is too long, setting to maximum %s", update_expected_in_s, max_update_expected_in_s)
