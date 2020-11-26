@@ -24,6 +24,7 @@ setup(name='oda-node',
           'retrying',
           'oda-knowledge-base[cwl]>=0.7.0', # should be an option
           'pyjwt',
+          'pylogstash-context',
           ],
       zip_safe=False,
      )
