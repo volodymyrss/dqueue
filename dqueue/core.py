@@ -1058,7 +1058,7 @@ class Queue:
 
         task.note_failure()
 
-        self.log_task(f"task failed {self.n_times_failed} times",self.current_task,"failed")
+        self.log_task(f"task failed {self.current_task.n_times_failed} times",self.current_task,"failed")
 
         r=TaskEntry.update({
                     TaskEntry.state: "failed",
