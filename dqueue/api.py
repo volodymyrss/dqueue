@@ -380,6 +380,9 @@ class WorkerFailed(SwaggerView):
         task = queue.current_task
 
         logger.debug("marking current task in %s failed", queue)
+
+        logger.error("task failed execution info: %s", queue.current_task.execution_info)
+
         queue.task_failed()
 
         # here also upload data nad store?
