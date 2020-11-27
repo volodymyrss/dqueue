@@ -1028,7 +1028,7 @@ class Queue:
         history = [model_to_dict(en) for en in EventLog.select().where(EventLog.task_key == task.key).order_by(EventLog.id.desc()).execute(database=None)]
         n_failed = len([he for he in history if he['task_state'] == "failed"])
         
-        self.log_task("event logs reports failed {n_failed}, task record shows {self.current_task.n_times_failed} {task}", "failed")
+        self.log_task("event logs reports failed {n_failed}, task record shows {self.current_task.n_times_failed}", task, "failed")
 
         n_failed = max(n_failed, self.current_task.n_times_failed)
 
