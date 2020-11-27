@@ -11,12 +11,13 @@ import io
 import re
 import click
 import urllib.parse
+import pylogstash
 
 from functools import reduce
 
 from bravado.client import SwaggerClient
 
-__version__ = "0.1.42"
+__version__ = "0.1.44"
 
 try:
     import io
@@ -41,6 +42,7 @@ from dqueue.database import EventLog, TaskEntry, db, model_to_dict
 sleep_multiplier = 1
 n_failed_retries = int(os.environ.get('DQUEUE_FAILED_N_RETRY','20'))
 
+log_stasher = pylogstash.LogStasher(sep="/")
 
 def get_logger(name):
     level = getattr(logging, os.environ.get('DQUEUE_LOG_LEVEL', 'INFO'))
@@ -588,8 +590,8 @@ class Queue:
 
         self.note_worker_state("ready")
 
-        max_update_expected_in_s = 3600
-        default_update_expected_in_s = 1200
+        max_update_expected_in_s = 7200
+        default_update_expected_in_s = 1800
 
         if update_expected_in_s > max_update_expected_in_s:
             logger.warning("update expected timeout %s is too long, setting to maximum %s", update_expected_in_s, max_update_expected_in_s)
@@ -1148,15 +1150,36 @@ class Queue:
         if state is None:
             state="undefined"
 
-        logger.info("log_task: %s:%s for %s at %s", task, task_key, message, state)
+        logger.info("log_task: task:%s task_key:%s for message:%s at state:%s", task, task_key, message, state)
+
+        # pass
+
+        log_data = dict(
+                         queue=self.queue,
+                         task_key=task_key,
+                         task_state=state,
+                         worker_id=self.worker_id,
+                   )
+
+        msg = {
+                **log_data, 
+                'origin': 'oda-node', 
+            }
+
+        try:
+            msg['message'] = json.loads(message)
+            logger.info("managed to decode message json: %s", msg['message'])
+        except Exception as e:
+            logger.warning("unable to decode message: %s - from %s", e, message)
+            msg['message'] = message
+
+        logger.info("to logstash: %s", json.dumps(pylogstash.flatten(msg, sep="/")))
+        log_stasher.log({"oda_"+k:v for k,v in msg.items()})
 
         return EventLog.insert(
-                             queue=self.queue,
-                             task_key=task_key,
-                             task_state=state,
-                             worker_id=self.worker_id,
-                             timestamp=datetime.datetime.now(),
-                             message=message,
+                            **log_data,
+                            message=message,
+                            timestamp=datetime.datetime.now(),
                         ).execute(database=None)
 
 

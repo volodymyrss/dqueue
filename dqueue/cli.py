@@ -474,6 +474,37 @@ def execute(obj):
     an example runner for INTEGRAL pipeline is available with data-analysis  module and \033[32moda-runner-execute\033[0m command
     """)
 
+
+@cli.command()
+@click.argument("target")
+@click.option("-m", "--module", multiple=True)
+@click.option("-a", "--assume", multiple=True)
+@click.pass_obj
+def ask(obj, target, module, assume):
+    task_data = dict(
+                object_identity=dict(
+                    assumptions=[
+                            ['ii_spectra_exract', {'request_root_node': True}]
+                        ] + [['', a] for a in assume],
+                    expected_hashe='None',
+                    factory_name=target,
+                    full_name=target,
+                    modules=[
+                            ['git', m[len("git://"):].split("/")[0], m[len("git://"):].split("/")[1]]
+                            for m in module
+                        ]
+                )
+            )
+
+    r = obj['queue'].put(
+            task_data,
+            submission_data=dict(
+                callbacks=[],
+                request_origin="cli",
+                ),
+            )
+
+
 def main():
     cli(obj={})
 

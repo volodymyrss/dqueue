@@ -16,3 +16,5 @@ ADD entrypoint.sh /entrypoint.sh
 
 ENTRYPOINT bash /entrypoint.sh
 
+ADD pylogstash /pylogstash
+RUN pip install --upgrade /pylogstash 

@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='oda-node',
-      version='0.1.42',
+      version='0.1.44',
       description='a queue manager (yet another)',
       author='Volodymyr Savchenko',
       author_email='vladimir.savchenko@gmail.com',
@@ -24,6 +24,7 @@ setup(name='oda-node',
           'retrying',
           'oda-knowledge-base[cwl]>=0.7.0', # should be an option
           'pyjwt',
+          'pylogstash-context',
           ],
       zip_safe=False,
      )
