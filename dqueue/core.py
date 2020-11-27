@@ -165,6 +165,7 @@ class Task:
         self=cls(task_dict['task_data'])
         self.depends_on=task_dict.get('depends_on', [])
         self.submission_info=task_dict['submission_info']
+        self.execution_info=task_dict['execution_info']
 
         return self
 
