@@ -114,6 +114,13 @@ class Task:
         )
     
     @property
+    def n_times_failed(self):
+        return self.submission_info.get('n_times_failed', 0)
+
+    def note_failure(self):
+        self.submission_info['n_times_failed'] = self.n_times_failed
+    
+    @property
     def as_dict(self):
         return dict(
                 submission_info=self.submission_info,
@@ -1020,10 +1027,13 @@ class Queue:
 
         history = [model_to_dict(en) for en in EventLog.select().where(EventLog.task_key == task.key).order_by(EventLog.id.desc()).execute(database=None)]
         n_failed = len([he for he in history if he['task_state'] == "failed"])
+        
+        self.log_task("event logs reports failed {n_failed}, task record shows {self.current_task.n_times_failed} {task}", "failed")
 
-        self.log_task("task failed %i times already"%n_failed,task,"failed")
+        n_failed = max(n_failed, self.current_task.n_times_failed)
+
         if n_failed < n_failed_retries:
-            self.log_task("task failure forgiven, to waiting",task,"waiting")
+            self.log_task("task failure forgiven, to waiting", task, "waiting")
             #time.sleep( (5+2**int(n_failed/2))*sleep_multiplier )
             r=TaskEntry.update({
                         TaskEntry.state: "waiting",
@@ -1044,7 +1054,9 @@ class Queue:
     def task_failed(self,update=lambda x:None):
         update(self.current_task)
 
-        task= self.current_task
+        task = self.current_task
+
+        task.note_failure()
 
         self.log_task("task failed",self.current_task,"failed")
 

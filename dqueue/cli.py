@@ -484,13 +484,13 @@ def ask(obj, target, module, assume):
     task_data = dict(
                 object_identity=dict(
                     assumptions=[
-                            ['ii_spectra_exract', {'request_root_node': True}]
+                            [target, {'request_root_node': True}]
                         ] + [['', a] for a in assume],
                     expected_hashe='None',
                     factory_name=target,
                     full_name=target,
                     modules=[
-                            ['git', m[len("git://"):].split("/")[0], m[len("git://"):].split("/")[1]]
+                            ['git', m[len("git://"):].split("/")[0], m]
                             for m in module
                         ]
                 )
@@ -503,6 +503,9 @@ def ask(obj, target, module, assume):
                 request_origin="cli",
                 ),
             )
+
+    #print("odahub responds", r)
+    print(f"\033[31m{r['state']:10s}\033[0m \033[33m{r['modified']}\033[0m \033[34m{r['created']}\033[0m")
 
 
 def main():
