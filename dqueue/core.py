@@ -116,9 +116,9 @@ class Task:
     @property
     def n_times_failed(self):
         return self.execution_info.get('n_times_failed', 0)
-
+ 
     def note_failure(self):
-        self.execution_info['n_times_failed'] = self.n_times_failed
+        self.execution_info['n_times_failed'] = self.n_times_failed + 1
     
     @property
     def as_dict(self):
@@ -1059,7 +1059,7 @@ class Queue:
 
         task.note_failure()
 
-        self.log_task(f"task failed {self.current_task.n_times_failed} times",self.current_task,"failed")
+        self.log_task(f"task failed: {self.current_task.n_times_failed} times",self.current_task,"failed")
 
         r=TaskEntry.update({
                     TaskEntry.state: "failed",
