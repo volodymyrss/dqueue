@@ -194,6 +194,8 @@ class QueueProxy(DataFacts, Queue):
     def task_failed(self,update=lambda x:None):
         update(self.current_task)
 
+        self.logger.error("current task updated for failed task, execution info: %s", self.current_task.execution_info)
+
         r = self.client.worker.failed(worker_id=self.worker_id, 
                                       queue=self.queue, 
                                       task_dict=self.current_task.as_dict,
