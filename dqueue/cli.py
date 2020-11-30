@@ -11,6 +11,7 @@ import random
 import socket
 from termcolor import colored
 from collections import defaultdict
+import pylogstash
 
 from dqueue import from_uri
 from dqueue.core import Queue, Task
@@ -19,6 +20,7 @@ from dqueue.proxy import QueueProxy
 import dqueue.core as core 
 
 logger = logging.getLogger()
+log_stasher = pylogstash.LogStasher(sep="/")
 
 @click.group()
 @click.option("-q", "--quiet", default=False, is_flag=True)
@@ -370,8 +372,11 @@ def guardian(obj, watch):
         # stats
 
         print("getting queue statistics...")
+        print(">>", obj['queue'].info)
         log_info(obj['queue'])
         print("\n")
+
+        log_stasher.log()
 
         print("sleeping", watch)
 

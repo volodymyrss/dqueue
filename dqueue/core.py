@@ -115,10 +115,15 @@ class Task:
     
     @property
     def n_times_failed(self):
+        if self.execution_info is None:
+            return 0
         return self.execution_info.get('n_times_failed', 0)
  
     def note_failure(self):
-        self.execution_info['n_times_failed'] = self.n_times_failed + 1
+        if self.execution_info is None:
+            logger.warning("no execution info: not noting failure")
+        else:
+            self.execution_info['n_times_failed'] = self.n_times_failed + 1
     
     @property
     def as_dict(self):
