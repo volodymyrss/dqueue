@@ -372,11 +372,17 @@ def guardian(obj, watch):
         # stats
 
         print("getting queue statistics...")
-        print(">>", obj['queue'].info)
+        print(">>", obj['queue'].summary)
         log_info(obj['queue'])
         print("\n")
 
-        log_stasher.log()
+        log_stasher.log(
+                    dict(
+                        origin="oda-node",
+                        action="queue-status",
+                        summary=obj['queue'].summary,
+                    )
+                )
 
         print("sleeping", watch)
 
