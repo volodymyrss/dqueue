@@ -383,6 +383,16 @@ def guardian(obj, watch):
                         summary=obj['queue'].summary,
                     )
                 )
+        
+        for k,v in obj['queue'].summary.items():
+            log_stasher.log(
+                        dict(
+                            origin="oda-node",
+                            action="queue-status-per-kind",
+                            kind=k,
+                            njobs=v,
+                        )
+                    )
 
         print("sleeping", watch)
 
