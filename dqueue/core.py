@@ -1089,7 +1089,7 @@ class Queue:
                 r[kind] = TaskEntry.select().where(
                                                 TaskEntry.state==kind, 
                                                 TaskEntry.queue==self.queue, 
-                                                TaskEntry.modified >= datetime.datetime.now() - datetime.timedelta(days=since_days)
+                                                TaskEntry.modified >= datetime.datetime.now() - datetime.timedelta(days=float(since_days))
                                              ).count()
             else:
                 r[kind] = TaskEntry.select().where(TaskEntry.state==kind, TaskEntry.queue==self.queue).count()
