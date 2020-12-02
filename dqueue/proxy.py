@@ -231,9 +231,15 @@ class QueueProxy(DataFacts, Queue):
             r[kind]=[t for t in tasks if t['state'] == kind]
         return r
     
+    def get_summary(self, since_days=None):
+        if since_days is not None:
+            return self.client.tasks.summary(queue=self.queue).response().result['tasks']
+        else:
+            return self.client.tasks.summary(queue=self.queue, since_days=since_days).response().result['tasks']
+    
     @property
     def summary(self):
-        return self.client.tasks.summary(queue=self.queue).response().result['tasks']
+        return self.get_summary()
 
     def show(self):
         r=""

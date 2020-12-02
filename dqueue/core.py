@@ -1082,14 +1082,24 @@ class Queue:
                 log("removing",fromk + "/" + key)
                 TaskEntry.delete().where(TaskEntry.key==key).execute(database=None)
 
-    @property
-    def summary(self):
+    def get_summary(self, since_days=None):
         r={}
         for kind in "waiting","running","done","failed","locked", "corrupt":
-            r[kind] = TaskEntry.select().where(TaskEntry.state==kind, TaskEntry.queue==self.queue).count()
+            if since_days is not None:
+                r[kind] = TaskEntry.select().where(
+                                                TaskEntry.state==kind, 
+                                                TaskEntry.queue==self.queue, 
+                                                TaskEntry.modified >= datetime.datetime.now() - datetime.timedelta(days=since_days)
+                                             ).count()
+            else:
+                r[kind] = TaskEntry.select().where(TaskEntry.state==kind, TaskEntry.queue==self.queue).count()
            # .execute(database=None)
             #
         return r
+
+    @property
+    def summary(self):
+        return self.get_summary()
         
     @property
     def info(self):

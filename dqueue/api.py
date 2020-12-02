@@ -116,6 +116,12 @@ class SummaryView(SwaggerView):
             "type": "string",
             "required": False,
         },
+        {
+            "name": "since_days",
+            "in": "query",
+            "type": "number",
+            "required": False,
+        },
     ]
     responses = {
         200: {
@@ -131,8 +137,10 @@ class SummaryView(SwaggerView):
 
         queue_name = request.args.get('queue', 'default')
         queue = dqueue.core.Queue(queue_name)
+        
+        since_days = request.args.get('since_days', None)
 
-        tasks = queue.summary
+        tasks = queue.get_summary(since_days=since_days)
 
         logger.info("got summary: %s for %s", tasks, queue_name)
 

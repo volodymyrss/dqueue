@@ -372,7 +372,7 @@ def guardian(obj, watch):
         # stats
 
         print("getting queue statistics...")
-        print(">>", obj['queue'].summary)
+        print(">>", obj['queue'].get_summary(since_days=0.1))
         log_info(obj['queue'])
         print("\n")
 
