@@ -155,7 +155,7 @@ def list(obj, debug, log, info, select, json_output):
             print("")
 
         if debug:
-            print(pprint.pformat(task))
+            print(json.dumps(task, indent=4,sort_keys=True))
             t = Task.from_task_dict(task['task_dict'])
             print("Task: ", t)
             print("Task key: ", t.key)

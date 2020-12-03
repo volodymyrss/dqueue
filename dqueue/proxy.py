@@ -78,7 +78,7 @@ class QueueProxy(DataFacts, Queue):
                                    ).response().result
     
     def log_task(self, message, task=None, state="unset", task_key=None):
-        self.logger.info("log_task %s", message)
+        self.logger.info("\033[31mlog_task %s\033[0m", message)
 
         if task_key is None:
             if task is None:
