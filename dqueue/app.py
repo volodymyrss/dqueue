@@ -66,40 +66,48 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_statistics import Statistics
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:////tmp/database.db"
-#app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DQUEUE_DATABASE_URL").replace("pool", "pymysql").split("?")[0]
-db = SQLAlchemy(app)
 
+request_db = SQLAlchemy(app)
+logger.info("\033[31mcreated database %s\033[0m", request_db)
 
-class Request(db.Model):
+class Request(request_db.Model):
     __tablename__ = "request"
 
-    index = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    response_time = db.Column(db.Float)
-    date = db.Column(db.DateTime)
-    method = db.Column(db.String(10))
-    size = db.Column(db.Integer)
-    status_code = db.Column(db.Integer)
-    path = db.Column(db.String(1000))
-    user_agent = db.Column(db.String(1000))
-    remote_address = db.Column(db.String(1000))
-    exception = db.Column(db.String(1000))
-    referrer = db.Column(db.String(1000))
-    browser = db.Column(db.String(1000))
-    platform = db.Column(db.String(1000))
-    mimetype = db.Column(db.String(1000))
+    index = request_db.Column(request_db.Integer, primary_key=True, autoincrement=True)
+    response_time = request_db.Column(request_db.Float)
+    date = request_db.Column(request_db.DateTime)
+    method = request_db.Column(request_db.String(10))
+    size = request_db.Column(request_db.Integer)
+    status_code = request_db.Column(request_db.Integer)
+    path = request_db.Column(request_db.String(1000))
+    user_agent = request_db.Column(request_db.String(1000))
+    remote_address = request_db.Column(request_db.String(1000))
+    exception = request_db.Column(request_db.String(1000))
+    referrer = request_db.Column(request_db.String(1000))
+    browser = request_db.Column(request_db.String(1000))
+    platform = request_db.Column(request_db.String(1000))
+    mimetype = request_db.Column(request_db.String(1000))
 
-try: # TODO!!
+try: 
     db.create_all()
 except:
     pass
 
-statistics = Statistics(app, db, Request)
+try: 
+    request_db.create_all()
+except:
+    pass
+
+statistics = Statistics(app, request_db, Request)
 
 
 @app.before_request
 def before_request():
     if app.debug:
         print(request.method, request.endpoint, request.headers)
+        
+    if dqueue.database.db is None:
+        dqueue.database.db = dqueue.database.connect_db()
 
     try:
         dqueue.database.db.connect()
@@ -110,8 +118,9 @@ def before_request():
 
 @app.after_request
 def after_request(response):
-    dqueue.database.db.close()
-    logger.debug("disconnecting from the db after request %s", dqueue.database.db)
+    if dqueue.database.db is not None:
+        dqueue.database.db.close()
+        logger.debug("disconnecting from the db after request %s", dqueue.database.db)
     return response
 
 

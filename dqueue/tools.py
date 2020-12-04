@@ -65,7 +65,7 @@ def list_tasks(include_task_data=True, decode=True, state="any", json_filter=Non
     date_N_days_ago = datetime.datetime.now() - datetime.timedelta(days=float(request.args.get('since',1)))
 
     c = core.TaskEntry.modified >= date_N_days_ago
-
+    
     if state != "any":
         c &= core.TaskEntry.state == state
 

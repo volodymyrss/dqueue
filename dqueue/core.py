@@ -1215,7 +1215,7 @@ class Queue:
         logger.warning("please use list_tasks instead")
         return self.list_tasks(*args, **kwargs)
 
-    def list_tasks(self, state=None, states=None, kind=None, kinds=None, decode=False):
+    def list_tasks(self, state=None, states=None, kind=None, kinds=None, decode=False, task_key="any"):
         ""
 
         if kind is not None:

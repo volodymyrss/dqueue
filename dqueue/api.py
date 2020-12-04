@@ -167,7 +167,7 @@ class TaskListView(SwaggerView):
             "name": "state",
             "in": "query",
             "type": "string",
-            "enum": ["submitted", "waiting", "done", "any", "failed", "running", "corrupt"],
+            "enum": ["submitted", "waiting", "done", "any", "failed", "running", "corrupt", "locked"],
             "required": False,
             "default": "any",
         },

@@ -170,7 +170,7 @@ def test_locked_jobs():
 
     print("waiting:", queue.list("waiting")[0])
     task_key = queue.list("waiting")[0]
-
+    
     task_log =  queue.view_log(task_key)
     print("task_log:", task_log)
 
