@@ -1015,43 +1015,42 @@ class Queue:
             return 0
 
 
-        entry=entries[0]
+        for entry in entries:
+            try:
+                self.current_task=Task.from_task_dict(entry.task_dict_string)
+                self.current_task_stored_key=self.current_task.key
+                logger.info("found %s failed tasks: will try to forgive", len(entries))
+            except Exception as e:
+                logger.info("will not forgive task %s with corrupt json, updating modified", entry.key)
+                r=TaskEntry.update({
+                            TaskEntry.modified:datetime.datetime.now(),
+                            TaskEntry.state: "corrupt",
+                        }).where(TaskEntry.key == entry.key).execute(database=None)
+                return 0
 
-        try:
-            self.current_task=Task.from_task_dict(entry.task_dict_string)
-            self.current_task_stored_key=self.current_task.key
-            logger.info("found %s failed tasks: will try to forgive", len(entries))
-        except Exception as e:
-            logger.info("will not forgive task %s with corrupt json, updating modified", entry.key)
-            r=TaskEntry.update({
-                        TaskEntry.modified:datetime.datetime.now(),
-                        TaskEntry.state: "corrupt",
-                    }).where(TaskEntry.key == entry.key).execute(database=None)
-            return 0
+            task = self.current_task
 
-        task = self.current_task
+            history = [model_to_dict(en) for en in EventLog.select().where(EventLog.task_key == task.key).order_by(EventLog.id.desc()).execute(database=None)]
+            n_failed = len([he for he in history if he['task_state'] == "failed"])
+            
+            self.log_task(f"event logs reports failed {n_failed}, task record shows {self.current_task.n_times_failed}", task, "failed")
 
-        history = [model_to_dict(en) for en in EventLog.select().where(EventLog.task_key == task.key).order_by(EventLog.id.desc()).execute(database=None)]
-        n_failed = len([he for he in history if he['task_state'] == "failed"])
-        
-        self.log_task(f"event logs reports failed {n_failed}, task record shows {self.current_task.n_times_failed}", task, "failed")
+            n_failed = max(n_failed, self.current_task.n_times_failed)
 
-        n_failed = max(n_failed, self.current_task.n_times_failed)
+            if n_failed < n_failed_retries:
+                self.log_task("task failure forgiven, to waiting", task, "waiting")
+                #time.sleep( (5+2**int(n_failed/2))*sleep_multiplier )
+                r=TaskEntry.update({
+                            TaskEntry.state: "waiting",
+                            TaskEntry.task_dict_string:self.current_task.serialize(),
+                            TaskEntry.modified:datetime.datetime.now(),
+                        }).where(TaskEntry.key == self.current_task.key).execute(database=None)
+            else:
+                self.log_task("task failure permanent",task,"waiting")
 
-        if n_failed < n_failed_retries:
-            self.log_task("task failure forgiven, to waiting", task, "waiting")
-            #time.sleep( (5+2**int(n_failed/2))*sleep_multiplier )
-            r=TaskEntry.update({
-                        TaskEntry.state: "waiting",
-                        TaskEntry.task_dict_string:self.current_task.serialize(),
-                        TaskEntry.modified:datetime.datetime.now(),
-                    }).where(TaskEntry.key == self.current_task.key).execute(database=None)
-        else:
-            self.log_task("task failure permanent",task,"waiting")
-
-        self.current_task = None
-        self.current_task_stored_key = None
-        self.current_task_status = None
+            self.current_task = None
+            self.current_task_stored_key = None
+            self.current_task_status = None
 
         return 1
 
