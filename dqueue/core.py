@@ -1008,7 +1008,7 @@ class Queue:
         self.current_task=None
 
     def forgive_task_failures(self) -> int:
-        entries = TaskEntry.select().where(TaskEntry.state=="failed").order_by(TaskEntry.modified).limit(1).execute(database=None)
+        entries = TaskEntry.select().where(TaskEntry.state=="failed").order_by(TaskEntry.modified).limit(20).execute(database=None)
 
         if len(entries) == 0:
             logger.info("no failed tasks: will not try to forgive")
