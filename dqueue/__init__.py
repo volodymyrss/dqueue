@@ -15,6 +15,9 @@ def from_uri(queue_uri: Union[str, None]=None, worker_id: Union[str, None]=None)
         if 'ODAHUB' in os.environ:
             queue_uri = os.environ['ODAHUB']
             logger.info("getting ODAHUB from env: %s", queue_uri)
+        else:
+            queue_uri = "https://crux.staging-1-3.odahub.io@default"
+            logger.info("using hard-coded ODAHUB point: %s", queue_uri)
 
     for uri in queue_uri.split(","):
         logger.info("found ODAHUB URI option: %s", uri)

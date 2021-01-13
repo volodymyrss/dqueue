@@ -1,8 +1,11 @@
 import click
 import logging
+import requests
 import json
+import io
 import os
 import sys
+import yaml
 import pprint
 import time
 import subprocess
@@ -459,7 +462,18 @@ def runnercli():
 @click.pass_obj
 def start_executor(obj, deploy_runner_command, list_runners_command, profile, timeout, max_runners, min_waiting_jobs):
     if profile is not None:
-        pass
+        if profile.startswith(":"):
+            p = yaml.safe_load(io.BytesIO(requests.get("https://raw.githubusercontent.com/volodymyrss/oda-runner-profiles/main/{}.yaml".format(profile[1:])).content)) # long and hard-coded string
+        else:
+            if os.path.exists(profile):
+                p = yaml.safe_load(open(profile))
+            else:
+                logger.error("profile file %s does not exist!", profile)
+                sys.exit(1)
+
+        deploy_runner_command = p['deploy_runner_command']
+        list_runners_command = p['list_runners_command']
+
 
     if deploy_runner_command is None:
         logger.error("executor needs deploy_runner_command, either in argument or in profile")
