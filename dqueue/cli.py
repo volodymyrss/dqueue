@@ -19,7 +19,10 @@ from dqueue.proxy import QueueProxy
 
 import dqueue.core as core 
 
+import coloredlogs
+
 logger = logging.getLogger()
+
 log_stasher = pylogstash.LogStasher(sep="/")
 
 @click.group()
@@ -29,15 +32,15 @@ log_stasher = pylogstash.LogStasher(sep="/")
 @click.pass_obj
 def cli(obj, quiet=False, debug=False, queue=None):
     if quiet:
-        logging.basicConfig(level=logging.CRITICAL)
+        level = logging.CRITICAL
     else:
         if debug:
-            logging.basicConfig(level=logging.DEBUG)
+            level=logging.DEBUG
         else:
-            logging.basicConfig(level=logging.INFO)
+            level=logging.INFO
 
-    if queue is None:
-        queue = os.environ.get('ODAHUB', None)
+    logging.basicConfig(level=level)
+    coloredlogs.install(level=level)
 
     obj['queue'] = from_uri(queue)
     logger.debug("using queue: %s", obj['queue'])
@@ -56,6 +59,11 @@ def version(obj, validate):
         else:
             logger.error("versions INcompatible!")
             sys.exit(1)
+
+@cli.command()
+@click.pass_context
+def hub_info(ctx):
+    ctx.invoke(version, validate=False)
 
 @cli.command()
 @click.pass_obj
@@ -442,13 +450,25 @@ def runnercli():
     pass
 
 @runnercli.command()
-@click.argument("deploy-runner-command")
-@click.argument("list-runners-command")
+@click.option("-d", "--deploy-runner-command", default=None)
+@click.option("-l", "--list-runners-command", default=None)
+@click.option("-p", "--profile", default=None)
 @click.option("-t", "--timeout", default=10)
 @click.option("-m", "--max-runners", default=100)
 @click.option("-n", "--min-waiting-jobs", default=2)
 @click.pass_obj
-def start_executor(obj, deploy_runner_command, list_runners_command, timeout, max_runners, min_waiting_jobs):
+def start_executor(obj, deploy_runner_command, list_runners_command, profile, timeout, max_runners, min_waiting_jobs):
+    if profile is not None:
+        pass
+
+    if deploy_runner_command is None:
+        logger.error("executor needs deploy_runner_command, either in argument or in profile")
+        sys.exit(1)
+    
+    if list_runners_command is None:
+        logger.error("executor needs list_runners_command, either in argument or in profile")
+        sys.exit(1)
+
     age = 0
 
     while True:

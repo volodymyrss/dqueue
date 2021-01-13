@@ -11,3 +11,4 @@ Flask-HTTPAuth
 pyjwt==1.7.1
 flask-statistics
 pylogstash-context>=0.1.14
+coloredlogs
