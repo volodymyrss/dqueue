@@ -1247,7 +1247,7 @@ class Queue:
         # yes. all of this can be one cmmand. but we want details
         entries = TaskEntry.select().where(
                     TaskEntry.state=="running",
-                ).order_by(TaskEntry.modified.desc()).limit(1).execute(database=None)
+                ).order_by(TaskEntry.modified.desc()).execute(database=None)
 
         N = 0
 
