@@ -1251,6 +1251,8 @@ class Queue:
 
         N = 0
 
+        logger.info("total running tasks to scan for expire: %s", len(entries))
+
         for entry in entries:
             age = datetime.datetime.now().timestamp() - entry.modified.timestamp()
             expected = entry.update_expected_in_s
