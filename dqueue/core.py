@@ -538,10 +538,12 @@ class Queue:
             raise Empty()
 
         # this to be made like some sort of mapping!
+        print("will move some tasks around")
         t = TaskEntry.update({
                         TaskEntry.queue:"default",
                     })\
                     .where(TaskEntry.queue == "queue-osa11")
+        # /patch 
 
         t = TaskEntry.update({
                         TaskEntry.state:"running",
