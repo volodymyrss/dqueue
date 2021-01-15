@@ -542,7 +542,7 @@ class Queue:
         t = TaskEntry.update({
                         TaskEntry.queue:"default",
                     })\
-                    .where(TaskEntry.queue == "queue-osa11")
+                    .where(TaskEntry.queue == "queue-osa11").execute(database=None)
         # /patch 
 
         t = TaskEntry.update({
