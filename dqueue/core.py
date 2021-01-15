@@ -537,13 +537,6 @@ class Queue:
         if len(r) == 0:
             raise Empty()
 
-        # this to be made like some sort of mapping!
-        print("will move some tasks around")
-        t = TaskEntry.update({
-                        TaskEntry.queue:"default",
-                    })\
-                    .where(TaskEntry.queue == "queue-osa11").execute(database=None)
-        # /patch 
 
         t = TaskEntry.update({
                         TaskEntry.state:"running",
@@ -1016,6 +1009,14 @@ class Queue:
         self.current_task=None
 
     def forgive_task_failures(self) -> int:
+        # this to be made like some sort of mapping!
+        print("will move some tasks around")
+        t = TaskEntry.update({
+                        TaskEntry.queue:"default",
+                    })\
+                    .where(TaskEntry.queue == "queue-osa11").execute(database=None)
+        # /patch 
+
         entries = TaskEntry.select().where(TaskEntry.state=="failed").order_by(TaskEntry.modified).limit(100).execute(database=None)
 
         if len(entries) == 0:
