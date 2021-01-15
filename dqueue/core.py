@@ -537,6 +537,12 @@ class Queue:
         if len(r) == 0:
             raise Empty()
 
+        # this to be made like some sort of mapping!
+        t = TaskEntry.update({
+                        TaskEntry.queue:"default",
+                    })\
+                    .where(TaskEntry.queue == "queue-osa11")
+
         t = TaskEntry.update({
                         TaskEntry.state:"running",
                         TaskEntry.worker_id:self.worker_id,
