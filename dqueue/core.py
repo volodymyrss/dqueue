@@ -607,7 +607,7 @@ class Queue:
 
         entries = TaskEntry.select().where(TaskEntry.key == self.current_task.key).order_by(TaskEntry.modified.desc()).limit(1).execute(database=None)
        # Task.from_task_dict(entries[0].task_dict_string)
-        logger.info("after setting task %s to state %s, found in state %s", r, self.current_task.key, state, entries[0].state)
+        logger.info("after setting task %s to state %s, found in state %s", self.current_task.key, state, entries[0].state)
 
         return r
 
