@@ -599,7 +599,7 @@ class Queue:
 
     def set_current_task_state(self, state):
         return TaskEntry.update({
-                        TaskEntry.state:sate,
+                        TaskEntry.state:state,
                     })\
                     .where( (TaskEntry.key == self.current_task.key) ).limit(1).execute(database=None)
 
@@ -773,7 +773,7 @@ class Queue:
                     self.log_task(f"db close before reconnect failed", state="db_reconnected")
 
                 db.connect()
-                self.log_task(f"managed to reconnect! {repr(e)}", state="db_reconnected")
+                self.log_task(f"managed to reconnect!", state="db_reconnected")
             except peewee.OperationalError as e:
                 self.log_task(f"failed to reconnect! {repr(e)}", state="failed_to_reconnect")
 
