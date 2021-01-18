@@ -1274,12 +1274,12 @@ class Queue:
                 try:
                     self.current_task=Task.from_task_dict(entry.task_dict_string)
                     self.current_task_stored_key=self.current_task.key
-                    self.log_task("task failed - expired",self.current_task,"failed")
                 except Exception as e:
                     logger.error("unexpected error in decoding task content: %s", repr(e))
                     extra = {TaskEntry.task_dict_string: json.dumps({'corrupt_json': entry.task_dict_string})}
                     self.log_task("task failed - corrupt json", None, "failed", task_key=entry.key)
-
+                    
+                self.log_task("task failed - expired",self.current_task,"failed")
 
                 n = TaskEntry.update({
                             TaskEntry.state:"failed",
