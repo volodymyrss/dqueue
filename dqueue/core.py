@@ -547,7 +547,7 @@ class Queue:
         pre_selected_task_key = r[0].key
 
         t = TaskEntry.update({
-                        TaskEntry.state:"running",
+                        TaskEntry.state:"reserved",
                         TaskEntry.worker_id:self.worker_id,
                         TaskEntry.modified:datetime.datetime.now(),
                         TaskEntry.update_expected_in_s:update_expected_in_s
@@ -558,7 +558,7 @@ class Queue:
 
         r = t.execute(database=None)
 
-        entries=TaskEntry.select().where(TaskEntry.worker_id==self.worker_id,TaskEntry.state=="running").order_by(TaskEntry.modified.desc()).limit(1).execute(database=None)
+        entries=TaskEntry.select().where(TaskEntry.worker_id==self.worker_id,TaskEntry.state=="reserved").order_by(TaskEntry.modified.desc()).limit(1).execute(database=None)
 
 
         if len(entries)>1:
@@ -569,6 +569,8 @@ class Queue:
             raise Empty()
 
         entry=entries[0]
+
+        log(call+": post-selected current task: " + entry.key)
 
         try:
             self.current_task = Task.from_task_dict(entry.task_dict_string)
