@@ -544,6 +544,8 @@ class Queue:
 
         logger.info("%s: pre-selected task %s", call, r[0].key)
 
+        pre_selected_task_key = r[0].key
+
         t = TaskEntry.update({
                         TaskEntry.state:"running",
                         TaskEntry.worker_id:self.worker_id,
@@ -588,6 +590,10 @@ class Queue:
             logger.error("fetched task key: %s entry: %s", entry.key, entry)
 
         log(call+": selected current task: " + self.current_task.key)
+
+        if pre_selected_task_key != self.current_task.key:
+            logger.error("pre-selected task %s does not coincide with recovered one: %s", pre_selected_task_key, self.current_task.key)
+
         
 
         if self.current_task.key != entry.key:
@@ -603,17 +609,20 @@ class Queue:
 
             raise Exception("Inconsistent storage")
 
-    def set_current_task_state(self, state):
-        logger.info("setting task %s to state %s", self.current_task.key, state)
+    def set_current_task_state(self, state, key=None):
+        if key is None:
+            key = self.current_task.key
+
+        logger.info("setting task %s to state %s", key, state)
         r = TaskEntry.update({
                         TaskEntry.state:state,
                     })\
-                    .where( (TaskEntry.key == self.current_task.key) ).limit(1).execute(database=None)
-        logger.info("result %s while setting task %s to state %s", r, self.current_task.key, state)
+                    .where( (TaskEntry.key == key) ).limit(1).execute(database=None)
+        logger.info("result %s while setting task %s to state %s", r, key, state)
 
-        entries = TaskEntry.select().where(TaskEntry.key == self.current_task.key).order_by(TaskEntry.modified.desc()).limit(1).execute(database=None)
+        entries = TaskEntry.select().where(TaskEntry.key == key).order_by(TaskEntry.modified.desc()).limit(1).execute(database=None)
        # Task.from_task_dict(entries[0].task_dict_string)
-        logger.info("after setting task %s to state %s, found in state %s", self.current_task.key, state, entries[0].state)
+        logger.info("after setting task %s to state %s, found in state %s", key, state, entries[0].state)
 
         return r
 
