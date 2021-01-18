@@ -546,7 +546,7 @@ class Queue:
                     })\
                     .where(TaskEntry.key == r[0].key)
 
-        print("task update sql:", t.sql())
+        logger.info("task update sql: %s", t.sql())
 
         r = t.execute(database=None)
 
@@ -628,6 +628,8 @@ class Queue:
         while True:
             self.get_one_task(update_expected_in_s, offset=offset)
             tried_tasks += 1
+
+            logger.info("get_one_task set current_task to %s", self.current_task.key)
 
             if tried_tasks > 50: # TODO: HC
                 logger.warning("stopping search for task, exceeded max")
