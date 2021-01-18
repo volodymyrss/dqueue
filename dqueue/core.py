@@ -527,7 +527,8 @@ class Queue:
         return [ model_to_dict(r) for r in EventLog.select().where(EventLog.worker_state!="unset").order_by(EventLog.timestamp.desc()).limit(1).execute(database=None) ]
 
     def get_one_task(self, update_expected_in_s, offset):
-        call = repr(self) + str(id(self)) +  "wid:" + self.worker_id + ";pid:" + str(os.getpid()) + "thr:" + str(threading.get_ident())  + ":" + str(random.randint(0, 100000)) + ":get_one_task"
+        random_token = str(random.randint(0, 100000)
+        call = repr(self) + str(id(self)) +  "wid:" + self.worker_id + ";pid:" + str(os.getpid()) + "thr:" + str(threading.get_ident())  + ":" + random_token) + ":get_one_task"
 
                     # or created? was created
         select_task = TaskEntry.select(TaskEntry.key)\
@@ -558,17 +559,21 @@ class Queue:
 
         r = t.execute(database=None)
 
-        entries=TaskEntry.select().where(TaskEntry.worker_id==self.worker_id,TaskEntry.state=="reserved").order_by(TaskEntry.modified.desc()).limit(1).execute(database=None)
-
-
-        if len(entries)>1:
-            raise Exception(f"several tasks ({len(entries)}) are reserved for this worker: impossible!")
-
+        #entries=TaskEntry.select().where(TaskEntry.worker_id==self.worker_id,TaskEntry.state=="reserved").order_by(TaskEntry.modified.desc()).execute(database=None)
+        entries=TaskEntry.select().where(
+                    TaskEntry.worker_id==self.worker_id, 
+                    TaskEntry.state=="reserved",
+                    TaskEntry.key==pre_selected_task_key,
+                ).order_by(TaskEntry.modified.desc()).execute(database=None)
+        
         if len(entries) == 0:
             logger.error("%s: task disappeared", call)
             raise Empty()
 
-        entry=entries[0]
+        if len(entries)>1:
+            raise Exception(f"several tasks ({len(entries)}) are reserved for this worker: something else")
+
+
 
         log(call+": post-selected current task: " + entry.key)
 
