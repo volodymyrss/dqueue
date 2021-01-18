@@ -581,7 +581,7 @@ class Queue:
             logger.error("current task key: %s task: %s", self.current_task.key, self.current_task)
             logger.error("fetched task key: %s entry: %s", entry.key, entry)
 
-        log(self.current_task.key)
+        log("selected current task: " + self.current_task.key)
         
 
         if self.current_task.key != entry.key:
