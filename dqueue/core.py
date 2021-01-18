@@ -634,6 +634,7 @@ class Queue:
         tried_tasks = 0
         while True:
             self.get_one_task(update_expected_in_s, offset=offset)
+            r = self.set_current_task_state("reserved")
             tried_tasks += 1
 
             logger.info("get_one_task set current_task to %s", self.current_task.key)
@@ -667,6 +668,7 @@ class Queue:
             raise Empty()
 
 
+        r = self.set_current_task_state("running")
         log("task is running",self.current_task)
         self.current_task_status = "running"
 
