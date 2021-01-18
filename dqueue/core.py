@@ -573,7 +573,7 @@ class Queue:
         if len(entries)>1:
             raise Exception(f"several tasks ({len(entries)}) are reserved for this worker: something else")
 
-
+        entry = entries[0]
 
         log(call+": post-selected current task: " + entry.key)
 
