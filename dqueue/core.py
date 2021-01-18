@@ -528,7 +528,7 @@ class Queue:
 
     def get_one_task(self, update_expected_in_s, offset):
         random_token = str(random.randint(0, 100000)
-        call = repr(self) + str(id(self)) +  "wid:" + self.worker_id + ";pid:" + str(os.getpid()) + "thr:" + str(threading.get_ident())  + ":" + random_token) + ":get_one_task"
+        call = repr(self) + str(id(self)) +  "wid:" + self.worker_id + ";pid:" + str(os.getpid()) + "thr:" + str(threading.get_ident())  + ":" + str(random_token) + ":get_one_task"
 
                     # or created? was created
         select_task = TaskEntry.select(TaskEntry.key)\
