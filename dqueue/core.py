@@ -598,6 +598,7 @@ class Queue:
             raise Exception("Inconsistent storage")
 
     def set_current_task_state(self, state):
+        logger.info("setting task %s to state %s", self.current_task.key, state)
         return TaskEntry.update({
                         TaskEntry.state:state,
                     })\
