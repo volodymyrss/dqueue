@@ -525,7 +525,7 @@ class Queue:
         return [ model_to_dict(r) for r in EventLog.select().where(EventLog.worker_state!="unset").order_by(EventLog.timestamp.desc()).limit(1).execute(database=None) ]
 
     def get_one_task(self, update_expected_in_s, offset):
-        call = str(os.getpid()) + ":get_one_task"
+        call = str(os.getpid()) + ":" + str(threading.get_ident())  + ":" + str(random.randint(0, 100000)) + ":get_one_task"
 
                     # or created? was created
         select_task = TaskEntry.select(TaskEntry.key)\
