@@ -592,9 +592,10 @@ class Queue:
         log(call+": selected current task: " + self.current_task.key)
 
         if pre_selected_task_key != self.current_task.key:
-            logger.error("pre-selected task %s does not coincide with recovered one: %s", pre_selected_task_key, self.current_task.key)
+            logger.error("RACED: pre-selected task %s does not coincide with recovered one: %s; will set %s to waiting", pre_selected_task_key, self.current_task.key, pre_selected_task_key)
+            self.set_current_task_state("waiting", pre_selected_task_key)
+            raise Empty()
 
-        
 
         if self.current_task.key != entry.key:
             log("inconsitent storage:")
