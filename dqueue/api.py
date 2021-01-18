@@ -255,7 +255,7 @@ class WorkerOffer(SwaggerView):
 
         try:
             task = queue.get(update_expected_in_s, worker_knowledge=worker_knowledge)
-            logger.warning("got task: %s", task)
+            logger.warning("picked task to offer: %s", task)
             return jsonify(
                     task.as_dict,
                 )

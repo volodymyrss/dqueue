@@ -597,6 +597,12 @@ class Queue:
 
             raise Exception("Inconsistent storage")
 
+    def set_current_task_state(self, state):
+        return TaskEntry.update({
+                        TaskEntry.state:sate,
+                    })\
+                    .where( (TaskEntry.key == self.current_task.key) ).limit(1).execute(database=None)
+
     def get(self, update_expected_in_s: float=-1, worker_knowledge=None):
         ""
         if self.current_task is not None:
@@ -624,6 +630,7 @@ class Queue:
 
             if tried_tasks > 50: # TODO: HC
                 logger.warning("stopping search for task, exceeded max")
+                r = self.set_current_task_state("waiting")
                 self.current_task = None
                 break
 
@@ -636,10 +643,7 @@ class Queue:
                 logger.warning("picked task %s has non-positive (%s) worker (%s) score: skipping; tried %s current offset %s",
                         self.current_task.key, worker_fit_score, worker_knowledge, tried_tasks, offset)
 
-                r=TaskEntry.update({
-                                TaskEntry.state:"waiting",
-                            })\
-                            .where( (TaskEntry.key == self.current_task.key) ).limit(1).execute(database=None)
+                r = self.set_current_task_state("waiting")
 
                 offset += 1
                 self.current_task = None
