@@ -562,7 +562,7 @@ class Queue:
 
 
         if len(entries)>1:
-            raise Exception(f"several tasks ({len(entries)}) are running for this worker: impossible!")
+            raise Exception(f"several tasks ({len(entries)}) are reserved for this worker: impossible!")
 
         if len(entries) == 0:
             logger.error("%s: task disappeared", call)
@@ -685,9 +685,8 @@ class Queue:
         if self.current_task is None:
             raise Empty()
 
-
-        r = self.set_current_task_state("running")
         log("task is running",self.current_task)
+        r = self.set_current_task_state("running")
         self.current_task_status = "running"
 
         self.log_task("task started")
