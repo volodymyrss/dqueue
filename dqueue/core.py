@@ -599,10 +599,17 @@ class Queue:
 
     def set_current_task_state(self, state):
         logger.info("setting task %s to state %s", self.current_task.key, state)
-        return TaskEntry.update({
+        r = TaskEntry.update({
                         TaskEntry.state:state,
                     })\
                     .where( (TaskEntry.key == self.current_task.key) ).limit(1).execute(database=None)
+        logger.info("result %s while setting task %s to state %s", r, self.current_task.key, state)
+
+        entries = TaskEntry.select().where(TaskEntry.key == self.current_task.key).order_by(TaskEntry.modified.desc()).limit(1).execute(database=None)
+       # Task.from_task_dict(entries[0].task_dict_string)
+        logger.info("after setting task %s to state %s, found in state %s", r, self.current_task.key, state, entries[0].state)
+
+        return r
 
     def get(self, update_expected_in_s: float=-1, worker_knowledge=None):
         ""
