@@ -220,7 +220,7 @@ class Task:
         return key
 
     def __repr__(self):
-        return "[{}: {}: {}]".format(self.__class__.__name__, self.key, repr(self.task_data)[:300])
+        return "[{}/{}: {}: {}]".format(self.__class__.__name__, id(self), self.key, repr(self.task_data)[:300])
 
     def filename_instance(self):
         return "unset"
@@ -527,7 +527,7 @@ class Queue:
         return [ model_to_dict(r) for r in EventLog.select().where(EventLog.worker_state!="unset").order_by(EventLog.timestamp.desc()).limit(1).execute(database=None) ]
 
     def get_one_task(self, update_expected_in_s, offset):
-        call = str(os.getpid()) + ":" + str(threading.get_ident())  + ":" + str(random.randint(0, 100000)) + ":get_one_task"
+        call = repr(self)+ ":" + str(os.getpid()) + ":" + str(threading.get_ident())  + ":" + str(random.randint(0, 100000)) + ":get_one_task"
 
                     # or created? was created
         select_task = TaskEntry.select(TaskEntry.key)\
