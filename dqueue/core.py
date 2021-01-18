@@ -525,6 +525,8 @@ class Queue:
         return [ model_to_dict(r) for r in EventLog.select().where(EventLog.worker_state!="unset").order_by(EventLog.timestamp.desc()).limit(1).execute(database=None) ]
 
     def get_one_task(self, update_expected_in_s, offset):
+        call = str(os.getpid()) + ":get_one_task"
+
                     # or created? was created
         select_task = TaskEntry.select(TaskEntry.key)\
                     .where( (TaskEntry.state=="waiting") & (TaskEntry.queue==self.queue) )\
@@ -546,7 +548,7 @@ class Queue:
                     })\
                     .where(TaskEntry.key == r[0].key)
 
-        logger.info("task update sql: %s", t.sql())
+        logger.info("%s: task update sql: %s", call, t.sql())
 
         r = t.execute(database=None)
 
@@ -557,7 +559,7 @@ class Queue:
             raise Exception(f"several tasks ({len(entries)}) are running for this worker: impossible!")
 
         if len(entries) == 0:
-            logger.error("task disappeared")
+            logger.error("%s: task disappeared", call)
             raise Empty()
 
         entry=entries[0]
@@ -570,7 +572,7 @@ class Queue:
                         TaskEntry.state: "corrupt",
                     }).where(TaskEntry.key == entry.key).execute(database=None)
 
-            logger.error("found corrupt entry %s, marking as so", entry.key)
+            logger.error("%s: found corrupt entry %s, marking as so", call, entry.key)
             return None
 
         # validate
@@ -581,7 +583,7 @@ class Queue:
             logger.error("current task key: %s task: %s", self.current_task.key, self.current_task)
             logger.error("fetched task key: %s entry: %s", entry.key, entry)
 
-        log("selected current task: " + self.current_task.key)
+        log(call+": selected current task: " + self.current_task.key)
         
 
         if self.current_task.key != entry.key:
