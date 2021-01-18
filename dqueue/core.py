@@ -537,6 +537,8 @@ class Queue:
                     .limit(1)
 
         r = select_task.execute(database=None) # not atomic!?
+
+        logger.info("%s: pre-selected task %s", call, r[0].key)
         
         if len(r) == 0:
             raise Empty()
@@ -554,8 +556,8 @@ class Queue:
 
         r = t.execute(database=None)
 
-
         entries=TaskEntry.select().where(TaskEntry.worker_id==self.worker_id,TaskEntry.state=="running").order_by(TaskEntry.modified.desc()).limit(1).execute(database=None)
+
 
         if len(entries)>1:
             raise Exception(f"several tasks ({len(entries)}) are running for this worker: impossible!")
@@ -578,7 +580,7 @@ class Queue:
             return None
 
         # validate
-        self.current_task_stored_key=self.current_task.key
+        self.current_task_stored_key = self.current_task.key
 
         if self.current_task.key != entry.key:
             logger.error("current task key computed now does not match that found in record")
