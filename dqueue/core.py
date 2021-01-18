@@ -538,11 +538,11 @@ class Queue:
 
         r = select_task.execute(database=None) # not atomic!?
 
-        logger.info("%s: pre-selected task %s", call, r[0].key)
         
         if len(r) == 0:
             raise Empty()
 
+        logger.info("%s: pre-selected task %s", call, r[0].key)
 
         t = TaskEntry.update({
                         TaskEntry.state:"running",
