@@ -10,5 +10,5 @@ retrying
 Flask-HTTPAuth
 pyjwt==1.7.1
 flask-statistics
-pylogstash-context>=0.1.14
+pylogstash-context>=0.1.17
 coloredlogs
