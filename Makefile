@@ -32,7 +32,7 @@ run-guardian: build
                 --name $(CONTAINER) $(IMAGE)
 	        #-e ODATESTS_BOT_PASSWORD=$(shell cat testbot-password.txt) \
 
-build:
+build: Dockerfile requirements.txt
 	rm -fv dist/*
 	python setup.py sdist
 	DOCKER_BUILDKIT=1 docker build -t $(IMAGE) .
