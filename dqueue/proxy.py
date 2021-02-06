@@ -3,6 +3,7 @@ import os
 import time
 import json
 import socket
+import traceback
 from hashlib import sha224
 from collections import defaultdict
 import glob
@@ -219,6 +220,7 @@ class QueueProxy(DataFacts, Queue):
 
     def list_tasks(self, state="any"):
         self.logger.warning("\033[31mexpensive list_tasks operation!\033[0m")
+        self.logger.warning("\033[31mexpensive list_tasks operation at: %s\033[0m", traceback.format_stack())
         l = [task for task in self.client.tasks.listTasks(state=state).response().result['tasks']]
         self.logger.info(f"found tasks: {len(l)}")
         return l
