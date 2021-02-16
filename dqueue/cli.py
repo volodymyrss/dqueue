@@ -452,21 +452,57 @@ def resubmit(obj, scope_selector):
 def runnercli():
     pass
 
-def list_runners(command, executor_name):
+
+def list_runners(command, inactive_runners_command, infra_stats_command, executor_name):
     runners = subprocess.check_output(["bash", "-c", command]).decode().split("\n")
-
     runners = [ r for r in runners if r != "" ]
+    
+    if inactive_runners_command is not None:
+        inactive_runners = subprocess.check_output(["bash", "-c", inactive_runners_command]).decode().split("\n")
+        inactive_runners = [ r for r in runners if r != "" ]
+    else:
+        inactive_runners = []
 
-    print("found runners:", runners)
+    
+    if infra_stats_command is not None:
+        stats_rows =  subprocess.check_output(["bash", "-c", infra_stats_command]).decode().split("\n")
+
+        for r in stats_rows[1:]:
+            if len(r.split()) != len(stats_rows[0].split()):
+                continue
+
+            D = {}
+            for k, v in zip([k.lower() for k in stats_rows[0].split()], 
+                             r.split()):
+                if k in D:
+                    k = k+"_1"
+
+                D[k] = v
+
+
+            log_stasher.log(
+                            {**dict(
+                                origin="oda-node-executor",
+                                action="infra-stats",
+                                executor_name=executor_name,
+                                ),
+                             **D
+                            }
+                           )
+
+    else:
+        infra_stats = {}
 
     log_stasher.log(
-                dict(
-                    origin="oda-node-executor",
-                    action="list-runners",
-                    nrunners=len(runners),
-                    executor_name=executor_name,
+                    dict(
+                        origin="oda-node-executor",
+                        action="list-runners",
+                        nrunners=len(runners),
+                        n_active_runners=len(runners) - len(inactive_runners),
+                        n_inactive_runners=len(inactive_runners),
+                        executor_name=executor_name,
+                    ),
                 )
-            )
 
     return runners
 
@@ -474,6 +510,9 @@ def list_runners(command, executor_name):
 @runnercli.command()
 @click.option("-d", "--deploy-runner-command", default=None)
 @click.option("-l", "--list-runners-command", default=None)
+@click.option("--list-inactive-runners-command", default=None)
+@click.option("--list-inactive-runners-command", default=None)
+@click.option("--infra-stats-command", default=None)
 @click.option("-p", "--profile", default=None)
 @click.option("-t", "--timeout", default=10)
 @click.option("-m", "--max-runners", default=100)
@@ -481,7 +520,7 @@ def list_runners(command, executor_name):
 @click.option("-i", "--idle-check-rate", default=10)
 @click.option("-N", "--executor-name", default=None)
 @click.pass_obj
-def start_executor(obj, deploy_runner_command, list_runners_command, profile, timeout, max_runners, min_waiting_jobs, idle_check_rate, executor_name):
+def start_executor(obj, deploy_runner_command, list_runners_command, list_inactive_runners_command, infra_stats_command, profile, timeout, max_runners, min_waiting_jobs, idle_check_rate, executor_name):
     if profile is not None:
         if profile.startswith(":"):
             p = yaml.safe_load(io.BytesIO(requests.get("https://raw.githubusercontent.com/volodymyrss/oda-runner-profiles/main/{}.yaml".format(profile[1:])).content)) # long and hard-coded string
@@ -494,6 +533,8 @@ def start_executor(obj, deploy_runner_command, list_runners_command, profile, ti
 
         deploy_runner_command = p['deploy_runner_command']
         list_runners_command = p['list_runners_command']
+        list_inactive_runners_command = p.get('list_inactive_runners_command', None)
+        infra_stats_command = p.get('infra_stats_command', None)
 
     if executor_name is None:
         if profile is None:
@@ -530,7 +571,7 @@ def start_executor(obj, deploy_runner_command, list_runners_command, profile, ti
             if summary['waiting'] > 0:
                 print(f"\033[31mfound {summary['waiting']} waiting jobs, need to start some runners\033[0m")
                 
-                runners = list_runners(list_runners_command, executor_name)
+                runners = list_runners(list_runners_command, list_inactive_runners_command, infra_stats_command, executor_name)
                 
                 print(f"\033[33mfound {len(runners)} live runners, max {max_runners}, min waiting to trigger {min_waiting_jobs}, need at least {summary['waiting'] - min_waiting_jobs}\033[0m")
                 if len(runners) >= min(max_runners, summary['waiting'] - min_waiting_jobs):
@@ -545,7 +586,10 @@ def start_executor(obj, deploy_runner_command, list_runners_command, profile, ti
             if age % idle_check_rate == 0:
                 print(f"\033[33mwill perform idle check\033[0m")
                 
-                runners = list_runners(list_runners_command, executor_name)
+                runners = list_runners(list_runners_command, 
+                                       list_inactive_runners_command, 
+                                       infra_stats_command, 
+                                       executor_name)
 
 
         time.sleep(timeout)
