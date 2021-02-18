@@ -1199,7 +1199,14 @@ class TaskCallbackView(SwaggerView):
         if any([url.startswith(p) for p in allowed_dispatcher]):
             r = requests.get(url, params=params)
         else:
-            raise RuntimeError(f"unable to deal with non-standard dispatcher, allowed {allowed_dispatcher}")
+            error = f"unable to deal with non-standard dispatcher, allowed {allowed_dispatcher}"
+            return jsonify(
+                    dict(
+                        status = "RequestNotGood",
+                        text = error,
+                    )
+                )
+            
 
         url_parsed = urlparse(url)
         qs = parse_qs(url_parsed.query)
