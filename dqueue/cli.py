@@ -635,6 +635,9 @@ def ask(obj, target, module, assume):
     #print("odahub responds", r)
     print(f"\033[31m{r['state']:10s}\033[0m \033[33m{r['modified']}\033[0m \033[34m{r['created']}\033[0m")
 
+# TODO something fails on list?
+
+# ls filter jsonpath
 
 def main():
     cli(obj={})
