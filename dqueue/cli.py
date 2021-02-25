@@ -459,7 +459,7 @@ def list_runners(command, inactive_runners_command, infra_stats_command, executo
     
     if inactive_runners_command is not None:
         inactive_runners = subprocess.check_output(["bash", "-c", inactive_runners_command]).decode().split("\n")
-        inactive_runners = [ r for r in runners if r != "" ]
+        inactive_runners = [ r for r in inactive_runners if r != "" ]
     else:
         inactive_runners = []
 
