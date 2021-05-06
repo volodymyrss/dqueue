@@ -1199,6 +1199,7 @@ class TaskCallbackView(SwaggerView):
 
         if any([url.startswith(p) for p in allowed_dispatcher]):
             r = requests.get(url, params=params)
+            logger.info("callback %s returns %s", url, r)
         else:
             error = f"unable to deal with non-standard dispatcher, allowed {allowed_dispatcher}"
             logger.error("requested not allowed callback url %s, params %s, allowed %s", url, params, allowed_dispatcher)
