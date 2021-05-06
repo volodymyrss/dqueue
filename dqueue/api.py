@@ -1193,6 +1193,7 @@ class TaskCallbackView(SwaggerView):
 
         allowed_dispatcher = [
                     "http://oda-dispatcher:8000",
+                    "http://dispatcher.staging.internal.odahub.io",
                     url_for('healthcheck', _external=True),
                 ]
 
@@ -1200,6 +1201,7 @@ class TaskCallbackView(SwaggerView):
             r = requests.get(url, params=params)
         else:
             error = f"unable to deal with non-standard dispatcher, allowed {allowed_dispatcher}"
+            logger.error("requested not allowed callback url %s, params %s, allowed %s", url, params, allowed_dispatcher)
             return jsonify(
                     dict(
                         status = "RequestNotGood",
