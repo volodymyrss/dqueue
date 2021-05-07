@@ -32,7 +32,7 @@ def decode(token, secret=None, verify=True):
             if secret is None:
                 secret = binascii.unhexlify(find_hexified_secret())
 
-            data = jwt.decode(token, key=secret)
+            data = jwt.decode(token, key=secret, algorithms=["HS256"])
         else:
             data = jwt.decode(token, verify=False)
     except Exception as e:
@@ -64,7 +64,7 @@ def generate(output=None, secret=None, lifetime=3*24*3600):
 
     logger.info("decodes to %s", decode(cjwt))
 
-    f.write(cjwt.decode())
+    f.write(cjwt)
 
     payload={"action": "new token"}
 
@@ -73,7 +73,7 @@ def generate(output=None, secret=None, lifetime=3*24*3600):
                 data=json.dumps(payload),
                 headers={
                         'content-type': 'application/json',
-                        'Authorization': 'Bearer ' + cjwt.decode(),
+                        'Authorization': 'Bearer ' + cjwt,
                     }
             )
 
