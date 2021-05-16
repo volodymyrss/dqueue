@@ -569,13 +569,17 @@ def start_executor(obj, deploy_runner_command, list_runners_command, list_inacti
             )
 
             if summary['waiting'] > 0:
-                print(f"\033[31mfound {summary['waiting']} waiting jobs, need to start some runners\033[0m")
+                print(f"\033[31mfound {summary['waiting']} waiting jobs, may need to start some runners\033[0m")
                 
                 runners = list_runners(list_runners_command, list_inactive_runners_command, infra_stats_command, executor_name)
+
+                needed_runners = summary['waiting'] + summary['running'] - min_waiting_jobs
                 
-                print(f"\033[33mfound {len(runners)} live runners, max {max_runners}, min waiting to trigger {min_waiting_jobs}, need at least {summary['waiting'] - min_waiting_jobs}\033[0m")
-                if len(runners) >= min(max_runners, summary['waiting'] - min_waiting_jobs):
-                    print(f"\033[33mfound enough runners {len(runners)}\033[0m")
+                print(f"\033[33mfound {len(runners)} live runners, max {max_runners}, min waiting to trigger {min_waiting_jobs}, need at least {}\033[0m")
+                if len(runners) >= max_runners:
+                    print(f"\033[33mreached max runners {len(runners)}\033[0m")
+                elif summary['waiting'] < min_waiting_jobs:
+                    print(f"\033[33mnot enough waiting to trigger runners, have runners {len(runners)}\033[0m")
                 else:
                     cmd = deploy_runner_command.format(**tpars)
                     print(f"\033[31mexecuting: {cmd}\033[0m")
