@@ -575,7 +575,7 @@ def start_executor(obj, deploy_runner_command, list_runners_command, list_inacti
 
                 needed_runners = summary['waiting'] + summary['running'] - min_waiting_jobs
                 
-                print(f"\033[33mfound {len(runners)} live runners, max {max_runners}, min waiting to trigger {min_waiting_jobs}, need at least {}\033[0m")
+                print(f"\033[33mfound {len(runners)} live runners, max {max_runners}, min waiting to trigger {min_waiting_jobs}\033[0m")
                 if len(runners) >= max_runners:
                     print(f"\033[33mreached max runners {len(runners)}\033[0m")
                 elif summary['waiting'] < min_waiting_jobs:
