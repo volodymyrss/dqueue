@@ -390,6 +390,8 @@ def guardian(obj, watch):
         log_stasher.log(
                     dict(
                         origin="oda-node",
+                        leader=getattr(obj['queue'], 'leader', 'local'),
+                        queue=obj['queue'].queue,
                         action="queue-status",
                         summary=obj['queue'].summary,
                     )
