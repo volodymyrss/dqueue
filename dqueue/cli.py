@@ -401,6 +401,8 @@ def guardian(obj, watch):
             log_stasher.log(
                          { 
                             "origin": "oda-node",
+                            "leader": getattr(obj['queue'], 'leader', 'local'),
+                            "queue": obj['queue'].queue,
                             "action": "queue-status-per-kind",
                             "oda-node/queue/kind": k,
                             "oda-node/queue/njobs": v,
