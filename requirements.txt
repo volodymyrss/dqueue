@@ -12,3 +12,4 @@ pyjwt==1.7.1
 flask-statistics
 pylogstash-context>=0.1.17
 coloredlogs
+oda-knowledge-base>=0.7.16
