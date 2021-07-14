@@ -1191,11 +1191,15 @@ class TaskCallbackView(SwaggerView):
 
         logger.info("callback %s, params %s", url, params)
 
+
         allowed_dispatcher = [
-                    "http://oda-dispatcher:8000",
-                    "http://dispatcher.staging.internal.odahub.io",
                     url_for('healthcheck', _external=True),
                 ]
+
+        allowed_dispatcher += os.environ.get("ODA_ALLOWED_DISPATCHER_CALLBACKS", 
+                                             "http://oda-dispatcher:8000,http://dispatcher.staging.internal.odahub.io").split(",")
+
+        
 
         if any([url.startswith(p) for p in allowed_dispatcher]):
             r = requests.get(url, params=params)
