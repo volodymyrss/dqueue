@@ -418,7 +418,7 @@ def guardian(obj, watch):
 @cli.command()
 @click.pass_obj
 def get(obj):
-    task_data=obj['queue'].get()
+    task_data=obj['queue'].get(only_users='vladimir.savchenko@gmail.com')
     print(colored("offered:", "green"), task_data)
 
 @cli.command()
