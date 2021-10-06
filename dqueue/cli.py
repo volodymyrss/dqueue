@@ -1,3 +1,4 @@
+import base64
 import click
 import logging
 import requests
@@ -140,6 +141,13 @@ def list(obj, debug, log, info, select, json_output):
 
         s.append(task['created'])
 
+        token_payload = json.loads(
+                            base64.b64decode(
+                                task['task_dict']['submission_info']['callback_parameters']['token'][0].split(".")[1]))
+        
+        s.append( colored(token_payload['sub'], "grey"))
+
+
         if 'object_identity' in td:
             oi = td['object_identity']
 
@@ -149,8 +157,10 @@ def list(obj, debug, log, info, select, json_output):
                 s.append( colored(oi['name'], "yellow"))
 
         if info:
-            ti = obj['queue'].task_info(task['key'])
-            print(ti['task_info']['task_data']['object_identity']['factory_name'] )#['task_dict'])
+            ti = obj['queue'].task_info(task['key'])            
+            #print(ti['task_info']['task_data']['object_identity']['factory_name'] )#['task_dict'])
+
+#        print(ti['task_info']['task_data']['object_identity']['factory_name'] )#['task_dict'])
 
 
         s.append(repr(td))
