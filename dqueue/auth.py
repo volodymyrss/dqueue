@@ -32,6 +32,9 @@ def decode(token, secret=None, verify=True):
             if secret is None:
                 secret = binascii.unhexlify(find_hexified_secret())
 
+            logger.info("token: %s", token)
+            logger.info("secret: %s", binascii.hexlify(secret))
+
             data = jwt.decode(token, key=secret, algorithms=["HS256"])
         else:
             data = jwt.decode(token, verify=False)
@@ -62,14 +65,16 @@ def generate(output=None, secret=None, lifetime=3*24*3600):
     else:
         f=open(output,"wt")
 
-    logger.info("decodes to %s", decode(cjwt))
+    logger.info("decodes to %s", decode(cjwt, secret))
+    logger.info("token %s", cjwt)
+    logger.info("secret hexified %s", binascii.hexlify(secret))
 
     f.write(cjwt)
 
     payload={"action": "new token"}
 
     r=requests.get(
-                "https://dqueue.staging-1-3.odahub.io/",
+                os.getenv("ODAHUB").split("@")[0],
                 data=json.dumps(payload),
                 headers={
                         'content-type': 'application/json',
