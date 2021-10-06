@@ -8,6 +8,7 @@ import socket
 from hashlib import sha224
 from collections import OrderedDict, defaultdict
 import logging
+import urllib
 import pylogstash
 import base64
 
@@ -677,7 +678,9 @@ class Queue:
             else:
                 try:
                     logger.info('will search for user info in %s', self.current_task.submission_info)
-                    user_job_token = self.current_task.submission_info['callback_parameters']['token'][0]
+                    callback = self.current_task.submission_info['callbacks'][0]
+                    user_job_token = dict(urllib.parse.parse_qs(callback.split("?",1)[1]))['token'][0]
+                    
                     user_sub = json.loads(base64.b64decode(user_job_token.split(".")[1]))['sub']
                     logger.info('allowed only %s, user token contains %s', only_users, user_sub)
                     if user_sub not in only_users.split(","):                        
