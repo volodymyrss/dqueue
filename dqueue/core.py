@@ -7,13 +7,9 @@ import random
 import socket
 from hashlib import sha224
 from collections import OrderedDict, defaultdict
-import glob
 import logging
-import io
-import re
-import click
-import urllib.parse
 import pylogstash
+import base64
 
 from functools import reduce
 
@@ -634,7 +630,7 @@ class Queue:
 
         return r
 
-    def get(self, update_expected_in_s: float=-1, worker_knowledge=None):
+    def get(self, update_expected_in_s: float=-1, worker_knowledge=None, only_users='all'):
         ""
         if self.current_task is not None:
             raise CurrentTaskUnfinished(self.current_task)
@@ -671,6 +667,23 @@ class Queue:
             if self.current_task is None:
                 time.sleep(1)
                 continue
+
+            if only_users != 'all':
+                try:
+                    user_job_token = self.current_task.submission_info['callback_parameters']['token'][0]
+                    user_sub = json.loads(base64.b64decode(user_job_token.split(".")[1]))['sub']
+                    logger.info('allowed only %s, user token contains %s', only_users, user_sub)
+                    if user_sub not in only_users.split(","):                        
+                        logger.info('allowed only %s, user token contains %s, skipping!', only_users, user_sub)
+                        r = self.set_current_task_state("waiting")
+                        offset += 1
+                        self.current_task = None
+
+                        time.sleep(1)
+                        continue
+                    logger.info('allowed only %s, user token contains %s, NOT skipping!', only_users, user_sub)
+                except Exception as e:
+                    logger.warning('failed to find user token: %s', e)
 
             worker_fit_score = self.current_task.score_worker_knowledge(worker_knowledge) # also sort TODO
             if worker_fit_score <= 0:
