@@ -668,7 +668,9 @@ class Queue:
                 time.sleep(1)
                 continue
 
-            if only_users != 'all':
+            if only_users == 'all':
+                logger.info('allowed all users: %s', only_users)
+            else:
                 try:
                     user_job_token = self.current_task.submission_info['callback_parameters']['token'][0]
                     user_sub = json.loads(base64.b64decode(user_job_token.split(".")[1]))['sub']
