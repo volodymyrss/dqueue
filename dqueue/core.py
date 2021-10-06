@@ -705,7 +705,7 @@ class Queue:
                 offset += 1
                 self.current_task = None
 
-                time.sleep(1)
+                time.sleep(0.1)
                 continue
 
             break
