@@ -231,6 +231,12 @@ class WorkerOffer(SwaggerView):
                     'required': False,
                     'type': 'string',
                 },
+                {
+                    'name': 'only_users',
+                    'in': 'query',
+                    'required': False,
+                    'type': 'string',
+                },                                
             ]
 
     responses = {
@@ -245,6 +251,7 @@ class WorkerOffer(SwaggerView):
 
     def get(self, worker_id):
         update_expected_in_s = request.args.get('update_expected_in_s', -1, type=float)
+        only_users = request.args.get('only_users', 'all', type=str)
 
         worker_knowledge = json.loads(request.args.get('worker_knowledge_json', '{}'))
 
@@ -254,7 +261,7 @@ class WorkerOffer(SwaggerView):
         queue = dqueue.core.Queue(request.args.get('queue', 'default'), worker_id=worker_id)
 
         try:
-            task = queue.get(update_expected_in_s, worker_knowledge=worker_knowledge)
+            task = queue.get(update_expected_in_s, worker_knowledge=worker_knowledge, only_users=only_users)
             logger.warning("picked task to offer: %s", task)
             return jsonify(
                     task.as_dict,
