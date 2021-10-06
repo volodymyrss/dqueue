@@ -670,30 +670,33 @@ class Queue:
                 time.sleep(1)
                 continue
 
+            skip_this_one = False
+
             if only_users == 'all':
                 logger.info('allowed all users: %s', only_users)
             else:
                 try:
+                    logger.info('will search for user info in %s', self.current_task.submission_info)
                     user_job_token = self.current_task.submission_info['callback_parameters']['token'][0]
                     user_sub = json.loads(base64.b64decode(user_job_token.split(".")[1]))['sub']
                     logger.info('allowed only %s, user token contains %s', only_users, user_sub)
                     if user_sub not in only_users.split(","):                        
                         logger.info('allowed only %s, user token contains %s, skipping!', only_users, user_sub)
-                        r = self.set_current_task_state("waiting")
-                        offset += 1
-                        self.current_task = None
-
-                        time.sleep(1)
-                        continue
-                    logger.info('allowed only %s, user token contains %s, NOT skipping!', only_users, user_sub)
+                        skip_this_one = True
+                    else:
+                        logger.info('allowed only %s, user token contains %s, NOT skipping!', only_users, user_sub)
                 except Exception as e:
-                    logger.warning('failed to find user token: %s', e)
+                    logger.warning('failed to find user token: %s; will skip', e)
+                    skip_this_one = True
 
-            worker_fit_score = self.current_task.score_worker_knowledge(worker_knowledge) # also sort TODO
-            if worker_fit_score <= 0:
-                logger.warning("picked task %s has non-positive (%s) worker (%s) score: skipping; tried %s current offset %s",
-                        self.current_task.key, worker_fit_score, worker_knowledge, tried_tasks, offset)
+            if not skip_this_one:
+                worker_fit_score = self.current_task.score_worker_knowledge(worker_knowledge) # also sort TODO
+                if worker_fit_score <= 0:
+                    logger.warning("picked task %s has non-positive (%s) worker (%s) score: skipping; tried %s current offset %s",
+                            self.current_task.key, worker_fit_score, worker_knowledge, tried_tasks, offset)
+                    skip_this_one = True
 
+            if skip_this_one:
                 r = self.set_current_task_state("waiting")
 
                 offset += 1
