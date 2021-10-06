@@ -141,9 +141,9 @@ def list(obj, debug, log, info, select, json_output):
 
         s.append(task['created'])
 
-        token_payload = json.loads(
-                            base64.b64decode(
-                                task['task_dict']['submission_info']['callback_parameters']['token'][0].split(".")[1]))
+        token = task['task_dict']['submission_info']['callback_parameters']['token'][0].split(".")[1]
+
+        token_payload = json.loads(base64.b64decode(token + ("=" * ((int(len(token)/4)*4) + 4 - len(token)))))
         
         s.append( colored(token_payload['sub'], "grey"))
 
