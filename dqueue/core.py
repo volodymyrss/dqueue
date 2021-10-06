@@ -661,7 +661,7 @@ class Queue:
 
             logger.info("get_one_task set current_task to %s", self.current_task.key)
 
-            if tried_tasks > 50: # TODO: HC
+            if tried_tasks > 500: # TODO: HC
                 logger.warning("stopping search for task, exceeded max")
                 r = self.set_current_task_state("waiting")
                 self.current_task = None
