@@ -13,3 +13,4 @@ flask-statistics
 pylogstash-context>=0.1.17
 coloredlogs
 oda-knowledge-base>=0.7.16
+jsonschema<4.0
