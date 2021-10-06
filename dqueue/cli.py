@@ -416,9 +416,10 @@ def guardian(obj, watch):
         time.sleep(watch)
 
 @cli.command()
+@click.option('--only-users', default='all')
 @click.pass_obj
-def get(obj):
-    task_data=obj['queue'].get(only_users='vladimir.savchenko@gmail.com')
+def get(obj, only_users):
+    task_data=obj['queue'].get(only_users=only_users)
     print(colored("offered:", "green"), task_data)
 
 @cli.command()
