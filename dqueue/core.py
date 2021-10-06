@@ -632,6 +632,8 @@ class Queue:
 
     def get(self, update_expected_in_s: float=-1, worker_knowledge=None, only_users='all'):
         ""
+        logger.info('getting offer for only_users: %s', only_users)
+
         if self.current_task is not None:
             raise CurrentTaskUnfinished(self.current_task)
 

@@ -134,6 +134,8 @@ class QueueProxy(DataFacts, Queue):
         if self.current_task is not None:
             raise CurrentTaskUnfinished(self.current_task)
 
+        print('proxy q requesting for users:', only_users)
+
         r = self.client.worker.getOffer(worker_id=self.worker_id, 
                                         queue=self.queue, 
                                         update_expected_in_s= update_expected_in_s, 

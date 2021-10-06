@@ -419,6 +419,7 @@ def guardian(obj, watch):
 @click.option('--only-users', default='all')
 @click.pass_obj
 def get(obj, only_users):
+    print('requesting for users:', only_users)
     task_data=obj['queue'].get(only_users=only_users)
     print(colored("offered:", "green"), task_data)
 
