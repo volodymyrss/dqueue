@@ -253,6 +253,8 @@ class WorkerOffer(SwaggerView):
         update_expected_in_s = request.args.get('update_expected_in_s', -1, type=float)
         only_users = request.args.get('only_users', 'all', type=str)
 
+        logger.info('only_users: %s', only_users)
+
         worker_knowledge = json.loads(request.args.get('worker_knowledge_json', '{}'))
 
         if worker_knowledge == {}:
