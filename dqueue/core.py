@@ -534,8 +534,9 @@ class Queue:
 
                     #.join(TaskWorkerKnowledge)\
                     # or created? was created
+                    #.where( (TaskEntry.state=="waiting") & (TaskEntry.queue==self.queue) & (TaskWorkerKnowledge.last_denied_worker_knowledge_hash != worker_knowledge_hash(prefer_worker_knowledge)) )\
         select_task = TaskEntry.select(TaskEntry.key)\
-                    .where( (TaskEntry.state=="waiting") & (TaskEntry.queue==self.queue) & (TaskWorkerKnowledge.last_denied_worker_knowledge_hash != worker_knowledge_hash(prefer_worker_knowledge)) )\
+                    .where( (TaskEntry.state=="waiting") & (TaskEntry.queue==self.queue) )\
                     .order_by(TaskEntry.modified)\
                     .offset(offset)\
                     .limit(1)
