@@ -532,9 +532,9 @@ class Queue:
         random_token = str(random.randint(0, 100000))
         call = repr(self) + str(id(self)) +  "wid:" + self.worker_id + ";pid:" + str(os.getpid()) + "thr:" + str(threading.get_ident())  + ":" + str(random_token) + ":get_one_task"
 
+                    #.join(TaskWorkerKnowledge)\
                     # or created? was created
         select_task = TaskEntry.select(TaskEntry.key)\
-                    .join(TaskWorkerKnowledge)\
                     .where( (TaskEntry.state=="waiting") & (TaskEntry.queue==self.queue) & (TaskWorkerKnowledge.last_denied_worker_knowledge_hash != worker_knowledge_hash(prefer_worker_knowledge)) )\
                     .order_by(TaskEntry.modified)\
                     .offset(offset)\
