@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 import os
 import threading
 import json
@@ -36,7 +37,7 @@ from dqueue.entry import decode_entry_data
 import pymysql
 import peewee # type: ignore
 
-from dqueue.database import EventLog, TaskEntry, db, model_to_dict
+from dqueue.database import EventLog, TaskEntry, TaskWorkerKnowledge, db, model_to_dict
 
 sleep_multiplier = 1
 n_failed_retries = int(os.environ.get('DQUEUE_FAILED_N_RETRY','20'))
@@ -304,6 +305,10 @@ def order_nested_dict(d):
 
     return d
 
+task_knowledge_memory = {}
+
+def worker_knowledge_hash(worker_knowledge):
+    return hashlib.md5(repr(worker_knowledge).encode()).hexdigest()[:8]
 
 class Queue:
     current_task=None
@@ -523,13 +528,14 @@ class Queue:
     def get_worker_states(self):
         return [ model_to_dict(r) for r in EventLog.select().where(EventLog.worker_state!="unset").order_by(EventLog.timestamp.desc()).limit(1).execute(database=None) ]
 
-    def get_one_task(self, update_expected_in_s, offset):
+    def get_one_task(self, update_expected_in_s, offset, prefer_worker_knowledge=None):
         random_token = str(random.randint(0, 100000))
         call = repr(self) + str(id(self)) +  "wid:" + self.worker_id + ";pid:" + str(os.getpid()) + "thr:" + str(threading.get_ident())  + ":" + str(random_token) + ":get_one_task"
 
                     # or created? was created
         select_task = TaskEntry.select(TaskEntry.key)\
-                    .where( (TaskEntry.state=="waiting") & (TaskEntry.queue==self.queue) )\
+                    .join(TaskWorkerKnowledge)\
+                    .where( (TaskEntry.state=="waiting") & (TaskEntry.queue==self.queue) & (TaskWorkerKnowledge.last_denied_worker_knowledge_hash != worker_knowledge_hash(prefer_worker_knowledge)) )\
                     .order_by(TaskEntry.modified)\
                     .offset(offset)\
                     .limit(1)
@@ -655,7 +661,7 @@ class Queue:
 
         tried_tasks = 0
         while True:
-            self.get_one_task(update_expected_in_s, offset=offset)
+            self.get_one_task(update_expected_in_s, offset=offset, prefer_worker_knowledge=worker_knowledge)
             r = self.set_current_task_state("reserved")
             tried_tasks += 1
 
@@ -695,7 +701,7 @@ class Queue:
             if not skip_this_one:
                 worker_fit_score = self.current_task.score_worker_knowledge(worker_knowledge) # also sort TODO
                 if worker_fit_score <= 0:
-                    logger.warning("picked task %s has non-positive (%s) worker (%s) score: skipping; tried %s current offset %s",
+                    logger.warning("picked task %s has non-positive score (%s) for worker (knowledge %s): skipping; tried %s current offset %s",
                             self.current_task.key, worker_fit_score, worker_knowledge, tried_tasks, offset)
                     skip_this_one = True
 

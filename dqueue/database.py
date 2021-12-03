@@ -23,7 +23,15 @@ def connect_db():
 
 db = connect_db()
 
-    
+
+class TaskWorkerKnowledge(peewee.Model):
+    database = None
+
+    key = peewee.CharField(primary_key=True)
+    last_denied_worker_knowledge_hash =  peewee.CharField()
+
+    class Meta:
+        database = db
 
 class TaskEntry(peewee.Model):
     database = None
