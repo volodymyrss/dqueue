@@ -29,10 +29,15 @@ logger=logging.getLogger(__name__)
 
 app = Flask(__name__)
 
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 auth = HTTPTokenAuth(scheme='Bearer')
 
 @auth.verify_token
 def verify_token(token):
+    if os.getenv('DQUEUE_DISABLE_AUTH', 'no') == 'yes':
+        return True
+
     logger.error("verify_token with token: \"%s\"", token)
     try:
         return dqauth.decode(token)

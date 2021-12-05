@@ -21,8 +21,6 @@ from dqueue import tools
 
 from retrying import retry # type: ignore
 
-from bravado.client import SwaggerClient, RequestsClient
-
 from dqueue.client import APIClient
 from dqueue.data import DataFacts
 

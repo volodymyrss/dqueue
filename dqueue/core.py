@@ -38,6 +38,7 @@ import pymysql
 import peewee # type: ignore
 
 from dqueue.database import EventLog, TaskEntry, TaskWorkerKnowledge, db, model_to_dict
+from peewee import JOIN, fn
 
 sleep_multiplier = 1
 n_failed_retries = int(os.environ.get('DQUEUE_FAILED_N_RETRY','20'))
@@ -532,14 +533,29 @@ class Queue:
         random_token = str(random.randint(0, 100000))
         call = repr(self) + str(id(self)) +  "wid:" + self.worker_id + ";pid:" + str(os.getpid()) + "thr:" + str(threading.get_ident())  + ":" + str(random_token) + ":get_one_task"
 
-                    #.join(TaskWorkerKnowledge)\
-                    # or created? was created
-                    #.where( (TaskEntry.state=="waiting") & (TaskEntry.queue==self.queue) & (TaskWorkerKnowledge.last_denied_worker_knowledge_hash != worker_knowledge_hash(prefer_worker_knowledge)) )\
-        select_task = TaskEntry.select(TaskEntry.key)\
-                    .where( (TaskEntry.state=="waiting") & (TaskEntry.queue==self.queue) )\
-                    .order_by(TaskEntry.modified)\
-                    .offset(offset)\
-                    .limit(1)
+        
+        # TODO: think more about join option
+        NDeniedKnowledge = TaskWorkerKnowledge.alias()
+        n_denied_knowledge = (NDeniedKnowledge
+                             .select(fn.COUNT(NDeniedKnowledge.key).alias('n_denied'), NDeniedKnowledge.key)
+                             .where(NDeniedKnowledge.worker_knowledge_hash == worker_knowledge_hash(prefer_worker_knowledge))
+                             .alias('n_denied_knowledge'))
+
+        predicate = (TaskEntry.key == n_denied_knowledge.c.key)
+
+        # denied_knowledge = HasDeniedKnowledge.select().where(Child.parent == Parent.id)
+        # parents_with_children = Parent.select().where(
+        #                     Clause(SQL('EXISTS'), subquery))
+                                
+        select_task = (TaskEntry.select(TaskEntry.key)
+                                .join(n_denied_knowledge, JOIN.LEFT_OUTER, on=predicate)
+                                .where(
+                                    (TaskEntry.state=="waiting") & (TaskEntry.queue==self.queue) & 
+                                    ( (n_denied_knowledge.c.n_denied.is_null()) | (n_denied_knowledge.c.n_denied == 0) )
+                                )
+                                .order_by(TaskEntry.modified)
+                                .offset(offset)
+                                .limit(1))
 
         r = select_task.execute(database=None) # not atomic!?
 
@@ -547,7 +563,9 @@ class Queue:
         if len(r) == 0:
             raise Empty()
 
-        logger.info("%s: pre-selected task %s", call, r[0].key)
+        logger.info("%s: pre-selected task %s task %s", call, r[0].key, model_to_dict(r[0]))
+
+        # logger.info("%s: pre-selected task %s", call, r[0].key)
 
         pre_selected_task_key = r[0].key
 
@@ -699,17 +717,25 @@ class Queue:
                     logger.warning('failed to find user token: %s; will skip', e)
                     skip_this_one = True
 
+            # TODO: use score for all
             if not skip_this_one:
                 worker_fit_score = self.current_task.score_worker_knowledge(worker_knowledge) # also sort TODO
                 if worker_fit_score <= 0:
                     logger.warning("picked task %s has non-positive score (%s) for worker (knowledge %s): skipping; tried %s current offset %s",
                             self.current_task.key, worker_fit_score, worker_knowledge, tried_tasks, offset)
+
+                    TaskWorkerKnowledge.insert(
+                        key=self.current_task.key,
+                        worker_knowledge_hash=worker_knowledge_hash(worker_knowledge),
+                        score=0
+                    ).execute(database=None)
+
                     skip_this_one = True
 
             if skip_this_one:
                 r = self.set_current_task_state("waiting")
 
-                offset += 1
+                #offset += 1
                 self.current_task = None
 
                 time.sleep(0.1)
@@ -730,9 +756,15 @@ class Queue:
 
         return self.current_task
     
+    def list_worker_knowledge(self):
+        return [model_to_dict(r) for r in TaskWorkerKnowledge.select().execute(database=None)]
+
     def clear_task_history(self):
         # compatibility
         return self.clear_event_log()
+
+    def clear_worker_job_knowledge(self):
+        return TaskWorkerKnowledge.delete().execute(database=None)
 
     def clear_event_log(self, 
                         only_older_than_days: Union[float,None]=None, 

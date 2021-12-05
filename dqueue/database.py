@@ -27,8 +27,10 @@ db = connect_db()
 class TaskWorkerKnowledge(peewee.Model):
     database = None
 
-    key = peewee.CharField(primary_key=True)
-    last_denied_worker_knowledge_hash =  peewee.CharField()
+    key = peewee.CharField()
+    worker_knowledge_hash =  peewee.CharField()
+    score = peewee.FloatField()
+    timestamp = peewee.DateTimeField(default=datetime.datetime.now)
 
     class Meta:
         database = db
@@ -71,7 +73,7 @@ class EventLog(peewee.Model):
         database = db
 
 try:
-    db.create_tables([TaskEntry, EventLog])
+    db.create_tables([TaskEntry, EventLog, TaskWorkerKnowledge])
     has_mysql = True
 except peewee.OperationalError:
     has_mysql = False

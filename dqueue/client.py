@@ -18,7 +18,9 @@ from dqueue import tools
 
 from retrying import retry # type: ignore
 
-from bravado.client import SwaggerClient, RequestsClient
+from bravado.client import RequestsClient, SwaggerClient
+
+import dqueue.timedswaggerclient 
 
 logger = logging.getLogger(__name__) 
 

@@ -158,10 +158,6 @@ def list(obj, debug, log, info, select, json_output):
 
         if info:
             ti = obj['queue'].task_info(task['key'])            
-            #print(ti['task_info']['task_data']['object_identity']['factory_name'] )#['task_dict'])
-
-#        print(ti['task_info']['task_data']['object_identity']['factory_name'] )#['task_dict'])
-
 
         s.append(repr(td))
 

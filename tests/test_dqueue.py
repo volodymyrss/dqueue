@@ -343,42 +343,68 @@ def test_expiration():
     assert queue.info['running'] == 0
     assert queue.info['failed'] == 1
 
-def test_score():
+def test_score(caplog):
     import dqueue
     
     queue=dqueue.Queue("test-queue")
     queue.wipe(["waiting","done","running","failed","locked"])
     queue.clear_task_history()
+    queue.clear_worker_job_knowledge()
     
     assert queue.info['waiting']==0
     assert queue.info['done']==0
     assert queue.info['running']==0
     assert queue.info['failed']==0
     assert queue.info['locked']==0
-
-
-    t11 = dict(test=1,
-              data=dict(
-                        modules=["osa10-module","osa11-module"]
-                   )
-             )
-    assert queue.put(t11)['state']=="submitted"
-
+    
     t10 = dict(test=1,
-              data=dict(
-                        modules=["osa10-module"]
-                   )
-             )
+               data=dict(modules=["osa10-module"]))
     assert queue.put(t10)['state']=="submitted"
 
+    assert queue.list_worker_knowledge() == []
+
+    time.sleep(1)
+
+    t11 = dict(test=1,
+               data=dict(modules=["osa10-module","osa11-module"]))
+    assert queue.put(t11)['state']=="submitted"
+
+    # this should skip first osa10 job, and record the denial
 
     tr11=queue.get(worker_knowledge=[
-            {'any-of': [
-                    dict(key=['data', 'modules'], value='osa11-module')
-                 ]},
+            {'any-of': [dict(key=['data', 'modules'], value='osa11-module')]},
          ]).task_data
     queue.task_done()
+
+    assert len(queue.list_worker_knowledge()) == 1
+
+    with pytest.raises(dqueue.Empty):        
+        tr11=queue.get(worker_knowledge=[
+                {'any-of': [dict(key=['data', 'modules'], value='osa12-module')]},
+            ]).task_data
+
+    assert len(queue.list_worker_knowledge()) == 2
+
+    # assert len([r for r in caplog.records if 'has non-positive score' in r.message]) == 1
+
+    with pytest.raises(dqueue.Empty):
+        queue.get(worker_knowledge=[
+            {'any-of': [
+                    dict(key=['data', 'modules'], value='osa11-module')
+                    ]},
+            ]).task_data
+
+    # assert len([r for r in caplog.records if 'has non-positive score' in r.message]) == 0
+
+    with pytest.raises(dqueue.Empty):
+        queue.get(worker_knowledge=[
+            {'any-of': [
+                    dict(key=['data', 'modules'], value='osa11-module')
+                    ]},
+            ]).task_data
     
+    # assert len([r for r in caplog.records if 'has non-positive score' in r.message]) == 0
+
     assert t11 == tr11
     
     tr10=queue.get(worker_knowledge=[
@@ -388,6 +414,7 @@ def test_score():
          ]).task_data
     queue.task_done()
 
+    
     assert t10 == tr10
     
 def test_local_queue():
