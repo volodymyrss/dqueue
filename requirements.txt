@@ -8,7 +8,7 @@ flask-rest-api
 bravado
 retrying
 Flask-HTTPAuth
-pyjwt==1.7.1
+pyjwt==2.4.0
 flask-statistics
 pylogstash-context>=0.1.17
 coloredlogs
