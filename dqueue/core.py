@@ -1485,7 +1485,9 @@ class Queue:
                         ).where(CallbackQueue.uid==c.uid).execute(database=None)
 
                     logger.info("failed callback in %s", spent_s)                    
-            
+
+            CallbackQueue.update(state="new").where(CallbackQueue.state=="failed").execute(database=None)
+
             logger.info("waiting... %s", sleep)
             time.sleep(sleep)
 
