@@ -86,7 +86,7 @@ class EventLog(peewee.Model):
         database = db
 
 try:
-    db.create_tables([TaskEntry, EventLog, TaskWorkerKnowledge])
+    db.create_tables([TaskEntry, EventLog, TaskWorkerKnowledge, CallbackQueue])
     has_mysql = True
 except peewee.OperationalError:
     has_mysql = False
