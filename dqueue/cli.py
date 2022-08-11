@@ -672,7 +672,12 @@ def callbackcli():
 @click.pass_obj
 def list_callbacks(obj):
     Queue().list_callbacks()
-         
+
+
+@callbackcli.command()
+@click.pass_obj
+def run_next_callback(obj):
+    Queue().run_next_callback(int(1e6))
 
 def main():
     cli(obj={})

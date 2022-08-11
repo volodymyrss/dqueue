@@ -589,7 +589,7 @@ class Queue:
                 ).order_by(TaskEntry.modified.desc()).execute(database=None)
         
         if len(entries) == 0:
-            logger.error("%s: task disappeared", call)
+            logger.warning("%s: task disappeared", call)
             raise Empty()
 
         if len(entries)>1:
@@ -1434,11 +1434,16 @@ class Queue:
     
     def run_callback(self, url, params):
         r = requests.get(url, params=params)
-        logger.info("callback %s returns %s", url, r)
+        logger.info("callback %s %s returns %s", url, params, r)
 
-    def run_next_callback(self, url, params):
-        r = requests.get(url, params=params)
-        logger.info("callback %s returns %s", url, r)
-
+    def run_next_callback(self, N=1, loop=True):
+        #  TaskEntry.update(self.worker_id).where(TaskEntry.state=="failed").order_by(TaskEntry.modified).limit(100).execute(database=None)
+        while loop:
+            for c in CallbackQueue.select().where(CallbackQueue.state=="new").order_by(CallbackQueue.id).limit(N).execute(database=None):
+                self.run_callback(c.url, json.loads(c.params_json))
+                CallbackQueue.update(state="finished").where(CallbackQueue.uid==c.uid).execute(database=None)
+            time.sleep(5)
+            logger.info("waiting...")
+            
 
 
