@@ -24,6 +24,19 @@ def connect_db():
 db = connect_db()
 
 
+class CallbackQueue(peewee.Model):
+    database = None
+
+    url = peewee.TextField()
+    params_json =  peewee.TextField()
+    timestamp = peewee.DateTimeField(default=datetime.datetime.now)
+    state = peewee.CharField() # new, processing, complete
+    returned_status_json = peewee.TextField()
+
+    class Meta:
+        database = db
+
+
 class TaskWorkerKnowledge(peewee.Model):
     database = None
 

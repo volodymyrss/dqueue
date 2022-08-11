@@ -1,3 +1,4 @@
+import requests
 import datetime
 import hashlib
 import os
@@ -12,6 +13,7 @@ import logging
 import urllib
 import pylogstash
 import base64
+from urllib.parse import urlparse, parse_qs
 
 from functools import reduce
 
@@ -24,11 +26,6 @@ try:
 except:
     from io import StringIO
 
-try:
-    import urlparse # type: ignore
-except ImportError:
-    import urllib.parse as urlparse# type: ignore
-
 from typing import NewType, Dict, Union, List
 
 import dqueue.dqtyping as dqtyping
@@ -37,13 +34,16 @@ from dqueue.entry import decode_entry_data
 import pymysql
 import peewee # type: ignore
 
-from dqueue.database import EventLog, TaskEntry, TaskWorkerKnowledge, db, model_to_dict
+from dqueue.database import EventLog, TaskEntry, TaskWorkerKnowledge, db, model_to_dict, CallbackQueue
 from peewee import JOIN, fn
 
 sleep_multiplier = 1
 n_failed_retries = int(os.environ.get('DQUEUE_FAILED_N_RETRY','20'))
 
-log_stasher = pylogstash.LogStasher(sep="/")
+try:
+    log_stasher = pylogstash.LogStasher(sep="/")
+except Exception as e:
+    log_stasher = pylogstash.LogStasher()
 
 def get_logger(name):
     level = getattr(logging, os.environ.get('DQUEUE_LOG_LEVEL', 'INFO'))
@@ -1394,5 +1394,37 @@ class Queue:
                 N += n
 
         return N
+
+
+    def schedule_callback(self, url, params):
+        CallbackQueue.insert(
+            url=url,
+            params_json=json.dumps(params),
+            state="new",
+            returned_status_json=""
+        )
+        
+        url_parsed = urlparse(url)
+        qs = parse_qs(url_parsed.query)
+
+        logger.info("schedule_callback qs: %s", qs)
+        logger.info("schedule_callback params: %s", params)
+        
+        self.log_task(message=json.dumps(
+            dict(
+                callback_event="scheduled",
+                qs={k:v for k, v in qs.items() if k in ['job_id']}, 
+                params={k:v for k,v in params.items() if k in ['node', 'message']}
+                )), task_key="unset", state="unset")
+        
+        
+    
+    def run_callback(self, url, params):
+        r = requests.get(url, params=params)
+        logger.info("callback %s returns %s", url, r)
+
+    def run_next_callback(self, url, params):
+        r = requests.get(url, params=params)
+        logger.info("callback %s returns %s", url, r)
 
 

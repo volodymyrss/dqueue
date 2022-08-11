@@ -1190,6 +1190,7 @@ class TaskCallbackView(SwaggerView):
                 }
         }
 
+
     def post(self):
         worker_id = request.args.get('worker_id')
 
@@ -1208,11 +1209,11 @@ class TaskCallbackView(SwaggerView):
         allowed_dispatcher += os.environ.get("ODA_ALLOWED_DISPATCHER_CALLBACKS", 
                                              "http://oda-dispatcher:8000,http://dispatcher.staging.internal.odahub.io").split(",")
 
+                
+        queue = dqueue.core.Queue(worker_id=worker_id)
         
-
-        if any([url.startswith(p) for p in allowed_dispatcher]):
-            r = requests.get(url, params=params)
-            logger.info("callback %s returns %s", url, r)
+        if any([url.startswith(p) for p in allowed_dispatcher]):            
+            queue.schedule_callback(url, params=params)            
         else:
             error = f"unable to deal with non-standard dispatcher, allowed {allowed_dispatcher}"
             logger.error("requested not allowed callback url %s, params %s, allowed %s", url, params, allowed_dispatcher)
@@ -1224,24 +1225,13 @@ class TaskCallbackView(SwaggerView):
                 )
             
 
-        url_parsed = urlparse(url)
-        qs = parse_qs(url_parsed.query)
-
-        logger.info("qs: %s", qs)
-        logger.info("params: %s", params)
         
-        queue = dqueue.core.Queue(worker_id=worker_id)
-        queue.log_task(message=json.dumps(
-            dict(
-                qs={k:v for k, v in qs.items() if k in ['job_id']}, 
-                params={k:v for k,v in params.items() if k in ['node', 'message']}
-                )), task_key="unset", state="unset")
         #queue.log_task(message=f"callback: {qs.get('job_id', 'unknown')} {params.get('node', 'no-node')}", task_key="unset", state="unset")
 
         return jsonify(
                 dict(
-                    status = r.status_code,
-                    text = r.text ,
+                    status = 200,
+                    text = "callback scheduled" ,
                 )
             )
 
