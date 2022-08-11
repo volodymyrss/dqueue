@@ -398,11 +398,11 @@ class WorkerFailed(SwaggerView):
 
         logger.debug("marking current task in %s failed", queue)
 
-        logger.error("task failed execution info: %s", queue.current_task.execution_info)
+        logger.warning("task failed execution info: %s", queue.current_task.execution_info)
 
         queue.task_failed()
 
-        # here also upload data nad store?
+        # here also upload data and store?
 
         return jsonify(
                     { 'task_key': task.key, **task.as_dict}
