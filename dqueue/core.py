@@ -1402,7 +1402,7 @@ class Queue:
             params_json=json.dumps(params),
             state="new",
             returned_status_json=""
-        )
+        ).execute(database=None)
         
         url_parsed = urlparse(url)
         qs = parse_qs(url_parsed.query)
