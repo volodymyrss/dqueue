@@ -1444,7 +1444,18 @@ class Queue:
         while loop:
             for c in CallbackQueue.select().where(CallbackQueue.state=="new").order_by(CallbackQueue.id).limit(N).execute(database=None):                
                 t0 = time.time()
-                r = self.run_callback(c.url, json.loads(c.params_json))
+
+                try:
+                    params = json.loads(c.params_json)
+                except json.decoder.JSONDecodeError as e:
+                    logger.exception('problem decoding json from this: %s')
+                    CallbackQueue.update(
+                            state="corrupt",
+                        ).where(CallbackQueue.uid==c.uid).execute(database=None)
+                    continue
+
+
+                r = self.run_callback(c.url, params)
                 spent_s = time.time() - t0
 
                 if r.status_code == 200:
