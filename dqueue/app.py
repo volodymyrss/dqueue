@@ -137,7 +137,7 @@ def before_request():
         dqueue.database.db.connect()
         logger.debug("connecting to db before request %s", dqueue.database.db)
     except Exception as e:
-        logger.error("db access error: %s", e)
+        logger.warning("db access error: %s", e)
 
 
 @app.after_request
