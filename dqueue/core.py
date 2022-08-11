@@ -462,7 +462,7 @@ class Queue:
 
         logger.info("testing it was put as corrupt...")
         instances_for_key = self.find_task_instances(task, ["corrupt"])
-        if instances_for_key is not None:
+        if instances_for_key is not None and len(instances_for_key) > 0:
             logger.error("found corrupt instances for key: %s", instances_for_key)
             #open("/tmp/problematic_entry.json", "wt").write(entry)
             nentries = TaskEntry.delete().where(TaskEntry.key == task.key).execute(database=None)
