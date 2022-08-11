@@ -929,7 +929,7 @@ class Queue:
         ))
         
         r = TaskEntry.select(TaskEntry.key == task.key).execute()
-        logger.error("prior to inserting, have %s", r)
+        logger.debug("prior to inserting, have %s", r)
 
 
         insert_result = None

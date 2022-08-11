@@ -57,7 +57,7 @@ def verify_token(token):
     if os.getenv('DQUEUE_DISABLE_AUTH', 'no') == 'yes':
         return True
 
-    logger.error("verify_token with token: \"%s\"", token)
+    logger.info("verify_token with token: \"%s\"", token)
     try:
         return dqauth.decode(token)
     except Exception as e:

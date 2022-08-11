@@ -574,7 +574,7 @@ class WorkerDataConsultFact(SwaggerView):
                            )
                 except minio.error.NoSuchKey:
                     odakb.datalake.delete(dag_bucket)
-                    logger.error("bucket was corrupt, deleging")
+                    logger.error("bucket was corrupt, deleting")
                     return Response(
                               f"corrupt bucket: {dag_bucket}",
                               status=400,
