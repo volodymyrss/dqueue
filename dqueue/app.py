@@ -25,7 +25,26 @@ from dqueue.core import model_to_dict
 import dqueue.api
 import dqueue.database
 
-logger=logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
+
+
+import sentry_sdk
+from flask import Flask
+from sentry_sdk.integrations.flask import FlaskIntegration
+
+sentry_sdk.init(
+    dsn="https://11e06b017e34446596e8e163b9c7e895@sentry.obsuks1.unige.ch/2",
+    integrations=[
+        FlaskIntegration(),
+    ],
+
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    # We recommend adjusting this value in production.
+    traces_sample_rate=1.0,
+
+    release=f"dqueue@{core.__version__}",
+)
 
 app = Flask(__name__)
 
@@ -167,6 +186,10 @@ def healthcheck():
                         version="undefined",
                     )
             )
+
+@app.route('/debug-sentry')
+def trigger_error():
+    division_by_zero = 1 / 0
 
 def listen():
     app.run(port=8000,debug=True,threaded=True)
