@@ -1410,7 +1410,7 @@ class Queue:
                 returned_status_json=""
             ).execute(database=None)
         except Exception:
-            logger.error("requested duplicate callback?", url, params)
+            logger.error("requested duplicate callback? %s: url=%s, params%s", e, url, params)
             return False
             
         url_parsed = urlparse(url)
