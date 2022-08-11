@@ -1397,13 +1397,22 @@ class Queue:
 
 
     def schedule_callback(self, url, params):
-        CallbackQueue.insert(
-            url=url,
-            params_json=json.dumps(params),
-            state="new",
-            returned_status_json=""
-        ).execute(database=None)
-        
+        uid = hashlib.md5(
+                json.dumps({"params": params, "url": url}, sort_keys=True).encode()
+            ).hexdigest()[:16]
+
+        try:
+            CallbackQueue.insert(
+                uid=uid,
+                url=url,
+                params_json=json.dumps(params),
+                state="new",
+                returned_status_json=""
+            ).execute(database=None)
+        except Exception:
+            logger.error("requested duplicate callback?", url, params)
+            return False
+            
         url_parsed = urlparse(url)
         qs = parse_qs(url_parsed.query)
 
@@ -1417,7 +1426,11 @@ class Queue:
                 params={k:v for k,v in params.items() if k in ['node', 'message']}
                 )), task_key="unset", state="unset")
         
-        
+    def list_callbacks(self):
+        for callback_entry in CallbackQueue.select().execute(database=None):
+            print(">>>>>")
+            for k, v in model_to_dict(callback_entry).items():
+                print(f">> {k:20s} : {v}" )
     
     def run_callback(self, url, params):
         r = requests.get(url, params=params)
@@ -1426,5 +1439,6 @@ class Queue:
     def run_next_callback(self, url, params):
         r = requests.get(url, params=params)
         logger.info("callback %s returns %s", url, r)
+
 
 

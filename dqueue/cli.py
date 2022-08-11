@@ -658,6 +658,22 @@ def ask(obj, target, module, assume):
 
 # ls filter jsonpath
 
+@cli.group("server")
+def servercli():
+    pass
+
+
+@servercli.group("callback")
+def callbackcli():
+    pass
+
+
+@callbackcli.command()
+@click.pass_obj
+def list_callbacks(obj):
+    Queue().list_callbacks()
+         
+
 def main():
     cli(obj={})
 

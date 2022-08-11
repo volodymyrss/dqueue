@@ -1,3 +1,4 @@
+from enum import unique
 import os
 import peewee # type: ignore
 import logging
@@ -27,6 +28,7 @@ db = connect_db()
 class CallbackQueue(peewee.Model):
     database = None
 
+    uid = peewee.CharField(unique=True)
     url = peewee.TextField()
     params_json =  peewee.TextField()
     timestamp = peewee.DateTimeField(default=datetime.datetime.now)
