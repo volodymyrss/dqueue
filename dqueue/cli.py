@@ -677,7 +677,7 @@ def list_callbacks(obj):
 @callbackcli.command()
 @click.pass_obj
 def run_next_callback(obj):
-    Queue().run_next_callback(int(1e6))
+    Queue().run_next_callback(1)
 
 def main():
     cli(obj={})

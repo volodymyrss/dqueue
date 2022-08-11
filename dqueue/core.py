@@ -1425,7 +1425,7 @@ class Queue:
                 qs={k:v for k, v in qs.items() if k in ['job_id']}, 
                 params={k:v for k,v in params.items() if k in ['node', 'message']}
                 )), task_key="unset", state="unset")
-                
+
         return True
         
     def list_callbacks(self):
@@ -1437,13 +1437,24 @@ class Queue:
     def run_callback(self, url, params):
         r = requests.get(url, params=params)
         logger.info("callback %s %s returns %s", url, params, r)
+        return r
 
     def run_next_callback(self, N=1, loop=True):
         #  TaskEntry.update(self.worker_id).where(TaskEntry.state=="failed").order_by(TaskEntry.modified).limit(100).execute(database=None)
         while loop:
             for c in CallbackQueue.select().where(CallbackQueue.state=="new").order_by(CallbackQueue.id).limit(N).execute(database=None):
-                self.run_callback(c.url, json.loads(c.params_json))
-                CallbackQueue.update(state="finished").where(CallbackQueue.uid==c.uid).execute(database=None)
+                t0 = time.time()
+                r = self.run_callback(c.url, json.loads(c.params_json))
+                spent_s = time.time() - t0
+                logger.info("completed callback in %s", spent_s)
+                CallbackQueue.update(
+                        state="finished",
+                        returned_status_json={
+                            "spent_s": spent_s, 
+                            "response": r,
+                            "response_text": r.text
+                        }
+                    ).where(CallbackQueue.uid==c.uid).execute(database=None)
             time.sleep(5)
             logger.info("waiting...")
             
