@@ -1409,7 +1409,7 @@ class Queue:
                 state="new",
                 returned_status_json=""
             ).execute(database=None)
-        except Exception:
+        except Exception as e:
             logger.error("requested duplicate callback? %s: url=%s, params%s", e, url, params)
             return False
             
