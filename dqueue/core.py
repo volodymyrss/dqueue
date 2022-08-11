@@ -1410,7 +1410,7 @@ class Queue:
                 returned_status_json=""
             ).execute(database=None)
         except Exception as e:
-            logger.error("requested duplicate callback? %s: url=%s, params%s", e, url, params)
+            logger.warning("requested duplicate callback? %s: url=%s, params%s", e, url, params)
             return False
             
         url_parsed = urlparse(url)
@@ -1425,6 +1425,8 @@ class Queue:
                 qs={k:v for k, v in qs.items() if k in ['job_id']}, 
                 params={k:v for k,v in params.items() if k in ['node', 'message']}
                 )), task_key="unset", state="unset")
+                
+        return True
         
     def list_callbacks(self):
         for callback_entry in CallbackQueue.select().execute(database=None):
