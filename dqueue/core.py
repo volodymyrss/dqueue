@@ -1445,7 +1445,7 @@ class Queue:
         logger.info("callback %s %s returns %s", url, params, r)
         return r
 
-    def run_next_callback(self, N=100, loop=True, sleep=0.2):
+    def run_next_callback(self, N=100, loop=True, sleep=5):
         #  TaskEntry.update(self.worker_id).where(TaskEntry.state=="failed").order_by(TaskEntry.modified).limit(100).execute(database=None)
         while loop:
             for c in CallbackQueue.select().where(CallbackQueue.state=="new").order_by(CallbackQueue.id).limit(N).execute(database=None):                
