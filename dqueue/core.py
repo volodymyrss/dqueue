@@ -1429,17 +1429,23 @@ class Queue:
         return True
         
     def list_callbacks(self):
+        bystate = defaultdict(int)
         for callback_entry in CallbackQueue.select().execute(database=None):
             print(">>>>>")
             for k, v in model_to_dict(callback_entry).items():
                 print(f">> {k:20s} : {v}" )
+            
+            bystate[callback_entry.state] += 1
+
+        for k, v in bystate.items():
+            logger.info(f">>> {k}: {v}")
     
     def run_callback(self, url, params):
         r = requests.get(url, params=params)
         logger.info("callback %s %s returns %s", url, params, r)
         return r
 
-    def run_next_callback(self, N=1, loop=True):
+    def run_next_callback(self, N=100, loop=True):
         #  TaskEntry.update(self.worker_id).where(TaskEntry.state=="failed").order_by(TaskEntry.modified).limit(100).execute(database=None)
         while loop:
             for c in CallbackQueue.select().where(CallbackQueue.state=="new").order_by(CallbackQueue.id).limit(N).execute(database=None):                
