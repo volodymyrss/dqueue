@@ -1472,7 +1472,8 @@ class Queue:
                         ).where(CallbackQueue.uid==c.uid).execute(database=None)
                     continue
 
-                if params['action'] == 'progress':
+                if params['action'] in ['progress', 'main_done']:
+                    logger.info("ignoring callback for %s %s", params.get('action'), params.get('node_id'))
                     CallbackQueue.update(
                             state="postponed",                            
                         ).where(CallbackQueue.uid==c.uid).execute(database=None)   
