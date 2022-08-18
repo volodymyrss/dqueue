@@ -1401,6 +1401,9 @@ class Queue:
                 json.dumps({"params": params, "url": url}, sort_keys=True).encode()
             ).hexdigest()[:16]
 
+        if 'exception' in params:
+            params['exception'] = params['exception'][:500] + " ..."
+
         try:
             CallbackQueue.insert(
                 uid=uid,
@@ -1484,7 +1487,7 @@ class Queue:
                             }
                         ).where(CallbackQueue.uid==c.uid).execute(database=None)
 
-                    logger.info("failed callback in %s", spent_s)                    
+                    logger.error("failed callback in %s url: %s params: %s", spent_s, c.url, params)
 
             CallbackQueue.update(state="new").where(CallbackQueue.state=="failed").execute(database=None)
 
