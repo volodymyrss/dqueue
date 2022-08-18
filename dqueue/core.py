@@ -1448,9 +1448,10 @@ class Queue:
             params['exception'] = params['exception'][:100] + " ..."
 
         for p, v in params.items():
-            if len(v) > 200:
-                logger.warning("param %s too long (%s), truncating", p, len(v))
-            params[p] = v[:200]
+            if isinstance(v, str):
+                if len(v) > 200:
+                    logger.warning("param %s too long (%s), truncating", p, len(v))
+                params[p] = v[:200]
 
         r = requests.get(url, params=params)
         logger.info("callback %s %s returns %s", url, params, r)
