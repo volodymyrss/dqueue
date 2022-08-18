@@ -1444,6 +1444,9 @@ class Queue:
             logger.info(f">>> {k}: {v}")
     
     def run_callback(self, url, params):
+        if 'exception' in params:
+            params['exception'] = params['exception'][:200] + " ..."
+
         r = requests.get(url, params=params)
         logger.info("callback %s %s returns %s", url, params, r)
         return r
