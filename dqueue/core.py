@@ -1472,31 +1472,35 @@ class Queue:
                         ).where(CallbackQueue.uid==c.uid).execute(database=None)
                     continue
 
-
-                r = self.run_callback(c.url, params)
-                spent_s = time.time() - t0
-
-                if r.status_code == 200:
-                    logger.info("completed callback in %s", spent_s)
+                if params['action'] == 'progress':
                     CallbackQueue.update(
-                            state="finished",
-                            returned_status_json={
-                                "spent_s": spent_s, 
-                                "response": r,
-                                "response_text": r.text
-                            }
-                        ).where(CallbackQueue.uid==c.uid).execute(database=None)
+                            state="postponed",                            
+                        ).where(CallbackQueue.uid==c.uid).execute(database=None)   
                 else:
-                    CallbackQueue.update(
-                            state="failed",
-                            returned_status_json={
-                                "spent_s": spent_s, 
-                                "response": r,
-                                "response_text": r.text
-                            }
-                        ).where(CallbackQueue.uid==c.uid).execute(database=None)
+                    r = self.run_callback(c.url, params)
+                    spent_s = time.time() - t0
 
-                    logger.error("failed callback in %s url: %s params: %s", spent_s, c.url, params)
+                    if r.status_code == 200:
+                        logger.info("completed callback in %s", spent_s)
+                        CallbackQueue.update(
+                                state="finished",
+                                returned_status_json={
+                                    "spent_s": spent_s, 
+                                    "response": r,
+                                    "response_text": r.text
+                                }
+                            ).where(CallbackQueue.uid==c.uid).execute(database=None)
+                    else:
+                        CallbackQueue.update(
+                                state="failed",
+                                returned_status_json={
+                                    "spent_s": spent_s, 
+                                    "response": r,
+                                    "response_text": r.text
+                                }
+                            ).where(CallbackQueue.uid==c.uid).execute(database=None)
+
+                        logger.error("failed callback in %s url: %s params: %s", spent_s, c.url, params)
 
             CallbackQueue.update(state="new").where(CallbackQueue.state=="failed").execute(database=None)
 
