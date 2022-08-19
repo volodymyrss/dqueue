@@ -1505,6 +1505,8 @@ class Queue:
 
             # CallbackQueue.update(state="new").where(CallbackQueue.state=="failed").execute(database=None)
 
+            CallbackQueue.delete().where(CallbackQueue.state=="finished").execute(database=None)
+
             logger.info("waiting... %s", sleep)
             time.sleep(sleep)
 
