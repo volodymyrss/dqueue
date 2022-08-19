@@ -1510,7 +1510,7 @@ class Queue:
             q = CallbackQueue.select(CallbackQueue.state, fn.Count(CallbackQueue.state).alias('count')).group_by(CallbackQueue.state)
             logger.info("count sql:", q.sql())
             for _q in q.execute(database=None):
-                logger.info(""_q.state, _q.count)
+                logger.info("%s: %s", _q.state, _q.count)
 
             logger.info("waiting... %s", sleep)
             time.sleep(sleep)
