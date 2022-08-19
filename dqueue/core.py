@@ -1503,7 +1503,7 @@ class Queue:
 
                         logger.error("failed callback in %s url: %s params: %s", spent_s, c.url, params)
 
-            CallbackQueue.update(state="new").where(CallbackQueue.state=="failed").execute(database=None)
+            # CallbackQueue.update(state="new").where(CallbackQueue.state=="failed").execute(database=None)
 
             logger.info("waiting... %s", sleep)
             time.sleep(sleep)
