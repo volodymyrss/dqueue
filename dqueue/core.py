@@ -1506,9 +1506,10 @@ class Queue:
             # CallbackQueue.update(state="new").where(CallbackQueue.state=="failed").execute(database=None)
 
             CallbackQueue.delete().where(CallbackQueue.state=="finished").execute(database=None)
+            CallbackQueue.delete().where(CallbackQueue.state=="postponed").execute(database=None)
 
             q = CallbackQueue.select(CallbackQueue.state, fn.Count(CallbackQueue.state).alias('count')).group_by(CallbackQueue.state)
-            logger.info("count sql:", q.sql())
+            logger.info("count sql: %s", q.sql())
             for _q in q.execute(database=None):
                 logger.info("%s: %s", _q.state, _q.count)
 
