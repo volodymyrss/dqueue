@@ -949,6 +949,7 @@ class Queue:
             # deadlock
             insert_result = "updated", TaskEntry.update(
                                 queue=self.queue,
+                                task_dict_string=serialized_task,
                             ).where(
                                 TaskEntry.key == task.key,
                             ).execute(database=None)
@@ -965,10 +966,9 @@ class Queue:
             raise Exception(f"multiple tasks for key {task.key}")
 
         if r[0].task_dict_string != serialized_task:
-            logger.error("insert result was %s but found mismatch between task_dict_string and stored: %s != %s; complete entry %s", 
+            logger.error("insert result was %s but found mismatch between task_dict_string and stored: %s != %s; complete entry %s: could it be because of size limit of peewee db?", 
                     insert_result,
                     r[0].task_dict_string, serialized_task, model_to_dict(r[0]))
-            logger.error("insert result was %s but found mismatch between task_dict_string and stored: could it be because of size limit of peewee db?")
             raise InsertTaskAnomaly()
 
         log("task successfully inserted")
