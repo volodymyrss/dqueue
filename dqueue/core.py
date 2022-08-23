@@ -948,8 +948,13 @@ class Queue:
 
             # deadlock
             insert_result = "updated", TaskEntry.update(
-                                queue=self.queue,
-                                task_dict_string=serialized_task,
+                                 queue=self.queue,
+                                 key=task.key,
+                                 state=state,
+                                 worker_id=self.worker_id,
+                                 task_dict_string=serialized_task,
+                                 created=datetime.datetime.now(),
+                                 modified=datetime.datetime.now(),
                             ).where(
                                 TaskEntry.key == task.key,
                             ).execute(database=None)
