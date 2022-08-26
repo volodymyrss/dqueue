@@ -1477,7 +1477,7 @@ class Queue:
                         ).where(CallbackQueue.uid==c.uid).execute(database=None)
                     continue
 
-                banned_actions = ['progress', 'main_done']
+                banned_actions = ['progress', 'main_done', 'node_done']
 
                 if params['action'] in banned_actions:
                     logger.info("ignoring callback for %s %s", params.get('action'), params.get('node_id'))
