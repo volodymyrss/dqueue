@@ -1471,7 +1471,7 @@ class Queue:
                 try:
                     params = json.loads(c.params_json)
                 except json.decoder.JSONDecodeError as e:
-                    logger.exception('problem decoding json from this: %s')
+                    logger.exception('problem decoding json from this: %s', c.params_json)
                     CallbackQueue.update(
                             state="corrupt",
                         ).where(CallbackQueue.uid==c.uid).execute(database=None)
