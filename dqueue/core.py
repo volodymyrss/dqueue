@@ -1477,15 +1477,15 @@ class Queue:
                         ).where(CallbackQueue.uid==c.uid).execute(database=None)
                     continue
 
-                allowed_actions = ['progress', 'main_done']
+                banned_actions = ['progress', 'main_done']
 
-                if params['action'] in allowed_actions:
+                if params['action'] in banned_actions:
                     logger.info("ignoring callback for %s %s", params.get('action'), params.get('node_id'))
                     CallbackQueue.update(
                             state="postponed",                            
                         ).where(CallbackQueue.uid==c.uid).execute(database=None)   
                 else:
-                    logger.info('allowed action %s (%s)', params['action'], allowed_actions)
+                    logger.info('allowed action %s (banned %s)', params['action'], banned_actions)
                     r = self.run_callback(c.url, params)
                     spent_s = time.time() - t0
 
