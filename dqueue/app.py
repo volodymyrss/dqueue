@@ -33,7 +33,7 @@ from flask import Flask
 from sentry_sdk.integrations.flask import FlaskIntegration
 
 sentry_sdk.init(
-    dsn="https://11e06b017e34446596e8e163b9c7e895@sentry.obsuks1.unige.ch/2",
+    dsn="https://11a6238fdc604777826f8287dfcc6be0@sentry.obsuks1.unige.ch/4",
     integrations=[
         FlaskIntegration(),
     ],
