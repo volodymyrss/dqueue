@@ -685,6 +685,12 @@ def run_next_callback(obj):
 def compute_properties(obj):
     Queue().compute_task_properties()
 
+@runnercli.command()
+@click.pass_obj
+@click.option('--only-users', default='all')
+def get_one_local(obj, only_users):
+    Queue().get_one_task(100, 0, only_users=only_users)
+
 def main():
     cli(obj={})
 

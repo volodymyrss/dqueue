@@ -559,7 +559,8 @@ class Queue:
 
         if only_users != 'all':
             logger.info('selecting only users "%s"', only_users)
-            selection_condition = selection_condition & (TaskProperties.user_email == only_users)
+            # selection_condition = (TaskEntry.state=="waiting") & (TaskProperties.user_email == only_users.strip())
+            selection_condition = selection_condition & (TaskProperties.user_email == only_users.strip())
     
         select_task = (TaskEntry.select(TaskEntry.key)
                                 .join(n_denied_knowledge, JOIN.LEFT_OUTER, on=predicate)
@@ -570,9 +571,17 @@ class Queue:
                                 .limit(1))
 
         r = select_task.execute(database=None) # not atomic!?
-
         
         if len(r) == 0:
+
+            # select_users = (TaskEntry.select(TaskProperties.user_email)
+            #                     .join(n_denied_knowledge, JOIN.LEFT_OUTER, on=predicate)
+            #                     .join(TaskProperties, JOIN.LEFT_OUTER, on=(TaskEntry.key == TaskProperties.key))
+            #                     .where(selection_condition)
+            #                     .order_by(TaskEntry.modified)
+            #                     .offset(offset)
+            #                     .unique()).dicts()
+
             raise Empty()
 
         logger.info("%s: pre-selected task %s task %s", call, r[0].key, model_to_dict(r[0]))
