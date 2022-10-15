@@ -558,7 +558,7 @@ class Queue:
 
 
         if only_users != 'all':
-            logger.info('selecting only users %s', only_users)
+            logger.info('selecting only users "%s"', only_users)
             selection_condition = selection_condition & (TaskProperties.user_email == only_users)
     
         select_task = (TaskEntry.select(TaskEntry.key)
