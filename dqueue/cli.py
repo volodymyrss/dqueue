@@ -683,7 +683,9 @@ def run_next_callback(obj):
 @runnercli.command()
 @click.pass_obj
 def compute_properties(obj):
-    Queue().compute_task_properties()
+    while True:
+        Queue().compute_task_properties()
+        time.sleep(30)
 
 @runnercli.command()
 @click.pass_obj
