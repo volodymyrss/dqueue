@@ -27,7 +27,10 @@ import coloredlogs
 
 logger = logging.getLogger()
 
-log_stasher = pylogstash.LogStasher(sep="/")
+try:
+    log_stasher = pylogstash.LogStasher(sep="/")
+except Exception as e:
+    log_stasher = pylogstash.LogStasher()
 
 @click.group()
 @click.option("-q", "--quiet", default=False, is_flag=True)
@@ -654,6 +657,27 @@ def ask(obj, target, module, assume):
 # TODO something fails on list?
 
 # ls filter jsonpath
+
+@cli.group("server")
+def servercli():
+    pass
+
+
+@servercli.group("callback")
+def callbackcli():
+    pass
+
+
+@callbackcli.command()
+@click.pass_obj
+def list_callbacks(obj):
+    Queue().list_callbacks()
+
+
+@callbackcli.command()
+@click.pass_obj
+def run_next_callback(obj):
+    Queue().run_next_callback()
 
 def main():
     cli(obj={})

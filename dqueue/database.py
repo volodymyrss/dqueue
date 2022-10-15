@@ -1,3 +1,4 @@
+from enum import unique
 import os
 import peewee # type: ignore
 import logging
@@ -22,6 +23,20 @@ def connect_db():
         logger.warning("unable to connect to DB: %s", repr(e))
 
 db = connect_db()
+
+
+class CallbackQueue(peewee.Model):
+    database = None
+
+    uid = peewee.CharField(unique=True)
+    url = peewee.TextField()
+    params_json =  peewee.TextField()
+    timestamp = peewee.DateTimeField(default=datetime.datetime.now)
+    state = peewee.CharField() # new, processing, complete
+    returned_status_json = peewee.TextField()
+
+    class Meta:
+        database = db
 
 
 class TaskWorkerKnowledge(peewee.Model):
@@ -83,7 +98,7 @@ class EventLog(peewee.Model):
         database = db
 
 try:
-    db.create_tables([TaskEntry, EventLog, TaskWorkerKnowledge, TaskProperties])
+    db.create_tables([TaskEntry, EventLog, TaskWorkerKnowledge, TaskProperties, CallbackQueue])
     has_mysql = True
 except peewee.OperationalError:
     has_mysql = False

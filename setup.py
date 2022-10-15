@@ -25,6 +25,7 @@ setup(name='oda-node',
           'oda-knowledge-base[cwl]>=0.7.0', # should be an option
           'pyjwt',
           'pylogstash-context',
+          'sentry-sdk[flask]'
           ],
       zip_safe=False,
      )

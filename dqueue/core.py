@@ -1,3 +1,4 @@
+import requests
 import datetime
 import hashlib
 import os
@@ -12,6 +13,7 @@ import logging
 import urllib
 import pylogstash
 import base64
+from urllib.parse import urlparse, parse_qs
 
 from functools import reduce
 
@@ -24,11 +26,6 @@ try:
 except:
     from io import StringIO
 
-try:
-    import urlparse # type: ignore
-except ImportError:
-    import urllib.parse as urlparse# type: ignore
-
 from typing import NewType, Dict, Union, List
 
 import dqueue.dqtyping as dqtyping
@@ -37,13 +34,16 @@ from dqueue.entry import decode_entry_data
 import pymysql
 import peewee # type: ignore
 
-from dqueue.database import EventLog, TaskEntry, TaskProperties, TaskWorkerKnowledge, db, model_to_dict
+from dqueue.database import EventLog, TaskEntry, TaskProperties, TaskWorkerKnowledge, db, model_to_dict, CallbackQueue
 from peewee import JOIN, fn
 
 sleep_multiplier = 1
 n_failed_retries = int(os.environ.get('DQUEUE_FAILED_N_RETRY','20'))
 
-log_stasher = pylogstash.LogStasher(sep="/")
+try:
+    log_stasher = pylogstash.LogStasher(sep="/")
+except Exception as e:
+    log_stasher = pylogstash.LogStasher()
 
 def get_logger(name):
     level = getattr(logging, os.environ.get('DQUEUE_LOG_LEVEL', 'INFO'))
@@ -462,7 +462,7 @@ class Queue:
 
         logger.info("testing it was put as corrupt...")
         instances_for_key = self.find_task_instances(task, ["corrupt"])
-        if instances_for_key is not None:
+        if instances_for_key is not None and len(instances_for_key) > 0:
             logger.error("found corrupt instances for key: %s", instances_for_key)
             #open("/tmp/problematic_entry.json", "wt").write(entry)
             nentries = TaskEntry.delete().where(TaskEntry.key == task.key).execute(database=None)
@@ -600,7 +600,7 @@ class Queue:
                 ).order_by(TaskEntry.modified.desc()).execute(database=None)
         
         if len(entries) == 0:
-            logger.error("%s: task disappeared", call)
+            logger.warning("%s: task disappeared", call)
             raise Empty()
 
         if len(entries)>1:
@@ -940,7 +940,7 @@ class Queue:
         ))
         
         r = TaskEntry.select(TaskEntry.key == task.key).execute()
-        logger.error("prior to inserting, have %s", r)
+        logger.debug("prior to inserting, have %s", r)
 
 
         insert_result = None
@@ -959,7 +959,13 @@ class Queue:
 
             # deadlock
             insert_result = "updated", TaskEntry.update(
-                                queue=self.queue,
+                                 queue=self.queue,
+                                 key=task.key,
+                                 state=state,
+                                 worker_id=self.worker_id,
+                                 task_dict_string=serialized_task,
+                                 created=datetime.datetime.now(),
+                                 modified=datetime.datetime.now(),
                             ).where(
                                 TaskEntry.key == task.key,
                             ).execute(database=None)
@@ -976,10 +982,9 @@ class Queue:
             raise Exception(f"multiple tasks for key {task.key}")
 
         if r[0].task_dict_string != serialized_task:
-            logger.error("insert result was %s but found mismatch between task_dict_string and stored: %s != %s; complete entry %s", 
+            logger.error("insert result was %s but found mismatch between task_dict_string and stored: %s != %s; complete entry %s: could it be because of size limit of peewee db?", 
                     insert_result,
                     r[0].task_dict_string, serialized_task, model_to_dict(r[0]))
-            logger.error("insert result was %s but found mismatch between task_dict_string and stored: could it be because of size limit of peewee db?")
             raise InsertTaskAnomaly()
 
         log("task successfully inserted")
@@ -1405,5 +1410,129 @@ class Queue:
                 N += n
 
         return N
+
+
+    def schedule_callback(self, url, params):
+        uid = hashlib.md5(
+                json.dumps({"params": params, "url": url}, sort_keys=True).encode()
+            ).hexdigest()[:16]
+
+        if 'exception' in params:
+            params['exception'] = params['exception'][:500] + " ..."
+
+        try:
+            CallbackQueue.insert(
+                uid=uid,
+                url=url,
+                params_json=json.dumps(params),
+                state="new",
+                returned_status_json=""
+            ).execute(database=None)
+        except Exception as e:
+            logger.warning("requested duplicate callback? %s: url=%s, params%s", e, url, params)
+            return False
+            
+        url_parsed = urlparse(url)
+        qs = parse_qs(url_parsed.query)
+
+        logger.info("schedule_callback qs: %s", qs)
+        logger.info("schedule_callback params: %s", params)
+        
+        self.log_task(message=json.dumps(
+            dict(
+                callback_event="scheduled",
+                qs={k:v for k, v in qs.items() if k in ['job_id']}, 
+                params={k:v for k,v in params.items() if k in ['node', 'message']}
+                )), task_key="unset", state="unset")
+
+        return True
+        
+    def list_callbacks(self):
+        bystate = defaultdict(int)
+        for callback_entry in CallbackQueue.select().execute(database=None):
+            print(">>>>>")
+            for k, v in model_to_dict(callback_entry).items():
+                print(f">> {k:20s} : {v}" )
+            
+            bystate[callback_entry.state] += 1
+
+        for k, v in bystate.items():
+            logger.info(f">>> {k}: {v}")
+    
+    def run_callback(self, url, params):
+        if 'exception' in params:
+            params['exception'] = params['exception'][:100] + " ..."
+
+        for p, v in params.items():
+            if isinstance(v, str):
+                if len(v) > 200:
+                    logger.warning("param %s too long (%s), truncating", p, len(v))
+                params[p] = v[:200]
+
+        r = requests.get(url, params=params)
+        logger.info("callback %s %s returns %s", url, params, r)
+        return r
+
+    def run_next_callback(self, N=3000, loop=True, sleep=5):
+        #  TaskEntry.update(self.worker_id).where(TaskEntry.state=="failed").order_by(TaskEntry.modified).limit(100).execute(database=None)
+        while loop:
+            for c in CallbackQueue.select().where(CallbackQueue.state=="new").order_by(CallbackQueue.id).limit(N).execute(database=None):                
+                t0 = time.time()
+
+                try:
+                    params = json.loads(c.params_json)
+                except json.decoder.JSONDecodeError as e:
+                    logger.exception('problem decoding json from this: %s', c.params_json)
+                    CallbackQueue.update(
+                            state="corrupt",
+                        ).where(CallbackQueue.uid==c.uid).execute(database=None)
+                    continue
+
+                banned_actions = ['progress', 'main_done', 'node_done']
+
+                if params['action'] in banned_actions:
+                    logger.info("ignoring callback for %s %s", params.get('action'), params.get('node_id'))
+                    CallbackQueue.update(
+                            state="postponed",                            
+                        ).where(CallbackQueue.uid==c.uid).execute(database=None)   
+                else:
+                    logger.info('allowed action %s (banned %s)', params['action'], banned_actions)
+                    r = self.run_callback(c.url, params)
+                    spent_s = time.time() - t0
+
+                    if r.status_code == 200:
+                        logger.info("completed callback in %s", spent_s)
+                        CallbackQueue.update(
+                                state="finished",
+                                returned_status_json={
+                                    "spent_s": spent_s, 
+                                    "response": r,
+                                    "response_text": r.text
+                                }
+                            ).where(CallbackQueue.uid==c.uid).execute(database=None)
+                    else:
+                        CallbackQueue.update(
+                                state="failed",
+                                returned_status_json={
+                                    "spent_s": spent_s, 
+                                    "response": r,
+                                    "response_text": r.text
+                                }
+                            ).where(CallbackQueue.uid==c.uid).execute(database=None)
+
+                        logger.error("failed callback in %s url: %s params: %s", spent_s, c.url, params)
+
+            # CallbackQueue.update(state="new").where(CallbackQueue.state=="failed").execute(database=None)
+
+            CallbackQueue.delete().where(CallbackQueue.state=="finished").execute(database=None)
+            CallbackQueue.delete().where(CallbackQueue.state=="postponed").execute(database=None)
+
+            q = CallbackQueue.select(CallbackQueue.state, fn.Count(CallbackQueue.state).alias('count')).group_by(CallbackQueue.state)
+            logger.info("count sql: %s", q.sql())
+            for _q in q.execute(database=None):
+                logger.info("%s: %s", _q.state, _q.count)
+
+            logger.info("waiting... %s", sleep)
+            time.sleep(sleep)
 
 

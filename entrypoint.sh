@@ -12,6 +12,11 @@ elif [ ${APP_MODE:?} == "guardian" ]; then
     while true; do
         dqueue guardian -w 30
         sleep 1
+    done    
+elif [ ${APP_MODE:?} == "callbackworker" ]; then
+    while true; do
+        dqueue server callback run-next-callback
+        sleep 5
     done
 else
     echo 'unknown APP_MODE! can be "api" or "guardian"'

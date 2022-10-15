@@ -25,7 +25,26 @@ from dqueue.core import model_to_dict
 import dqueue.api
 import dqueue.database
 
-logger=logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
+
+
+import sentry_sdk
+from flask import Flask
+from sentry_sdk.integrations.flask import FlaskIntegration
+
+sentry_sdk.init(
+    dsn="https://11a6238fdc604777826f8287dfcc6be0@sentry.obsuks1.unige.ch/4",
+    integrations=[
+        FlaskIntegration(),
+    ],
+
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    # We recommend adjusting this value in production.
+    traces_sample_rate=1.0,
+
+    release=f"dqueue@{core.__version__}",
+)
 
 app = Flask(__name__)
 
@@ -38,7 +57,7 @@ def verify_token(token):
     if os.getenv('DQUEUE_DISABLE_AUTH', 'no') == 'yes':
         return True
 
-    logger.error("verify_token with token: \"%s\"", token)
+    logger.info("verify_token with token: \"%s\"", token)
     try:
         return dqauth.decode(token)
     except Exception as e:
@@ -118,7 +137,7 @@ def before_request():
         dqueue.database.db.connect()
         logger.debug("connecting to db before request %s", dqueue.database.db)
     except Exception as e:
-        logger.error("db access error: %s", e)
+        logger.warning("db access error: %s", e)
 
 
 @app.after_request
@@ -167,6 +186,10 @@ def healthcheck():
                         version="undefined",
                     )
             )
+
+@app.route('/debug-sentry')
+def trigger_error():
+    division_by_zero = 1 / 0
 
 def listen():
     app.run(port=8000,debug=True,threaded=True)
