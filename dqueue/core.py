@@ -37,7 +37,7 @@ from dqueue.entry import decode_entry_data
 import pymysql
 import peewee # type: ignore
 
-from dqueue.database import EventLog, TaskEntry, TaskWorkerKnowledge, db, model_to_dict
+from dqueue.database import EventLog, TaskEntry, TaskProperties, TaskWorkerKnowledge, db, model_to_dict
 from peewee import JOIN, fn
 
 sleep_multiplier = 1
@@ -350,7 +350,7 @@ class Queue:
 
         log("found task instances for",task.key,"N == ",len(instances_for_key))
         for i in instances_for_key:
-            log(i['state'], i['task_dict_string'])
+            log(i['state'], str(i['task_dict_string'])[:200])
 
         return instances_for_key
     
@@ -529,7 +529,7 @@ class Queue:
     def get_worker_states(self):
         return [ model_to_dict(r) for r in EventLog.select().where(EventLog.worker_state!="unset").order_by(EventLog.timestamp.desc()).limit(1).execute(database=None) ]
 
-    def get_one_task(self, update_expected_in_s, offset, prefer_worker_knowledge=None):
+    def get_one_task(self, update_expected_in_s, offset, prefer_worker_knowledge=None, only_users='all'):
         random_token = str(random.randint(0, 100000))
         call = repr(self) + str(id(self)) +  "wid:" + self.worker_id + ";pid:" + str(os.getpid()) + "thr:" + str(threading.get_ident())  + ":" + str(random_token) + ":get_one_task"
 
@@ -541,18 +541,29 @@ class Queue:
                              .where(NDeniedKnowledge.worker_knowledge_hash == worker_knowledge_hash(prefer_worker_knowledge))
                              .alias('n_denied_knowledge'))
 
+
         predicate = (TaskEntry.key == n_denied_knowledge.c.key)
 
         # denied_knowledge = HasDeniedKnowledge.select().where(Child.parent == Parent.id)
         # parents_with_children = Parent.select().where(
         #                     Clause(SQL('EXISTS'), subquery))
-                                
+
+        # NTaskProperties = TaskProperties.alias()
+        # n_task_properties = (NTaskProperties
+        #                     .select())
+
+        selection_condition = (
+            (TaskEntry.state=="waiting") & (TaskEntry.queue==self.queue) & 
+            ( (n_denied_knowledge.c.n_denied.is_null()) | (n_denied_knowledge.c.n_denied == 0) ))
+
+
+        if only_users != 'all':
+            selection_condition = selection_condition & (TaskProperties.user_email == only_users)
+    
         select_task = (TaskEntry.select(TaskEntry.key)
                                 .join(n_denied_knowledge, JOIN.LEFT_OUTER, on=predicate)
-                                .where(
-                                    (TaskEntry.state=="waiting") & (TaskEntry.queue==self.queue) & 
-                                    ( (n_denied_knowledge.c.n_denied.is_null()) | (n_denied_knowledge.c.n_denied == 0) )
-                                )
+                                .join(TaskProperties, JOIN.LEFT_OUTER, on=(TaskEntry.key == TaskProperties.key))
+                                .where(selection_condition)
                                 .order_by(TaskEntry.modified)
                                 .offset(offset)
                                 .limit(1))
@@ -680,7 +691,7 @@ class Queue:
 
         tried_tasks = 0
         while True:
-            self.get_one_task(update_expected_in_s, offset=offset, prefer_worker_knowledge=worker_knowledge)
+            self.get_one_task(update_expected_in_s, offset=offset, prefer_worker_knowledge=worker_knowledge, only_users=only_users)
             r = self.set_current_task_state("reserved")
             tried_tasks += 1
 
@@ -698,24 +709,24 @@ class Queue:
 
             skip_this_one = False
 
-            if only_users == 'all':
-                logger.info('allowed all users: %s', only_users)
-            else:
-                try:
-                    logger.info('will search for user info in %s', self.current_task.submission_info)
-                    callback = self.current_task.submission_info['callbacks'][0]
-                    user_job_token = dict(urllib.parse.parse_qs(callback.split("?",1)[1]))['token'][0]
+            # if only_users == 'all':
+            #     logger.info('allowed all users: %s', only_users)
+            # else:
+            #     try:
+            #         logger.info('will search for user info in %s', self.current_task.submission_info)
+            #         callback = self.current_task.submission_info['callbacks'][0]
+            #         user_job_token = dict(urllib.parse.parse_qs(callback.split("?",1)[1]))['token'][0]
                     
-                    user_sub = json.loads(base64.b64decode(user_job_token.split(".")[1]))['sub']
-                    logger.info('allowed only %s, user token contains %s', only_users, user_sub)
-                    if user_sub not in only_users.split(","):                        
-                        logger.info('allowed only %s, user token contains %s, skipping!', only_users, user_sub)
-                        skip_this_one = True
-                    else:
-                        logger.info('allowed only %s, user token contains %s, NOT skipping!', only_users, user_sub)
-                except Exception as e:
-                    logger.warning('failed to find user token: %s; will skip', e)
-                    skip_this_one = True
+            #         user_sub = json.loads(base64.b64decode(user_job_token.split(".")[1]))['sub']
+            #         logger.info('allowed only %s, user token contains %s', only_users, user_sub)
+            #         if user_sub not in only_users.split(","):                        
+            #             logger.info('allowed only %s, user token contains %s, skipping!', only_users, user_sub)
+            #             skip_this_one = True
+            #         else:
+            #             logger.info('allowed only %s, user token contains %s, NOT skipping!', only_users, user_sub)
+            #     except Exception as e:
+            #         logger.warning('failed to find user token: %s; will skip', e)
+            #         skip_this_one = True
 
             # TODO: use score for all
             if not skip_this_one:

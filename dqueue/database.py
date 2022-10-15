@@ -35,6 +35,16 @@ class TaskWorkerKnowledge(peewee.Model):
     class Meta:
         database = db
 
+
+class TaskProperties(peewee.Model):
+    database = None
+
+    key = peewee.CharField()
+    user_email =  peewee.CharField()
+    
+    class Meta:
+        database = db
+
 class TaskEntry(peewee.Model):
     database = None
 
@@ -73,7 +83,7 @@ class EventLog(peewee.Model):
         database = db
 
 try:
-    db.create_tables([TaskEntry, EventLog, TaskWorkerKnowledge])
+    db.create_tables([TaskEntry, EventLog, TaskWorkerKnowledge, TaskProperties])
     has_mysql = True
 except peewee.OperationalError:
     has_mysql = False
