@@ -12,7 +12,7 @@ from collections import OrderedDict, defaultdict
 import logging
 import urllib
 import pylogstash
-import base64
+import jwt
 from urllib.parse import urlparse, parse_qs
 
 from functools import reduce
@@ -558,6 +558,7 @@ class Queue:
 
 
         if only_users != 'all':
+            logger.info('selecting only users %s', only_users)
             selection_condition = selection_condition & (TaskProperties.user_email == only_users)
     
         select_task = (TaskEntry.select(TaskEntry.key)
@@ -709,25 +710,6 @@ class Queue:
 
             skip_this_one = False
 
-            # if only_users == 'all':
-            #     logger.info('allowed all users: %s', only_users)
-            # else:
-            #     try:
-            #         logger.info('will search for user info in %s', self.current_task.submission_info)
-            #         callback = self.current_task.submission_info['callbacks'][0]
-            #         user_job_token = dict(urllib.parse.parse_qs(callback.split("?",1)[1]))['token'][0]
-                    
-            #         user_sub = json.loads(base64.b64decode(user_job_token.split(".")[1]))['sub']
-            #         logger.info('allowed only %s, user token contains %s', only_users, user_sub)
-            #         if user_sub not in only_users.split(","):                        
-            #             logger.info('allowed only %s, user token contains %s, skipping!', only_users, user_sub)
-            #             skip_this_one = True
-            #         else:
-            #             logger.info('allowed only %s, user token contains %s, NOT skipping!', only_users, user_sub)
-            #     except Exception as e:
-            #         logger.warning('failed to find user token: %s; will skip', e)
-            #         skip_this_one = True
-
             # TODO: use score for all
             if not skip_this_one:
                 worker_fit_score = self.current_task.score_worker_knowledge(worker_knowledge) # also sort TODO
@@ -766,6 +748,53 @@ class Queue:
         log('task',self.current_task.submission_info)
 
         return self.current_task
+
+    def compute_task_properties(self, n_max=1000):
+        n_left = n_max
+        for task_entry in (TaskEntry
+                           .select(TaskEntry, TaskProperties.user_email)
+                           .join(TaskProperties, JOIN.LEFT_OUTER, on=(TaskEntry.key == TaskProperties.key))
+                           .where(TaskProperties.user_email == None)
+                        #    .limit(n_max).execute(database=None)):
+                           .limit(n_max).dicts()):
+            # logging.info('task_entry: %s', task_entry)
+
+            task = Task.from_task_dict(task_entry['task_dict_string'])
+
+            try:
+                logger.info('will search for user info in %s', task.submission_info)
+                callback = task.submission_info['callbacks'][0]
+                params = urllib.parse.urlparse(callback).query
+                logger.debug('params: %s', params)
+                user_job_token = dict(urllib.parse.parse_qs(params))['token'][0]
+                logger.info('token: %s', user_job_token)
+                
+                payload = jwt.decode(user_job_token, verify=False, algorithms=['HS256'], options={"verify_signature": False})
+                logger.info('token decoded: %s', payload)
+                
+
+                user_sub = payload['sub']
+                logger.info('user token contains %s', user_sub)
+                logger.info('properties contains %s', task_entry['user_email'])
+
+                if task_entry['user_email'] != user_sub:
+                    logger.info('mismatch (so we update)!')
+                TaskProperties.insert(user_email=user_sub, key=task.key).execute()
+
+                # if user_sub not in only_users.split(","):                        
+                #     logger.info('allowed only %s, user token contains %s, skipping!', only_users, user_sub)
+                #     skip_this_one = True
+                # else:
+                #     logger.info('allowed only %s, user token contains %s, NOT skipping!', only_users, user_sub)
+            except Exception as e:
+                logger.warning('\033[31mfailed to find user token\033[0m: "%s"; will skip', e)
+
+            n_left -= 1
+            if n_left <= 0:
+                logger.warning('compute_task_properties reached the limit of %s', n_max)
+                break
+
+
     
     def list_worker_knowledge(self):
         return [model_to_dict(r) for r in TaskWorkerKnowledge.select().execute(database=None)]

@@ -679,6 +679,12 @@ def list_callbacks(obj):
 def run_next_callback(obj):
     Queue().run_next_callback()
 
+
+@runnercli.command()
+@click.pass_obj
+def compute_properties(obj):
+    Queue().compute_task_properties()
+
 def main():
     cli(obj={})
 
