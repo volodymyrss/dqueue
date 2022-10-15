@@ -758,7 +758,7 @@ class Queue:
 
         return self.current_task
 
-    def compute_task_properties(self, n_max=300):
+    def compute_task_properties(self, n_max=50):
         n_left = n_max
         for task_entry in (TaskEntry
                            .select(TaskEntry, TaskProperties.user_email)
