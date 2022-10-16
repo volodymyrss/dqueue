@@ -679,6 +679,23 @@ def list_callbacks(obj):
 def run_next_callback(obj):
     Queue().run_next_callback()
 
+
+@runnercli.command()
+@click.pass_obj
+@click.option('--sleep', type=float, default=30)
+def compute_properties(obj, sleep):
+    while True:
+        stats = Queue().compute_task_properties()
+        logger.info('jobs by user %s', stats)
+        logger.info('sleeping %s s', sleep)
+        time.sleep(sleep)
+
+@runnercli.command()
+@click.pass_obj
+@click.option('--only-users', default='all')
+def get_one_local(obj, only_users):
+    Queue().get_one_task(100, 0, only_users=only_users)
+
 def main():
     cli(obj={})
 

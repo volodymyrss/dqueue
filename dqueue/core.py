@@ -13,6 +13,7 @@ import logging
 import urllib
 import pylogstash
 import base64
+import jwt
 from urllib.parse import urlparse, parse_qs
 
 from functools import reduce
@@ -1517,3 +1518,60 @@ class Queue:
             time.sleep(sleep)
 
 
+    def compute_task_properties(self, n_max=2000):
+        n_left = n_max
+
+        n_jobs_by_user = defaultdict(int)
+        new_task_prop = []
+
+        for task_entry in (TaskEntry
+                           .select(TaskEntry, TaskProperties.user_email)
+                           .join(TaskProperties, JOIN.LEFT_OUTER, on=(TaskEntry.key == TaskProperties.key))
+                           .where((TaskProperties.user_email == None) & (TaskEntry.state=="waiting"))
+                        #    .limit(n_max).execute(database=None)):
+                           .limit(n_max).dicts()):
+            # logging.info('task_entry: %s', task_entry)
+
+            task = Task.from_task_dict(task_entry['task_dict_string'])
+
+            try:
+                logger.info('will search for user info in %s', task.submission_info)
+                callback = task.submission_info['callbacks'][0]
+                params = urllib.parse.urlparse(callback).query
+                logger.debug('params: %s', params)
+                user_job_token = dict(urllib.parse.parse_qs(params))['token'][0]
+                logger.info('token: %s', user_job_token)
+                
+                payload = jwt.decode(user_job_token, verify=False, algorithms=['HS256'], options={"verify_signature": False})
+                logger.info('token decoded: %s', payload)
+                
+
+                user_sub = payload['sub']
+                logger.info('user token contains %s', user_sub)
+                logger.info('properties contains %s', task_entry['user_email'])
+
+                if task_entry['user_email'] != user_sub:
+                    logger.info('mismatch (so we update)!')
+                
+                # if user_sub not in only_users.split(","):                        
+                #     logger.info('allowed only %s, user token contains %s, skipping!', only_users, user_sub)
+                #     skip_this_one = True
+                # else:
+                #     logger.info('allowed only %s, user token contains %s, NOT skipping!', only_users, user_sub)
+
+                new_task_prop.append(dict(user_email=user_sub, key=task.key))
+
+                n_jobs_by_user[user_sub] += 1
+            except Exception as e:
+                logger.warning('\033[31mfailed to find user token\033[0m: "%s"; will skip', e)
+
+            n_left -= 1
+            if n_left <= 0:
+                logger.warning('compute_task_properties reached the limit of %s', n_max)
+                break
+
+        if len(new_task_prop) > 0:
+            logger.info('inserting %s new task properties...', len(new_task_prop))
+            TaskProperties.insert_many(new_task_prop).execute()
+
+        return n_jobs_by_user
