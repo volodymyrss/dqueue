@@ -34,7 +34,7 @@ from dqueue.entry import decode_entry_data
 import pymysql
 import peewee # type: ignore
 
-from dqueue.database import EventLog, TaskEntry, TaskWorkerKnowledge, db, model_to_dict, CallbackQueue
+from dqueue.database import EventLog, TaskEntry, TaskProperties, TaskWorkerKnowledge, db, model_to_dict, CallbackQueue
 from peewee import JOIN, fn
 
 sleep_multiplier = 1
@@ -529,7 +529,7 @@ class Queue:
     def get_worker_states(self):
         return [ model_to_dict(r) for r in EventLog.select().where(EventLog.worker_state!="unset").order_by(EventLog.timestamp.desc()).limit(1).execute(database=None) ]
 
-    def get_one_task(self, update_expected_in_s, offset, prefer_worker_knowledge=None):
+    def get_one_task(self, update_expected_in_s, offset, prefer_worker_knowledge=None, only_users='all'):
         random_token = str(random.randint(0, 100000))
         call = repr(self) + str(id(self)) +  "wid:" + self.worker_id + ";pid:" + str(os.getpid()) + "thr:" + str(threading.get_ident())  + ":" + str(random_token) + ":get_one_task"
 
@@ -547,15 +547,23 @@ class Queue:
         # parents_with_children = Parent.select().where(
         #                     Clause(SQL('EXISTS'), subquery))
                                 
+        selection_condition = (
+            (TaskEntry.state=="waiting") & (TaskEntry.queue==self.queue) & 
+            ( (n_denied_knowledge.c.n_denied.is_null()) | (n_denied_knowledge.c.n_denied == 0) ))
+
+        
         select_task = (TaskEntry.select(TaskEntry.key)
-                                .join(n_denied_knowledge, JOIN.LEFT_OUTER, on=predicate)
-                                .where(
-                                    (TaskEntry.state=="waiting") & (TaskEntry.queue==self.queue) & 
-                                    ( (n_denied_knowledge.c.n_denied.is_null()) | (n_denied_knowledge.c.n_denied == 0) )
-                                )
-                                .order_by(TaskEntry.modified)
-                                .offset(offset)
-                                .limit(1))
+                                .join(n_denied_knowledge, JOIN.LEFT_OUTER, on=predicate))
+                
+        if only_users != 'all':
+            selection_condition = selection_condition & (TaskProperties.user_email == only_users)
+            select_task = select_task.join(TaskProperties, JOIN.LEFT_OUTER, on=(TaskEntry.key == TaskProperties.key))
+
+        select_task = (select_task
+            .where(selection_condition)
+            .order_by(TaskEntry.modified)
+            .offset(offset)
+            .limit(1))
 
         r = select_task.execute(database=None) # not atomic!?
 
@@ -755,7 +763,7 @@ class Queue:
         log('task',self.current_task.submission_info)
 
         return self.current_task
-    
++    
     def list_worker_knowledge(self):
         return [model_to_dict(r) for r in TaskWorkerKnowledge.select().execute(database=None)]
 

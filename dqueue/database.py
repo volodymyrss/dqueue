@@ -87,8 +87,17 @@ class EventLog(peewee.Model):
     class Meta:
         database = db
 
+class TaskProperties(peewee.Model):
+    database = None
+
+    key = peewee.CharField()
+    user_email =  peewee.CharField()
+    
+    class Meta:
+        database = db
+
 try:
-    db.create_tables([TaskEntry, EventLog, TaskWorkerKnowledge, CallbackQueue])
+    db.create_tables([TaskEntry, EventLog, TaskWorkerKnowledge, CallbackQueue, TaskProperties])
     has_mysql = True
 except peewee.OperationalError:
     has_mysql = False
