@@ -555,7 +555,10 @@ class Queue:
         select_task = (TaskEntry.select(TaskEntry.key)
                                 .join(n_denied_knowledge, JOIN.LEFT_OUTER, on=predicate))
                 
-        if only_users != 'all':
+        if only_users == 'all':
+            logger.info('selecting all users (%s)', only_users)
+        else:
+            logger.info('selecting only users %s', only_users)
             selection_condition = selection_condition & (TaskProperties.user_email == only_users)
             select_task = select_task.join(TaskProperties, JOIN.LEFT_OUTER, on=(TaskEntry.key == TaskProperties.key))
 
@@ -688,7 +691,7 @@ class Queue:
 
         tried_tasks = 0
         while True:
-            self.get_one_task(update_expected_in_s, offset=offset, prefer_worker_knowledge=worker_knowledge)
+            self.get_one_task(update_expected_in_s, offset=offset, prefer_worker_knowledge=worker_knowledge, only_users=only_users)
             r = self.set_current_task_state("reserved")
             tried_tasks += 1
 
@@ -705,25 +708,6 @@ class Queue:
                 continue
 
             skip_this_one = False
-
-            if only_users == 'all':
-                logger.info('allowed all users: %s', only_users)
-            else:
-                try:
-                    logger.info('will search for user info in %s', self.current_task.submission_info)
-                    callback = self.current_task.submission_info['callbacks'][0]
-                    user_job_token = dict(urllib.parse.parse_qs(callback.split("?",1)[1]))['token'][0]
-                    
-                    user_sub = json.loads(base64.b64decode(user_job_token.split(".")[1]))['sub']
-                    logger.info('allowed only %s, user token contains %s', only_users, user_sub)
-                    if user_sub not in only_users.split(","):                        
-                        logger.info('allowed only %s, user token contains %s, skipping!', only_users, user_sub)
-                        skip_this_one = True
-                    else:
-                        logger.info('allowed only %s, user token contains %s, NOT skipping!', only_users, user_sub)
-                except Exception as e:
-                    logger.warning('failed to find user token: %s; will skip', e)
-                    skip_this_one = True
 
             # TODO: use score for all
             if not skip_this_one:
