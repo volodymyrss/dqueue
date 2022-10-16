@@ -18,6 +18,11 @@ elif [ ${APP_MODE:?} == "callbackworker" ]; then
         dqueue server callback run-next-callback
         sleep 5
     done
+elif [ ${APP_MODE:?} == "jobanalysis" ]; then
+    while true; do
+        dqueue runner compute-properties
+        sleep 5
+    done
 else
     echo 'unknown APP_MODE! can be "api" or "guardian"'
     exit 1
