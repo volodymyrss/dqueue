@@ -763,7 +763,7 @@ class Queue:
         log('task',self.current_task.submission_info)
 
         return self.current_task
-+    
+    
     def list_worker_knowledge(self):
         return [model_to_dict(r) for r in TaskWorkerKnowledge.select().execute(database=None)]
 
